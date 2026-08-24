@@ -1,7 +1,7 @@
 {
   "name": "dsh-right-sidebar",
   "version": "0.1.0",
-  "description": "DSH Web 右侧边栏插件（真列）：接管官方 details 列，详情 / 文件 / Git / 终端 tab + 会话联动层（ctx.sessionView）。",
+  "description": "DSH Web 右侧边栏插件（真列）：接管官方 details 列，详情 tab（收编官方工具详情座位）+ 会话联动层（ctx.sessionView）+ 开放 rightbar.tab 注册槽。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
