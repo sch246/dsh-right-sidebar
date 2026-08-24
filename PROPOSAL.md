@@ -1,11 +1,11 @@
 # dsh-right-sidebar · 干净、强大的右侧边栏插件 —— 开发方案（前置版 v0）
 
-> 状态：待拍板。本文档只做方案，不动代码、不安装任何东西。
+> 状态：规划已定（M0 未开工）。本文档只做方案，不动代码、不安装任何东西。
 
 ## 1. 目标与定位
 
 - **干净**：基于 DSH 官方 slot 体系实现，不 `position:fixed` 浮层盖在官方列上；从零写，不 fork 社区代码；注入即生效、卸载即净。
-- **强大（演进）**：第一版只做「干净的面板底座」，后续按里程碑加文件 / Git / 终端等 tab。
+- **平台化（已拍板）**：tab 不内置功能，而是**开放注册** —— 第三方插件可向我们的侧边栏注册自己的 tab；底座本身**不做文件 / Git / 终端**。默认仅一个「详情」tab（收编官方工具详情座位，属于底座职责）。
 - **发布形态**：独立文件夹仓库，参考本机 [`/root/dsh-warm-minimal`](/root/dsh-warm-minimal) 的布局（`package.json` + `dsh.bundle.patch` → `cordis.patch.yml` + `scripts/` + `README` + `LICENSE`）；本地注入验证稳定后发 GitHub Release pre-release。
 
 ## 2. 为什么现有插件「不够干净」
@@ -19,7 +19,7 @@
 
 ## 3. 架构（关键技术点，已对照源码核实）
 
-- **形态**：`ui-panel`（纯浏览器端 UI 插件，MVP 不需要 Node half；后续文件/Git/终端再加 host API 时转 `hybrid`）。
+- **形态**：`ui-panel`（纯浏览器端 UI 插件，不需要 Node half；tab 功能方各自决定是否需要自己的 host half）。
 - **挂载点**：`ctx.slots.inject('details', () => ctx.slots.register({ name: 'details', children: { 'conversation.details.tool': ... } }, RightSidebarPanel))`。
   - `details` 是 single slot：动态注册条目会 shadow 官方 DetailsPanel（`packages/client/runtime/src/client/slots.ts` 已确认该语义）。
   - 必须在 children 里**重新声明 `conversation.details.tool` 并原样 `renderSlot`**，把官方工具详情内容完整保住在我们面板的「详情」tab 里 —— 这是与现有插件本质不同的地方：不是遮挡它，而是收编它。
@@ -27,7 +27,7 @@
   - 打开/关闭：`ctx.layout.openDetails() / closeDetails()`；开关按钮挂到官方 `sidebar.footer.action`（加性 list slot，官方左侧栏底部）——干净的入口，不占屏。
   - 拖拽调宽：直接复用 AppFrame 内置的 details 拖拽把手，宽度夹在官方契约 300–520px，不越界。
   - 宽度持久化：自己的 entry store（`createXXXStore()` 工厂，遵循四 shares 规范），localStorage 持久化宽度偏好，启动时恢复并 `openDetails()`。
-  - Tab 条：默认一个「详情」tab 内嵌官方工具详情座位；预留私有 tab 注册点给 V1 扩展（先不对外公开 API）。
+  - Tab 条：默认一个「详情」tab 内嵌官方工具详情座位；同时声明**公开的 tab 注册槽**（如 `rightbar.tab`，list/keyed、scope: session），第三方插件用 `ctx.slots.inject('rightbar.tab', ...)` 注册自己的 tab（id / order / label / 图标 + 组件），tab 条自动从 slot ledger 渲染 —— 机制对齐官方 `conversation.view`（`ui-conversation/src/client/contract/slots.ts` L113，id/order/label）。
   - 主题/文案：`--dsw-*` tokens + CSS Modules，中文产品文案，locale 声明。
 - **数据流**：严格四 shares（PropsRuntime & PropsRenderSlots & PropsStore & inject face），组件零 `ctx`，符合 `packages/client/AGENTS.md`。
 
@@ -89,10 +89,10 @@ dsh-right-sidebar/
 |---|---|---|
 | M0 | 骨架 + details 接管最小实现（详情 tab + 开关 + 拖拽 + 宽度持久化） | 注入 web profile 可用 |
 | M0.5 | **联动层**：会话级 store（revealTarget / folded / activeView / selectedCall）+ `ctx.sessionView` 服务 + 自己的 conversation view/node 骨架（滚动到消息、折叠展开的最小闭环） | 两侧同步演示可用 |
-| M1 | 文件树 tab（懒加载 + 预览 + @引用，走 `workspaces.openPath` / `ctx.conversation.input`） | 本地可用 |
-| M2 | Git tab（状态 / stage / diff / 提交） | 本地可用 |
-| M3 | 终端 tab（xterm，需 Node half → hybrid） | 本地可用 |
+| M0.7 | **Tab 开放接入**：声明 `rightbar.tab` 注册槽 + 示例 tab（验证注册 / 激活 / HMR / 卸载） | 第三方插件可接入 |
 | M4 | 发布 pre-release（GitHub Release v0.1.0） | 发布 |
+
+> 已取消：文件 / Git / 终端 tab（原 M1–M3）—— 不做内置功能，交给插件生态。
 
 ## 6. 风险与决策点
 
@@ -107,3 +107,4 @@ dsh-right-sidebar/
 - D. 会话联动路径：**路径 1 真列（已拍板）** vs 路径 2 叠加共存？（见 §3.5 / §3.6）
 - B. 仓库名：`dsh-right-sidebar`？（可改）
 - C. MVP 验收标准：注入后能看到右侧栏、可开关/拖拽、刷新后宽度记住、官方工具详情仍在？
+- E. tab 定位（**已拍板**）：**tab 开放接入、不内置文件/Git/终端**；底座默认仅「详情」tab（收编官方工具详情座位）。
