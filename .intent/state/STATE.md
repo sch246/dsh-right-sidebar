@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with one selected C4 candidate realization. Retained C1, C2 and C3 locks are historical implementation, installation and lifecycle evidence, not current acceptance.
+Status: draft embedded intent package awaiting the navbar-alignment refinement. Retained C1 through C4 locks are historical implementation, installation and lifecycle evidence, not current acceptance.
 
 ## Intent
 
@@ -11,7 +11,7 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 ## Acceptance criteria
 
 - `SIDEBAR-001`: Opening the sidebar creates a full-height layout column that reduces main-content width; closing it leaves the main view unobstructed.
-- `SIDEBAR-002`: One navbar action opens and closes it, stays consistent with actual visibility, and does not overlap per-session header utilities; the panel does not repeat that visibility control internally.
+- `SIDEBAR-002`: One navbar action opens and closes it, stays consistent with actual visibility, does not overlap per-session header utilities, and aligns with the host header controls without a standalone resting border or shadow; the panel does not repeat that visibility control internally.
 - `SIDEBAR-003`: The full-height layout divider resizes it without a separate visible grip; refresh restores the last nonzero width while visibility still starts hidden.
 - `SIDEBAR-004`: An external fixture can register, switch, and remove multiple tabs while the platform itself contributes no business tab.
 - `SIDEBAR-005`: A fixture using one session-scoped state/action owner from the main view and a sidebar tab observes immediate two-way synchronization and session isolation.
@@ -36,6 +36,7 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 - C3 records user-authorized installation of that same source plus adapter commit `580b330323c13ec568adab2c35fabf8f8fa6b194` into the live `web` profile. Both local links, boot-manifest entries and served bundles were observed, and `dsh-web` restarted successfully. Client execution and visible interaction remain unobserved.
 - Live inspection revised the chrome requirements: reserve room for the global toggle instead of overlapping session utilities, keep the full divider edge draggable without a visible pill, remove the panel-internal collapse/title, and render no empty-state notice or empty tab strip.
 - C4 `794ecd03fc9b80619b679b5d33f844f55b786eb9` implements that revision. Component and layout regression suites, client typechecking, patch applicability, public bundle inspection and service restart pass; rendered browser geometry and subjective visual acceptance remain open.
+- The user subsequently confirmed C4's visible chrome and requested one refinement: match the Session log control's 32-pixel height and 12-pixel top inset, while removing the sidebar toggle's resting edge and shadow.
 - Realization locks cache concrete versions and evidence. Missing build outputs or an unusable historical environment require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
 
 ## Constraints and permissions

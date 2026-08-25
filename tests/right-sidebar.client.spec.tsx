@@ -12,6 +12,7 @@ import type { RightSidebarToggleProps } from '../src/client/RightSidebarToggle'
 import type { RightbarTab } from '../src/client/contract'
 import { createRightSidebarStore } from '../src/client/stores'
 import { apply, inject } from '../src/client/index'
+import { PANEL_CSS } from '../src/client/panel.css'
 
 afterEach(() => { cleanup() })
 
@@ -161,6 +162,12 @@ describe('RightSidebarPanel', () => {
 })
 
 describe('RightSidebarToggle', () => {
+  it('matches host header-control geometry without a resting edge or shadow', () => {
+    expect(PANEL_CSS).toContain('width:32px;height:32px')
+    expect(PANEL_CSS).toContain('padding:0;border:none;border-radius:8px;background:transparent')
+    expect(PANEL_CSS).not.toContain('box-shadow')
+  })
+
   it('uses the layout owner state and actions directly', () => {
     const openDetails = vi.fn()
     const closeDetails = vi.fn()

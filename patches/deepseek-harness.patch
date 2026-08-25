@@ -1,6 +1,6 @@
 # Harness-Base-Commit: b642a10626a950cc95c2d6f839810cb01fe599fe
 # Harness-Base-Ref: local/master
-# Purpose: right-sidebar layout seat, durable width, unobstructed navbar, and full-edge resize UX.
+# Purpose: right-sidebar layout seat, durable width, unobstructed aligned navbar, and full-edge resize UX.
 # Upgrade policy: rebase this patch manually against the new official Harness commit.
 diff --git a/packages/client/runtime/src/client/contract/store.ts b/packages/client/runtime/src/client/contract/store.ts
 index 0eb7917b03..03c0616d40 100644
@@ -147,7 +147,7 @@ index 265a0bd802..e547f16f8e 100644
  }
 
 diff --git a/packages/client/ui-layout/src/client/AppFrame.module.css b/packages/client/ui-layout/src/client/AppFrame.module.css
-index ae56780133..45c830931d 100644
+index ae56780133..fbb3195e80 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.module.css
 +++ b/packages/client/ui-layout/src/client/AppFrame.module.css
 @@ -48,9 +48,8 @@
@@ -208,7 +208,7 @@ index ae56780133..45c830931d 100644
 +.navbar {
 +  position: absolute;
 +  z-index: 30;
-+  top: 8px;
++  top: 12px;
 +  right: 8px;
 +  display: flex;
 +  align-items: center;
@@ -462,7 +462,7 @@ index d2de668a9c..af9ec6d9f0 100644
    })
    return handle
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index d865a5c186..76d50cae65 100644
+index d865a5c186..78cc700251 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 @@ -111,6 +111,7 @@ function drag(handle: Element, fromX: number, toX: number): void {
@@ -478,7 +478,7 @@ index d865a5c186..76d50cae65 100644
    window.innerWidth = frameWidth
    Element.prototype.getBoundingClientRect = function () {
 -    return { width: frameWidth, height: 1080, top: 0, left: 0, right: frameWidth, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
-+    const width = this instanceof HTMLElement && this.hasAttribute('data-shell-navbar') ? 28 : frameWidth
++    const width = this instanceof HTMLElement && this.hasAttribute('data-shell-navbar') ? 32 : frameWidth
 +    return { width, height: 1080, top: 0, left: 0, right: width, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
    }
    // jsdom lacks pointer capture: emulate per-element so hasPointerCapture gates pass.
@@ -507,11 +507,11 @@ index d865a5c186..76d50cae65 100644
 +  it('reserves measured navbar room only while details are collapsed', () => {
 +    const { frame, instance } = mountFrame()
 +    act(() => { fireResize?.(); vi.advanceTimersByTime(20) })
-+    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('44px')
++    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('48px')
 +    act(() => { instance.actions.openDetails() })
 +    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('28px')
 +    act(() => { instance.actions.closeDetails() })
-+    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('44px')
++    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('48px')
 +  })
 +
    it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {

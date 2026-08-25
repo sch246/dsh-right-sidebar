@@ -14,7 +14,7 @@ export const PANEL_CSS = `
 .dsh-rightbar-state{display:flex;min-height:96px;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;color:var(--dsw-alias-text-secondary,inherit);font-size:12px;}
 .dsh-rightbar-retry{min-height:28px;padding:4px 10px;border:1px solid var(--dsw-alias-border-l2,currentColor);border-radius:6px;background:transparent;color:var(--dsw-alias-text-primary,inherit);cursor:pointer;}
 .dsh-rightbar-retry:hover{background:var(--dsw-alias-bg-layer-1,transparent);}
-.dsh-rightbar-toggle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:8px;background:var(--dsw-alias-button-floating-fill,transparent);color:var(--dsw-alias-text-secondary,inherit);cursor:pointer;box-shadow:0 1px 2px rgb(0 0 0 / 8%);}
+.dsh-rightbar-toggle{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:none;border-radius:8px;background:transparent;color:var(--dsw-alias-text-secondary,inherit);cursor:pointer;}
 .dsh-rightbar-toggle:hover{background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-text-primary,inherit);}
 @container (max-width:260px){.dsh-rightbar-tab{padding-inline:8px}.dsh-rightbar-body{padding-inline:8px}}
 @media (prefers-reduced-motion:no-preference){.dsh-rightbar-tab,.dsh-rightbar-toggle,.dsh-rightbar-retry{transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease;}}
