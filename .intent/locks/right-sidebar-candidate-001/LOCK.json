@@ -1,7 +1,7 @@
 {
   "kind": "realization",
   "id": "dsh-right-sidebar-candidate-001",
-  "revision": "0.1.0-candidate.2",
+  "revision": "0.1.0-candidate.3",
   "status": "candidate",
   "protocol": {
     "id": "meta-intent",
@@ -9,17 +9,17 @@
   },
   "package": {
     "id": "dsh-right-sidebar",
-    "revision": "0.2.0-draft.3"
+    "revision": "0.2.0-draft.4"
   },
   "state": {
-    "revision": "0.2.0-draft.3",
+    "revision": "0.2.0-draft.4",
     "entry": {
       "path": "inputs/state/STATE.json",
-      "digest": "sha256:5267621cf60143d68235fe517b2b1f108ff3e036b31eb8fecad5bb172bab0c3e"
+      "digest": "sha256:f51940bc75a5305a764783fa42199c9259c92b90fe738d0a78921bf5cdfdb8ca"
     },
     "document": {
       "path": "inputs/state/STATE.md",
-      "digest": "sha256:a48985444f633417c99b17ded3bdbf3ffd19454d51ee7ce57451a2ecf27334cd"
+      "digest": "sha256:ecc05e6cea47bc797c2030cc57c48f37b4f616d21f6b9b7481b985cbb1e35c35"
     }
   },
   "logs": [
@@ -42,6 +42,10 @@
     {
       "path": "../../logs/2026-08-25-lifecycle-experiment.md",
       "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
     }
   ],
   "target": {
@@ -70,15 +74,15 @@
   "artifacts": [
     {
       "path": "EVIDENCE.md",
-      "digest": "sha256:5279858f352598a052313495735e84d232881d8b114415d454ef23906135d960"
+      "digest": "sha256:4beac9872bd43ffeaa7cd69cc9750b0cf34fa662e403678d947cef3de9cb77f1"
     },
     {
       "path": "LIFECYCLE-EVIDENCE.md",
-      "digest": "sha256:b1172eee1d807b0424da7c9211ccdc55e64b700553b19a98bfb89b64731f0324"
+      "digest": "sha256:d930a1ecd50dd8795a59d2fc62d65131436f43ecc3d9ed8f5841d7df02ecabd6"
     },
     {
       "path": "REALIZATION.json",
-      "digest": "sha256:b022077a85bdce4a6fb83a2c9352c56b391ca9707088e7549b2ca0b3b2a3bdde"
+      "digest": "sha256:c4bac37b6e371d1b739aea03558cfd8f2e8dc97ffc97d3c8aaf4f183e49e7752"
     }
   ],
   "acceptance": {
@@ -114,11 +118,11 @@
     "decision": "pending-user-review"
   },
   "unresolved": [
-    "fresh retrieval from the published Git reference",
-    "reproducible build dependency closure from immutable inputs",
     "upstream DSH or pnpm ownership of orphan link cleanup",
-    "browser acceptance and external multi-tab/session-synchronization fixtures",
+    "browser acceptance, product-quality UX, and external portable multi-tab/session-synchronization fixtures",
     "independent semantic review of provisional user-visible choices",
-    "machine-checked composition across the plugin and Harness repositories"
+    "portable right-sidebar surface and @dsh-std/adapter-dsh mapping",
+    "migration and removal of the direct sidebar-owned Harness patch",
+    "machine-checked adapter ownership of Harness target effects"
   ]
 }

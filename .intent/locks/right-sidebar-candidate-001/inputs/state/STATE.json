@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.2.0-draft.3",
+  "revision": "0.2.0-draft.4",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -9,7 +9,8 @@
     "../logs/2026-08-25-bootstrap-reality.md",
     "../logs/2026-08-25-git-reference-decision.md",
     "../logs/2026-08-25-first-realization.md",
-    "../logs/2026-08-25-lifecycle-experiment.md"
+    "../logs/2026-08-25-lifecycle-experiment.md",
+    "../logs/2026-08-25-product-quality-and-adapter-direction.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -17,7 +18,7 @@
     "package": "meta-intent",
     "uri": "https://github.com/sch246/meta-intent.git",
     "lock": "locks/protocol-0.2/LOCK.json",
-    "artifactDigest": "sha256:4353c9cb6156181dd76c08b98f8ae81b7ac46bd7bb463e1bb6a86fda75e74d79"
+    "artifactDigest": "sha256:a5ce1e0acacac0e313f3f281256cd79d5d6aa2ba6cf7a5e62af7a385df2539fe"
   },
   "resources": [
     {
@@ -39,7 +40,14 @@
       "id": "protocol.meta-intent",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/meta-intent",
-      "revision": "ba724ccc41f90d82493c4673fed2b17c8c8232f0"
+      "revision": "c3c60d1cce6cf1a3cf5c4e07f183a64ef167d7ce"
+    },
+    {
+      "id": "adapter.dsh-std",
+      "kind": "git-repository",
+      "uri": "https://github.com/Yan-Zero/dsh-std.git",
+      "revision": "bb194ad53a72f4fa7da1286c88dcebb488b43eb9",
+      "scope": "preferred-harness-adapter-boundary"
     },
     {
       "id": "runtime.dsh-web",

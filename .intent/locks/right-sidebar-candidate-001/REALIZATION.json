@@ -6,7 +6,7 @@
   },
   "installation": {
     "build": "DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh",
-    "buildEnvironment": "A prepared Harness development checkout with built vendored dependencies and package-local dependency links; this dependency closure is not yet locked.",
+    "buildEnvironment": "This cached realization was built with a prepared Harness development checkout. If that environment is unavailable, re-synthesize from current state rather than treating environment closure as intent.",
     "profileAdd": "dsh plugin --profile <profile> add <checkout>",
     "profileInspect": "dsh --profile <profile> --dump-config",
     "service": "dsh-web",
@@ -27,7 +27,8 @@
   },
   "maintenance": {
     "onSourceOrTargetDrift": "Re-investigate current state and re-synthesize the owned contribution; do not silently reuse this candidate.",
-    "preserveUnrelatedChanges": true
+    "preserveUnrelatedChanges": true,
+    "targetBoundary": "Transitional direct Harness patch. Move Harness-private mapping to an intent-managed @dsh-std/adapter-dsh realization and retire this ownership path after portable end-to-end acceptance."
   },
   "uninstall": {
     "profileRemove": "dsh plugin --profile <profile> remove @dsh-external/dsh-right-sidebar",
@@ -36,10 +37,10 @@
     "deleteSourceCheckout": false
   },
   "knownLimits": [
-    "The exact plugin commit was installed from a local Git worktree, not retrieved afresh through the published remote URI.",
-    "The build environment and prepared dependency outputs are not immutably bound by this lock.",
+    "The exact plugin commit was installed from a local Git worktree; remote retrieval is only a cache-availability concern.",
+    "Reusing this exact implementation requires a prepared build environment; regeneration from state may use a different implementation or toolchain.",
     "The DSH/pnpm remove path leaves an inactive orphan link that requires guarded realization-owned cleanup.",
-    "The separate Harness target is described here but is not a second mechanically validated protocol target.",
-    "Browser behavior and external tab/session-synchronization fixtures were not exercised by the lifecycle experiment."
+    "The separate Harness target is described here but is not a second mechanically validated protocol target, and its mapping has not moved to @dsh-std/adapter-dsh.",
+    "Browser behavior, product-quality UX, portable external registration, and tab/session-synchronization fixtures were not exercised by the lifecycle experiment."
   ]
 }

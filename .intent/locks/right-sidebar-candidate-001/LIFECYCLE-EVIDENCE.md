@@ -20,4 +20,4 @@ Observed on 2026-08-25. Ephemeral absolute paths are omitted; every source and t
 
 ## Interpretation boundary
 
-This is positive evidence for isolated profile composition and drift-preserving Harness removal with the corrected procedure. It is negative evidence for a closed build environment and for standard remove being sufficient. It does not prove browser acceptance, semantic completeness, remote availability, or general multi-package compatibility.
+This is positive evidence for isolated profile composition and drift-preserving Harness removal with the corrected procedure. It is negative evidence for reusing this concrete cache without a prepared build environment and for standard remove being sufficient. Environment closure is not a sidebar requirement: an unavailable cache calls for re-synthesis. This run does not prove browser acceptance, semantic completeness, portable adapter conformance, remote availability, or general multi-package compatibility.

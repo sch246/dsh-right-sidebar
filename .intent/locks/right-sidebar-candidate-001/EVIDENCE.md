@@ -16,15 +16,22 @@ Passed:
 - profile uninstall preserving an unrelated profile patch;
 - Harness reverse removal preserving a later non-overlapping target change.
 
-Not yet established:
+Concrete candidate reuse and lifecycle limits, which do not redefine sidebar intent:
 
 - fresh retrieval from the published Git reference;
 - reproducible build from only immutable referenced inputs;
 - uninstall without guarded cleanup of the orphan profile symlink;
+- reuse of the same implementation without a prepared Harness development checkout.
+
+Not yet established for current state acceptance:
+
+- product-quality browser UX;
+- external portable multi-tab and cross-surface session fixtures;
+- migration of Harness-private mapping into `@dsh-std/adapter-dsh`;
 - independent semantic review of every user-visible implementation choice.
 
 Observed failure boundaries:
 
-- the detached Harness source baseline lacked required built vendored/package dependency outputs, so it could not alone satisfy the declared build command;
+- the detached Harness source baseline lacked required built vendored/package dependency outputs, so this concrete cached realization could not be rebuilt there without re-synthesis or a prepared environment;
 - `dsh plugin remove`, followed by `pnpm install` and `pnpm prune`, left an inactive package symlink after every active profile reference was removed;
 - no service or browser was started, and the external multi-tab plus cross-surface session fixture criteria remain unobserved.
