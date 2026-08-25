@@ -20,8 +20,6 @@ export interface RightbarTab {
 
 /** Injected face of the details-column panel entry. */
 export interface PanelInjected {
-  /** Open or close the right column through the official layout service. */
-  setOpen(open: boolean): void
   hooks: {
     /** Live, locale-aware projection of the `rightbar.tab` ledger. */
     tabs: HostObservable<readonly RightbarTab[]>

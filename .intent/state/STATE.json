@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.2.0-draft.6",
+  "revision": "0.2.0-draft.7",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -12,7 +12,8 @@
     "../logs/2026-08-25-lifecycle-experiment.md",
     "../logs/2026-08-25-product-quality-and-adapter-direction.md",
     "../logs/2026-08-25-shell-quality-and-adapter-integration.md",
-    "../logs/2026-08-25-live-web-install.md"
+    "../logs/2026-08-25-live-web-install.md",
+    "../logs/2026-08-26-visual-chrome-revision.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -63,7 +64,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-candidate-003/LOCK.json"
-  ]
+  "candidateLocks": []
 }

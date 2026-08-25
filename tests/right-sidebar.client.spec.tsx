@@ -51,7 +51,7 @@ it('registers and tears down the column, navbar action, tab seat, locale, and st
 })
 
 const copy: Record<string, string> = {
-  title: 'Sidebar', collapse: 'Collapse', expand: 'Expand', empty: 'No sidebar tabs registered',
+  title: 'Sidebar', collapse: 'Collapse', expand: 'Expand',
   loading: 'Loading sidebar content…', failed: 'This sidebar content could not be displayed', retry: 'Retry',
 }
 
@@ -63,7 +63,6 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
   const instance = createRightSidebarStore().create('session-test')
   let rows = initialRows
   const rendered: string[] = []
-  const setOpen = vi.fn()
   const useStore = (<S,>(selector: (state: { activeTab: string }) => S): S =>
     selector(useSyncExternalStore(instance.subscribe, instance.getSnapshot))) as RightSidebarPanelProps['useStore']
   const element = () => <RightSidebarPanel {...({
@@ -74,7 +73,6 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
       rendered.push(options.only ?? '')
       return content?.() ?? <div data-testid="tab-content">{options.only}</div>
     },
-    setOpen,
     t: (key: string) => copy[key] ?? key,
   } as unknown as RightSidebarPanelProps)} />
   const view = render(element())
@@ -82,18 +80,18 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
     ...view,
     instance,
     rendered,
-    setOpen,
     setRows(next: readonly RightbarTab[]) { rows = next; view.rerender(element()) },
   }
 }
 
 describe('RightSidebarPanel', () => {
-  it('is a feature-free platform with a useful empty state and collapse action', () => {
+  it('keeps an empty platform mounted without redundant visible chrome', () => {
     const view = mountPanel([])
-    expect(view.getByText('No sidebar tabs registered')).toBeTruthy()
+    expect(view.container.querySelector('.dsh-rightbar-root')).not.toBeNull()
+    expect(view.queryByText('No sidebar tabs registered')).toBeNull()
+    expect(view.queryByText('Sidebar')).toBeNull()
+    expect(view.queryByRole('button', { name: 'Collapse' })).toBeNull()
     expect(view.queryByRole('tab')).toBeNull()
-    fireEvent.click(view.getByRole('button', { name: 'Collapse' }))
-    expect(view.setOpen).toHaveBeenCalledWith(false)
   })
 
   it('renders only the selected contribution and repairs selection after unload', async () => {

@@ -1,6 +1,6 @@
-# Harness-Base-Commit: b150a551b8d465e31e418e1b2eaf5e79bbb7d28e
-# Harness-Base-Ref: origin/master
-# Purpose: global navbar action slot and independently persisted details width.
+# Harness-Base-Commit: b642a10626a950cc95c2d6f839810cb01fe599fe
+# Harness-Base-Ref: local/master
+# Purpose: right-sidebar layout seat, durable width, unobstructed navbar, and full-edge resize UX.
 # Upgrade policy: rebase this patch manually against the new official Harness commit.
 diff --git a/packages/client/runtime/src/client/contract/store.ts b/packages/client/runtime/src/client/contract/store.ts
 index 0eb7917b03..03c0616d40 100644
@@ -133,11 +133,75 @@ index 3abd0483f2..6be4c7deac 100644
    it('clearPersisted is a no-op without a persist declaration or without storage', () => {
      const inst = declare().create('s1')   // no persist key declared
      expect(() => { inst.clearPersisted() }).not.toThrow()
+diff --git a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
+index 265a0bd802..e547f16f8e 100644
+--- a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
++++ b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
+@@ -28,7 +28,7 @@
+ .header {
+   position: relative;
+   flex: none;
+-  padding: 12px 28px 0 20px;
++  padding: 12px max(28px, var(--dsh-shell-navbar-clearance, 28px)) 0 20px;
+   border-bottom: 1px solid transparent;
+ }
+
 diff --git a/packages/client/ui-layout/src/client/AppFrame.module.css b/packages/client/ui-layout/src/client/AppFrame.module.css
-index ae56780133..fd71a8fa77 100644
+index ae56780133..45c830931d 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.module.css
 +++ b/packages/client/ui-layout/src/client/AppFrame.module.css
-@@ -114,6 +114,17 @@
+@@ -48,9 +48,8 @@
+   border-left: none;
+ }
+
+-/* Drag handles are frame children (columns clip overflow): an 8px hit strip
+-   centered on the column border via inline left, above column content. Details
+-   adds a visible 12x32 pill at vertical center; sidebar keeps only the hit strip. */
++/* Drag handles are frame children (columns clip overflow): an invisible 8px
++   full-height hit strip centered on the column border via inline left. */
+ .handle {
+   position: absolute;
+   top: 0;
+@@ -75,38 +74,6 @@
+   }
+ }
+
+-.handle[data-side='details']::after {
+-  content: '';
+-  position: absolute;
+-  top: 50%;
+-  left: 50%;
+-  transform: translate(-50%, -50%);
+-  width: 12px;
+-  height: 32px;
+-  border-radius: 10px;
+-  box-sizing: border-box;
+-  background: var(--dsw-alias-button-floating-fill);
+-  border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
+-  /* Hover affordance: the details pill hides until the pointer is over its
+-     column, the strip itself, or a drag. */
+-  opacity: 0;
+-  transition:
+-    opacity var(--ds-transition-duration-slow) var(--ds-ease-in-out),
+-    background var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+-}
+-
+-.detailsCol:hover ~ .handle[data-side='details']::after,
+-.handle[data-side='details']:hover::after,
+-.handle[data-side='details'][data-dragging='true']::after {
+-  opacity: 1;
+-}
+-
+-.handle[data-side='details']:hover::after,
+-.handle[data-side='details'][data-dragging='true']::after {
+-  background: var(--dsw-alias-button-floating-hover);
+-  border-color: var(--dsw-alias-border-l3);
+-}
+-
+ .overlayLayer {
+   position: absolute;
+   inset: 0;
+@@ -114,6 +81,17 @@
    pointer-events: none;
  }
 
@@ -156,9 +220,18 @@ index ae56780133..fd71a8fa77 100644
    pointer-events: auto;
  }
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index 2696dc91fa..a01b1132f5 100644
+index 2696dc91fa..fc7c843e1f 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
+@@ -11,7 +11,7 @@
+  * zero self-made hooks.
+  */
+ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+-import type { ReactNode } from 'react'
++import type { CSSProperties, ReactNode } from 'react'
+ import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+ import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+ import type { createLayoutStore } from './stores.ts'
 @@ -20,7 +20,7 @@ import css from './AppFrame.module.css'
  /** Full composed props: runtime share + child-slot render share + store share. */
  export type AppFrameProps =
@@ -168,7 +241,38 @@ index 2696dc91fa..a01b1132f5 100644
    & PropsStore<ReturnType<typeof createLayoutStore>>
 
  /** Center column grid item (session-body building block). */
-@@ -139,7 +139,8 @@ export function AppFrame({
+@@ -96,7 +96,9 @@ export function AppFrame({
+     return current !== undefined && s.byId[current]?.blank === false ? current : undefined
+   })
+   const frameRef = useRef<HTMLDivElement | null>(null)
++  const navbarRef = useRef<HTMLElement | null>(null)
+   const [viewport, setViewport] = useState(() => window.innerWidth)
++  const [navbarWidth, setNavbarWidth] = useState(28)
+
+   const lastSession = useRef(detailsSession)
+   useLayoutEffect(() => {
+@@ -110,6 +112,7 @@ export function AppFrame({
+   // Track the frame's own box (not the window): rAF-throttled ResizeObserver.
+   useEffect(() => {
+     const el = frameRef.current
++    const navbar = navbarRef.current
+     /* v8 ignore next -- the ref is always attached by effect time: the frame div renders unconditionally. */
+     if (el === null) return
+     let raf: number | null = null
+@@ -118,9 +121,12 @@ export function AppFrame({
+         raf = null
+         const width = el.getBoundingClientRect().width
+         if (width > 0) setViewport(width)
++        const nextNavbarWidth = navbar?.getBoundingClientRect().width ?? 0
++        if (nextNavbarWidth > 0) setNavbarWidth(nextNavbarWidth)
+       })
+     })
+     observer.observe(el)
++    if (navbar !== null) observer.observe(navbar)
+     return () => {
+       observer.disconnect()
+       if (raf !== null) cancelAnimationFrame(raf)
+@@ -139,9 +145,11 @@ export function AppFrame({
    const sidebarPreference = sidebarCollapsed
      ? 0
      : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
@@ -177,12 +281,27 @@ index 2696dc91fa..a01b1132f5 100644
 +  const cols = computeColumns(viewport, sidebarPreference, detailsPreference)
    const colsRef = useRef(cols)
    colsRef.current = cols
++  const shellNavbarClearance = cols.details === 0 ? Math.max(28, navbarWidth + 16) : 28
 
-@@ -193,6 +194,13 @@ export function AppFrame({
+   // The drag base is the rendered width captured at drag start (grabbing a
+   // concession-clamped panel must not jump back to the stored preference);
+@@ -165,7 +173,10 @@ export function AppFrame({
+     <div
+       ref={frameRef}
+       className={css.frame}
+-      style={{ gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` }}
++      style={{
++        gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`,
++        '--dsh-shell-navbar-clearance': `${shellNavbarClearance}px`,
++      } as CSSProperties}
+       data-sidebar-collapsed={sidebarCollapsed || undefined}
+       data-details-collapsed={cols.details === 0 || undefined}
+       data-dragging={dragging || undefined}
+@@ -193,6 +204,13 @@ export function AppFrame({
        <div className={css.overlayLayer} data-shell-overlay>
          {renderSlot('shell.overlay', {})}
        </div>
-+      <nav className={css.navbar} aria-label="Application controls" data-shell-navbar>
++      <nav ref={navbarRef} className={css.navbar} aria-label="Application controls" data-shell-navbar>
 +        {renderSlot('shell.navbar.action', {
 +          detailsOpen: cols.details > 0,
 +          openDetails: actions.openDetails,
@@ -343,7 +462,7 @@ index d2de668a9c..af9ec6d9f0 100644
    })
    return handle
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index d865a5c186..f5e5cc8d62 100644
+index d865a5c186..76d50cae65 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 @@ -111,6 +111,7 @@ function drag(handle: Element, fromX: number, toX: number): void {
@@ -354,7 +473,17 @@ index d865a5c186..f5e5cc8d62 100644
    frameWidth = 1920
    selectedSession.current = 's-test' as SessionId
    selectedSessionBlank.current = false
-@@ -142,6 +143,23 @@ describe('AppFrame', () => {
+@@ -121,7 +122,8 @@ beforeEach(() => {
+   vi.stubGlobal('cancelAnimationFrame', (h: number) => { clearTimeout(h) })
+   window.innerWidth = frameWidth
+   Element.prototype.getBoundingClientRect = function () {
+-    return { width: frameWidth, height: 1080, top: 0, left: 0, right: frameWidth, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
++    const width = this instanceof HTMLElement && this.hasAttribute('data-shell-navbar') ? 28 : frameWidth
++    return { width, height: 1080, top: 0, left: 0, right: width, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
+   }
+   // jsdom lacks pointer capture: emulate per-element so hasPointerCapture gates pass.
+   const captured = new WeakSet<Element>()
+@@ -142,6 +144,33 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 0])
    })
 
@@ -375,10 +504,20 @@ index d865a5c186..f5e5cc8d62 100644
 +    expect(owner().detailsOpen).toBe(false)
 +  })
 +
++  it('reserves measured navbar room only while details are collapsed', () => {
++    const { frame, instance } = mountFrame()
++    act(() => { fireResize?.(); vi.advanceTimersByTime(20) })
++    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('44px')
++    act(() => { instance.actions.openDetails() })
++    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('28px')
++    act(() => { instance.actions.closeDetails() })
++    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('44px')
++  })
++
    it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
      const { slotCalls, getByTestId } = mountFrame()
      expect(getByTestId('center-content')).toBeTruthy()
-@@ -188,7 +206,7 @@ describe('AppFrame', () => {
+@@ -188,7 +217,7 @@ describe('AppFrame', () => {
      selectedSessionBlank.current = true
      act(() => { rerenderFrame() })
      expect(tracks(frame)).toEqual([280, 0])
@@ -387,7 +526,7 @@ index d865a5c186..f5e5cc8d62 100644
 
      selectedSession.current = 's-next' as SessionId
      selectedSessionBlank.current = false
-@@ -207,7 +225,7 @@ describe('AppFrame', () => {
+@@ -207,7 +236,7 @@ describe('AppFrame', () => {
      selectedSession.current = undefined
      const { frame, instance, rerenderFrame } = mountFrame()
      expect(tracks(frame)).toEqual([280, 0])
@@ -396,7 +535,7 @@ index d865a5c186..f5e5cc8d62 100644
 
      selectedSession.current = 's-first' as SessionId
      act(() => { rerenderFrame() })
-@@ -241,7 +259,7 @@ describe('AppFrame', () => {
+@@ -241,7 +270,7 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 330])
      const handles = frame.querySelectorAll('[class*="handle"]')
      drag(handles[1]!, 920, 930) // shrink by 10 from the rendered width

@@ -57,11 +57,6 @@ export function apply(ctx: ClientContext): void {
     },
   }
 
-  const setOpen = (open: boolean): void => {
-    if (open) ctx.layout.openDetails()
-    else ctx.layout.closeDetails()
-  }
-
   ctx.effect(() => {
     const offLocale = ctx.locale.register(NS, { zh, en })
     const style = document.createElement('style')
@@ -84,7 +79,7 @@ export function apply(ctx: ClientContext): void {
       'rightbar.tab': { kind: 'list', scope: 'session' },
     },
     store,
-    inject: (): PanelInjected => ({ setOpen, hooks: { tabs } }),
+    inject: (): PanelInjected => ({ hooks: { tabs } }),
   }, RightSidebarPanel))
 
   // Root-scoped global navbar toggle; visibility comes from owner props.
