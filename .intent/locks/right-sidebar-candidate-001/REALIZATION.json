@@ -1,0 +1,40 @@
+{
+  "$schema": "dsh-right-sidebar/realization-manifest/0.1",
+  "source": {
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "6b2b58863f0c6d5c94000a0e3be54f23227ce2dc"
+  },
+  "installation": {
+    "build": "DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh",
+    "profileAdd": "dsh plugin --profile web add <checkout>",
+    "profileInspect": "dsh --profile web --dump-config",
+    "service": "dsh-web",
+    "restartRequiresAuthority": true
+  },
+  "ownership": {
+    "profilePackage": "@dsh-external/dsh-right-sidebar",
+    "generatedPaths": [
+      "lib",
+      "*.tsbuildinfo"
+    ],
+    "harnessContribution": {
+      "baselineCommit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+      "patchPathAtSourceCommit": "patches/deepseek-harness.patch",
+      "applyOnlyAfterCheck": "git apply --check <patch>",
+      "scope": "only hunks attributable to this patch"
+    }
+  },
+  "maintenance": {
+    "onSourceOrTargetDrift": "Re-investigate current state and re-synthesize the owned contribution; do not silently reuse this candidate.",
+    "preserveUnrelatedChanges": true
+  },
+  "uninstall": {
+    "profileRemove": "dsh plugin --profile web remove @dsh-external/dsh-right-sidebar",
+    "harnessPatchRemoval": "Re-synthesize the current Harness target without this patch; reverse-apply only after proving owned hunks are unchanged and unrelated later changes are preserved.",
+    "deleteSourceCheckout": false
+  },
+  "knownLimits": [
+    "No clean install-drift-maintain-uninstall experiment has been performed for this exact commit.",
+    "The separate Harness target is described here but is not a second mechanically validated protocol target."
+  ]
+}

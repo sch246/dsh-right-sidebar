@@ -1,0 +1,103 @@
+{
+  "kind": "realization",
+  "id": "dsh-right-sidebar-candidate-001",
+  "revision": "0.1.0-candidate.1",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.2.0-draft.2"
+  },
+  "state": {
+    "revision": "0.2.0-draft.2",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:ad81870e4fe70c7f3079c2a011ab7763e14d1c0db7be961b66012578a4a1bfad"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:d9bc5858430c105d1f1d23cf3b064e4ee42cd68b015c9e06f3862e2e892bcc3a"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "6b2b58863f0c6d5c94000a0e3be54f23227ce2dc",
+    "paths": [
+      ".gitignore",
+      "AGENTS.md",
+      "HANDOFF.md",
+      "LICENSE",
+      "PROPOSAL.md",
+      "README.md",
+      "cordis.patch.yml",
+      "package.json",
+      "patches",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "EVIDENCE.md",
+      "digest": "sha256:bed9e098d8cde4db3816a7011ee821c07b063d20ea8f4cd14329fc077964b4a4"
+    },
+    {
+      "path": "REALIZATION.json",
+      "digest": "sha256:39c4e255e23337ed21b8f83c4dcb6c2b773a052064b921875d3294797b154211"
+    }
+  ],
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "candidate-build-and-unit-tests",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "build, two TypeScript checks, and six component tests passed"
+      },
+      {
+        "id": "harness-patch-baseline-check",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "patch applies cleanly to the declared Harness baseline"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "clean install from the published Git reference",
+    "maintenance after real source, target, or profile drift",
+    "ownership-preserving uninstall from a modified target",
+    "independent semantic review of provisional user-visible choices",
+    "machine-checked composition across the plugin and Harness repositories"
+  ]
+}
