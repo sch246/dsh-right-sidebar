@@ -53,6 +53,8 @@ Harness 补丁由 `ui-layout` 自己持久化最后一次非零宽度：通用 s
 
 右栏平台提供接入规则，不解释功能状态。需要双向交互的功能插件在自己的 `apply()` 中创建一个 session-scoped store handle，并把同一个 handle 传给主界面贡献和 `rightbar.tab` 贡献。两处都通过 `useStore` 读取、通过声明的 actions 修改，因此任一侧点击产生的状态变化都会同步到另一侧。
 
+通过 `@dsh-std/ui-browser` 接入的可移植右栏组件会收到 `SidebarViewProps.sessionId`。该值只是功能插件划分自有状态的会话键；主界面贡献仍需通过它所使用的 surface 协议获得同一 session identity。右栏 shell 和 adapter 不持有功能状态，也不解释折叠、跳转或选择语义。
+
 例如，功能插件可以在自己的 store 中定义消息折叠集合、跳转目标或活动 session 视图；这些字段及其语义由该功能插件拥有，不属于 `dsh-right-sidebar`。测试夹具可以使用简单的选择值证明双向同步，但生产包不附带示例功能标签。
 
 主界面贡献优先使用现有 additive slots，例如 `conversation.view` 或 `conversation.chat.node`。若功能必须控制官方 ChatView 本身的消息折叠、滚动定位或视图选择，Harness 必须先提供公开的 session-scoped action API；右栏插件不得操作 DOM、导入 `ui-conversation` 私有 store 或复制 ChatView。该 API 只暴露定位和展示动作，业务状态仍由调用方拥有。

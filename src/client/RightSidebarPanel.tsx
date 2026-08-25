@@ -3,10 +3,11 @@
  * control. Reads the tab ledger through the framework-bound injected Hook and
  * renders the active entry via `only: <id>`.
  */
-import { useEffect, useId, useRef } from 'react'
+import { Suspense, useEffect, useId, useRef } from 'react'
 import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import { createRightSidebarStore } from './stores'
 import type { PanelInjected } from './contract'
+import { SidebarContentBoundary } from './SidebarContentBoundary'
 
 /** Full composed props: runtime share + tab render share + store + injected face + locale. */
 export type RightSidebarPanelProps =
@@ -28,7 +29,12 @@ export function RightSidebarPanel({ useStore, actions, renderSlot, setOpen, useT
   // session store on the same tab id.
   useEffect(() => {
     const next = selected?.id ?? ''
-    if (next !== activeTab) actions.setActiveTab(next)
+    if (next !== activeTab) {
+      actions.setActiveTab(next)
+      if (activeTab !== '') {
+        tabRefs.current[tabList.findIndex(tab => tab.id === next)]?.focus()
+      }
+    }
   }, [actions, activeTab, selected?.id])
 
   return (
@@ -56,7 +62,7 @@ export function RightSidebarPanel({ useStore, actions, renderSlot, setOpen, useT
             type="button"
             role="tab"
             aria-selected={tab.id === selected?.id}
-            aria-controls={`${tabsId}-panel-${tab.id}`}
+            aria-controls={tab.id === selected?.id ? `${tabsId}-panel-${tab.id}` : undefined}
             tabIndex={tab.id === selected?.id ? 0 : -1}
             className="dsh-rightbar-tab"
             data-active={tab.id === selected?.id ? 'true' : undefined}
@@ -89,10 +95,24 @@ export function RightSidebarPanel({ useStore, actions, renderSlot, setOpen, useT
       >
         {selected === undefined
           ? <div className="dsh-rightbar-empty">{t('empty')}</div>
-          : renderSlot('rightbar.tab', {}, {
-            only: selected.id,
-            fallback: <div className="dsh-rightbar-empty">{t('empty')}</div>,
-          })}
+          : (
+            <SidebarContentBoundary
+              resetKey={selected.id}
+              fallback={retry => (
+                <div className="dsh-rightbar-state" role="alert">
+                  <span>{t('failed')}</span>
+                  <button type="button" className="dsh-rightbar-retry" onClick={retry}>{t('retry')}</button>
+                </div>
+              )}
+            >
+              <Suspense fallback={<div className="dsh-rightbar-state" role="status">{t('loading')}</div>}>
+                {renderSlot('rightbar.tab', {}, {
+                  only: selected.id,
+                  fallback: <div className="dsh-rightbar-empty">{t('empty')}</div>,
+                })}
+              </Suspense>
+            </SidebarContentBoundary>
+          )}
       </div>
     </div>
   )

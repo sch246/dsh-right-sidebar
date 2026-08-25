@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
-import { useSyncExternalStore } from 'react'
+import { lazy, useSyncExternalStore } from 'react'
 import { Context } from 'cordis'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
@@ -52,9 +52,14 @@ it('registers and tears down the column, navbar action, tab seat, locale, and st
 
 const copy: Record<string, string> = {
   title: 'Sidebar', collapse: 'Collapse', expand: 'Expand', empty: 'No sidebar tabs registered',
+  loading: 'Loading sidebar content…', failed: 'This sidebar content could not be displayed', retry: 'Retry',
 }
 
-function mountPanel(initialRows: readonly RightbarTab[]) {
+function tab(id: string, label: string): RightbarTab {
+  return { id, label }
+}
+
+function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.ReactNode) {
   const instance = createRightSidebarStore().create('session-test')
   let rows = initialRows
   const rendered: string[] = []
@@ -67,7 +72,7 @@ function mountPanel(initialRows: readonly RightbarTab[]) {
     useTabs: (selector: (value: readonly RightbarTab[]) => unknown) => selector(rows),
     renderSlot: (_name: string, _owner: object, options: { only?: string }) => {
       rendered.push(options.only ?? '')
-      return <div data-testid="tab-content">{options.only}</div>
+      return content?.() ?? <div data-testid="tab-content">{options.only}</div>
     },
     setOpen,
     t: (key: string) => copy[key] ?? key,
@@ -92,25 +97,68 @@ describe('RightSidebarPanel', () => {
   })
 
   it('renders only the selected contribution and repairs selection after unload', async () => {
-    const view = mountPanel([{ id: 'files', label: 'Files' }, { id: 'outline', label: 'Outline' }])
+    const view = mountPanel([tab('files', 'Files'), tab('outline', 'Outline')])
     expect(view.getByTestId('tab-content').textContent).toBe('files')
     fireEvent.click(view.getByRole('tab', { name: 'Outline' }))
+    view.getByRole('tab', { name: 'Outline' }).focus()
     expect(view.getByTestId('tab-content').textContent).toBe('outline')
     expect(view.instance.getSnapshot().activeTab).toBe('outline')
 
-    view.setRows([{ id: 'files', label: 'Files' }])
+    view.setRows([tab('files', 'Files')])
     expect(view.getByTestId('tab-content').textContent).toBe('files')
-    await waitFor(() => { expect(view.instance.getSnapshot().activeTab).toBe('files') })
+    await waitFor(() => {
+      expect(view.instance.getSnapshot().activeTab).toBe('files')
+      expect(document.activeElement).toBe(view.getByRole('tab', { name: 'Files' }))
+    })
   })
 
   it('supports arrow-key tab navigation', () => {
-    const view = mountPanel([{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }])
+    const view = mountPanel([tab('one', 'One'), tab('two', 'Two')])
     const first = view.getByRole('tab', { name: 'One' })
     const second = view.getByRole('tab', { name: 'Two' })
     first.focus()
     fireEvent.keyDown(first, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(second)
     expect(view.instance.getSnapshot().activeTab).toBe('two')
+    expect(first.hasAttribute('aria-controls')).toBe(false)
+    const controlled = second.getAttribute('aria-controls')
+    expect(controlled).not.toBeNull()
+    expect(document.getElementById(controlled!)).not.toBeNull()
+  })
+
+  it('shows a loading state for a suspended contribution', () => {
+    const Pending = lazy(() => new Promise<never>(() => {}))
+    const view = mountPanel([tab('slow', 'Slow')], () => <Pending />)
+    expect(view.getByRole('status').textContent).toBe('Loading sidebar content…')
+  })
+
+  it('contains a contribution failure and retries it in place', () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const silenceFixtureError = (event: ErrorEvent): void => { event.preventDefault() }
+    window.addEventListener('error', silenceFixtureError)
+    let failing = true
+    function Unstable() {
+      if (failing) throw new Error('fixture failure')
+      return <div>Recovered content</div>
+    }
+    const view = mountPanel([tab('unstable', 'Unstable')], () => <Unstable />)
+    expect(view.getByRole('alert').textContent).toContain('could not be displayed')
+    failing = false
+    fireEvent.click(view.getByRole('button', { name: 'Retry' }))
+    expect(view.getByText('Recovered content')).toBeTruthy()
+    window.removeEventListener('error', silenceFixtureError)
+    report.mockRestore()
+  })
+
+  it('contains an undefined thrown value', () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const silenceFixtureError = (event: ErrorEvent): void => { event.preventDefault() }
+    window.addEventListener('error', silenceFixtureError)
+    function UndefinedFailure(): never { throw undefined }
+    const view = mountPanel([tab('undefined-failure', 'Undefined failure')], () => <UndefinedFailure />)
+    expect(view.getByRole('alert').textContent).toContain('could not be displayed')
+    window.removeEventListener('error', silenceFixtureError)
+    report.mockRestore()
   })
 })
 

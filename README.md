@@ -4,7 +4,7 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 
 本包不内置审阅、终端、浏览器、文件、Git、工具详情或其他业务标签。功能插件拥有自己的状态和动作，并可同时向主界面与 `rightbar.tab` 注册 UI，使两处通过同一个 session-scoped store 保持同步。
 
-当前意图、约束与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。当前实现已经通过构建、组件测试、profile `link:` 安装和真实浏览器交互验证；验证记录见 [HANDOFF.md](HANDOFF.md)。
+当前意图、约束与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。当前候选的早期基线通过了 profile `link:` 安装和真实浏览器交互验证；当前质量与 adapter 集成切片只完成了本地构建和自动化测试，尚未重新改动 live profile 或服务。历史验证记录见 [HANDOFF.md](HANDOFF.md)。
 
 ## 目标交互
 
@@ -21,7 +21,7 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 ```bash
 cd /root/dsh-right-sidebar
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
-npm test
+DSH_CHECKOUT=/root/deepseek-harness DSH_STD_CHECKOUT=/root/dsh-std npm test
 ```
 
 然后使用与 `dsh-warm-minimal` 相同的 profile link 模型：
