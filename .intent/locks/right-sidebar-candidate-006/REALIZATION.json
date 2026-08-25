@@ -1,0 +1,58 @@
+{
+  "$schema": "dsh-right-sidebar/realization-manifest/0.2",
+  "source": {
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "aa4baa3660f0ab7a06793baf576166340343bd09"
+  },
+  "portableContract": {
+    "uri": "file:///root/dsh-std",
+    "commit": "580b330323c13ec568adab2c35fabf8f8fa6b194",
+    "coordinate": "browser.ui.dsh/v1alpha1 SidebarView",
+    "mappingOwner": "@dsh-std/adapter-dsh"
+  },
+  "installation": {
+    "build": "DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh",
+    "test": "DSH_CHECKOUT=/root/deepseek-harness DSH_STD_CHECKOUT=/root/dsh-std npm test",
+    "profileAdd": "dsh plugin --profile <profile> add <checkout>",
+    "profileInspect": "dsh --profile <profile> --dump-config",
+    "service": "dsh-web",
+    "restartRequiresAuthority": true
+  },
+  "observedAssembly": {
+    "profile": "web",
+    "shell": "link:/root/dsh-right-sidebar",
+    "adapter": "link:/root/dsh-std/packages/adapter-dsh",
+    "service": "active after authorized restart",
+    "http": "the public application and revised shell, layout and conversation bundles returned 200",
+    "bundleEvidence": "12px navbar inset and clearance producer present; 32px borderless and shadowless shell toggle present",
+    "browserExecution": "user observed the deployed sidebar running; no automated browser trace retained"
+  },
+  "ownership": {
+    "profilePackage": "@dsh-external/dsh-right-sidebar",
+    "generatedPaths": ["lib", "*.tsbuildinfo"],
+    "harnessContribution": {
+      "baselineCommit": "b642a10626a950cc95c2d6f839810cb01fe599fe",
+      "patchPathAtSourceCommit": "patches/deepseek-harness.patch",
+      "scope": "transitional shell and layout preconditions owned by this package"
+    }
+  },
+  "maintenance": {
+    "onSourceOrTargetDrift": "Re-investigate current state and re-synthesize the owned contribution; do not silently reuse this candidate.",
+    "onStandardContractChange": "Re-evaluate the portable fixture and adapter mapping before updating this shell lock.",
+    "preserveUnrelatedChanges": true,
+    "targetBoundary": "Retire the direct Harness patch only after adapter-managed end-to-end acceptance."
+  },
+  "uninstall": {
+    "profileRemove": "dsh plugin --profile <profile> remove @dsh-external/dsh-right-sidebar",
+    "harnessPatchRemoval": "Re-synthesize the current Harness target without this patch; reverse-apply only after proving owned hunks are unchanged and unrelated later changes are preserved.",
+    "deleteSourceCheckout": false
+  },
+  "knownLimits": [
+    "C6 reuses the C5 source commit; its DSH standard dependency remains a local candidate commit.",
+    "Production profile discovery and module serving pass, but no controllable browser executed the live renderer.",
+    "Two-way main/sidebar feature state and session isolation are not yet exercised.",
+    "The user observed the live shell, but no automated browser trace covers a real contributed feature tab.",
+    "C6 target drift maintenance and uninstall are not yet exercised.",
+    "The direct Harness patch remains transitional ownership outside the standard adapter lock."
+  ]
+}
