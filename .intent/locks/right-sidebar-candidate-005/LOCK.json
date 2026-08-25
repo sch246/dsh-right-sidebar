@@ -1,0 +1,156 @@
+{
+  "kind": "realization",
+  "id": "dsh-right-sidebar-candidate-005",
+  "revision": "0.2.0-candidate.4",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.2.0-draft.10"
+  },
+  "state": {
+    "revision": "0.2.0-draft.10",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:0c992f4e05903fd5702bdc23595a06de2fe4a828b33c7c0609d1e8b5ff5d3944"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:83fc9d89c67a3e473d07b7f3d81724f5de8db33f151cec51ca33ba9b33fa2653"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
+    },
+    {
+      "path": "../../logs/2026-08-25-shell-quality-and-adapter-integration.md",
+      "digest": "sha256:1b33cebe1bb23d7799ab8ddd750aba6fb0be50b85350747f5abd962ead7fec47"
+    },
+    {
+      "path": "../../logs/2026-08-25-live-web-install.md",
+      "digest": "sha256:d72a59be471c3b6d3741a449a242ea3c4f46344d5183c00e1ab95598ea92d3d3"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-revision.md",
+      "digest": "sha256:ecf2a10118f7c6a89e7f3a57d4671b09c339040af6189a4680c73c173a5cd204"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-deployment.md",
+      "digest": "sha256:291d80ba9d341b7696b0f974612a99e2b98771e4259462d4abfaba5a44405920"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-alignment.md",
+      "digest": "sha256:675d1b94e327d99ea29ff21f2c0bda2dbde2fae2aca36e618d996d4cc99df243"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-deployment.md",
+      "digest": "sha256:6bf19f19057d9ad85f784edd4c22c5969603a26ade27f2436daa5b2d231a902d"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "aa4baa3660f0ab7a06793baf576166340343bd09",
+    "paths": [
+      ".gitignore",
+      "AGENTS.md",
+      "HANDOFF.md",
+      "LICENSE",
+      "PROPOSAL.md",
+      "README.md",
+      "cordis.patch.yml",
+      "package.json",
+      "patches",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "EVIDENCE.md",
+      "digest": "sha256:5a3d579d5a309a7258341678c11f2ff94b0728be53acc2e350a33b3eb6121077"
+    },
+    {
+      "path": "LIFECYCLE-EVIDENCE.md",
+      "digest": "sha256:40ff5c1c4a4397b39097d31c230e1fae7fe005999bf4c4c55c800acb3b5c0379"
+    },
+    {
+      "path": "LIVE-EVIDENCE.md",
+      "digest": "sha256:467112ffa97a1de62ef0747b1e075cb911ca56fa1d139c0a3fa201f9db106c1d"
+    },
+    {
+      "path": "REALIZATION.json",
+      "digest": "sha256:5b180ce85c4484e5558ac032f25acf8f786538648c477bc1ee87478585e4581f"
+    }
+  ],
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "shell-quality-component-tests",
+        "observedOn": "2026-08-26",
+        "artifact": "EVIDENCE.md",
+        "result": "build and 11 shell/integration tests passed, including navbar geometry and resting-style declarations"
+      },
+      {
+        "id": "portable-adapter-owner-lifecycle",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "portable two-view fixture passed through the real adapter runtime, slot registry and shell owner with owner-generation cleanup"
+      },
+      {
+        "id": "visual-chrome-layout-regressions",
+        "observedOn": "2026-08-26",
+        "artifact": "EVIDENCE.md",
+        "result": "60 ui-layout tests passed with a measured 32-pixel navbar, 48-pixel collapsed clearance and full-edge resize behavior"
+      },
+      {
+        "id": "live-web-profile-assembly",
+        "observedOn": "2026-08-26",
+        "artifact": "LIVE-EVIDENCE.md",
+        "result": "linked shell and affected Harness clients were rebuilt, dsh-web restarted active, public delivery returned 200, and served bundles contain the intended producer/consumer while omitting redundant chrome"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "browser client execution and visible interaction acceptance",
+    "two-way main/sidebar state synchronization and session isolation",
+    "Harness drift maintenance and uninstall",
+    "migration and removal of the direct sidebar-owned Harness patch",
+    "machine-checked adapter ownership of Harness target effects",
+    "remote availability of the local standard contract commit"
+  ]
+}
