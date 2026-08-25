@@ -1,0 +1,134 @@
+{
+  "kind": "realization",
+  "id": "dsh-right-sidebar-candidate-003",
+  "revision": "0.2.0-candidate.2",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.2.0-draft.6"
+  },
+  "state": {
+    "revision": "0.2.0-draft.6",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:4cb517717d1593f9173b0385ef47df10117c120df03bd6db601b5c8cf885e59c"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:a8b0098fd4b1582388b69ca71c653550f36867186ba5ba2ee50c3dfab34b835e"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
+    },
+    {
+      "path": "../../logs/2026-08-25-shell-quality-and-adapter-integration.md",
+      "digest": "sha256:1b33cebe1bb23d7799ab8ddd750aba6fb0be50b85350747f5abd962ead7fec47"
+    },
+    {
+      "path": "../../logs/2026-08-25-live-web-install.md",
+      "digest": "sha256:d72a59be471c3b6d3741a449a242ea3c4f46344d5183c00e1ab95598ea92d3d3"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "a522fb187a8afef060216f919ec32448caf98129",
+    "paths": [
+      ".gitignore",
+      "AGENTS.md",
+      "HANDOFF.md",
+      "LICENSE",
+      "PROPOSAL.md",
+      "README.md",
+      "cordis.patch.yml",
+      "package.json",
+      "patches",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "EVIDENCE.md",
+      "digest": "sha256:81b5a1ad95ee415cce790587842f1c2a164b64e69cc14cbb82d26e2e7ce3902c"
+    },
+    {
+      "path": "LIFECYCLE-EVIDENCE.md",
+      "digest": "sha256:9cca1093e05a545e5eeca4201e1246a3baba4c2eebcbb7523e7882e95a28ac53"
+    },
+    {
+      "path": "LIVE-EVIDENCE.md",
+      "digest": "sha256:96cf45340fdf597e19374993dbe4b4f146977a34fcb6ee37448889f356912ef7"
+    },
+    {
+      "path": "REALIZATION.json",
+      "digest": "sha256:7c5c33cfa6e5dbe7f5ccaf062ab3ccd0804f5b180663560b4250dcb74f00dfe3"
+    }
+  ],
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "shell-quality-component-tests",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "build and 10 shell/integration tests passed"
+      },
+      {
+        "id": "portable-adapter-owner-lifecycle",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "portable two-view fixture passed through the real adapter runtime, slot registry and shell owner with owner-generation cleanup"
+      },
+      {
+        "id": "live-web-profile-assembly",
+        "observedOn": "2026-08-25",
+        "artifact": "LIVE-EVIDENCE.md",
+        "result": "linked shell and adapter were assembled into the web profile, dsh-web restarted active, and the shell plus both client entries returned HTTP 200"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "browser client execution and visible interaction acceptance",
+    "two-way main/sidebar state synchronization and session isolation",
+    "Harness drift maintenance and uninstall",
+    "migration and removal of the direct sidebar-owned Harness patch",
+    "machine-checked adapter ownership of Harness target effects",
+    "remote availability of the local standard contract commit"
+  ]
+}
