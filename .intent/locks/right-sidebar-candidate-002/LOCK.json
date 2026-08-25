@@ -1,0 +1,120 @@
+{
+  "kind": "realization",
+  "id": "dsh-right-sidebar-candidate-002",
+  "revision": "0.2.0-candidate.1",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.2.0-draft.5"
+  },
+  "state": {
+    "revision": "0.2.0-draft.5",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:6fa1625134cc9815556485b6f0850e72092172e8cc4a3e76cd96614927a65337"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:b918f30822afe2afcf13fe8e380f15e851abe0dc1c90f45eaacfc6177e0aa26b"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
+    },
+    {
+      "path": "../../logs/2026-08-25-shell-quality-and-adapter-integration.md",
+      "digest": "sha256:1b33cebe1bb23d7799ab8ddd750aba6fb0be50b85350747f5abd962ead7fec47"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "a522fb187a8afef060216f919ec32448caf98129",
+    "paths": [
+      ".gitignore",
+      "AGENTS.md",
+      "HANDOFF.md",
+      "LICENSE",
+      "PROPOSAL.md",
+      "README.md",
+      "cordis.patch.yml",
+      "package.json",
+      "patches",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "EVIDENCE.md",
+      "digest": "sha256:06c2c7f7f4ac102afdfb16f2e65c9a390e3b6854ce69dd03e7c9682b22d3a58b"
+    },
+    {
+      "path": "LIFECYCLE-EVIDENCE.md",
+      "digest": "sha256:1849a6dcab40cfed057a3c500c21e0fcc1bf02c70e8d0e913ce383ba6d2dac0f"
+    },
+    {
+      "path": "REALIZATION.json",
+      "digest": "sha256:cd80df450bfe5c438532ae59d0739779b254502ef65837f94c064d2f6cec565a"
+    }
+  ],
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "shell-quality-component-tests",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "build and 10 shell/integration tests passed"
+      },
+      {
+        "id": "portable-adapter-owner-lifecycle",
+        "observedOn": "2026-08-25",
+        "artifact": "EVIDENCE.md",
+        "result": "portable two-view fixture passed through the real adapter runtime, slot registry and shell owner with owner-generation cleanup"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "browser and production module-loader acceptance",
+    "two-way main/sidebar state synchronization and session isolation",
+    "C2 link installation, Harness drift maintenance and uninstall",
+    "migration and removal of the direct sidebar-owned Harness patch",
+    "machine-checked adapter ownership of Harness target effects",
+    "remote availability of the local standard contract commit"
+  ]
+}
