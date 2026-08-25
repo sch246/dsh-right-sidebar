@@ -1,0 +1,824 @@
+# Harness-Base-Commit: b150a551b8d465e31e418e1b2eaf5e79bbb7d28e
+# Harness-Base-Ref: origin/master
+# Purpose: global navbar action slot and independently persisted details width.
+# Upgrade policy: rebase this patch manually against the new official Harness commit.
+diff --git a/packages/client/runtime/src/client/contract/store.ts b/packages/client/runtime/src/client/contract/store.ts
+index 0eb7917b03..03c0616d40 100644
+--- a/packages/client/runtime/src/client/contract/store.ts
++++ b/packages/client/runtime/src/client/contract/store.ts
+@@ -20,7 +20,7 @@ import type {
+ // Store contract types are ui-slots authority; re-exported beside the engine
+ // so store consumers get one import path.
+ export type {
+-  ActionsDecl, BakedActions, BoundActions, StoreFactory, StoreHandle, StoreInstance, StoreSpec,
++  ActionsDecl, BakedActions, BoundActions, StoreFactory, StoreHandle, StoreInstance, StorePersistence, StoreSpec,
+ } from '@deepseek-ai/dsh-client-ui-slots'
+
+ /** Minimal observable snapshot source: Session objects and snapshot stores both satisfy it. */
+@@ -84,12 +84,14 @@ function rafBatch(notify: () => void): () => void {
+  * @returns the store.
+  */
+ export function createSnapshotStore<T>(
+-  init: T, opts?: { flush?: 'raf' | 'sync'; persist?: { name: string } }): SnapshotStore<T> {
++  init: T,
++  opts?: { flush?: 'raf' | 'sync'; persist?: { name: string; keys?: readonly (keyof T)[] } },
++): SnapshotStore<T> {
+   // Immer enters through produce() in update() below (identical semantics to
+   // the immer middleware without its setState-signature mutator generics).
+   const withSelector = subscribeWithSelector(() => init)
+   const api: StoreApi<T> = createStore<T>()(withSelector)
+-  if (opts?.persist) attachPersistence(api, opts.persist.name)
++  if (opts?.persist) attachPersistence(api, opts.persist)
+
+   let subscribe = (fn: () => void) => api.subscribe(fn)
+   if (opts?.flush === 'raf') {
+@@ -124,7 +126,11 @@ export function createSnapshotStore<T>(
+  * because the corruption happens before serialization. Storage failures
+  * (quota, private mode) only disable persistence, never break the store.
+  */
+-function attachPersistence<T>(api: StoreApi<T>, name: string): void {
++function attachPersistence<T>(
++  api: StoreApi<T>,
++  options: { name: string; keys?: readonly (keyof T)[] },
++): void {
++  const { name, keys } = options
+   // Non-browser runs (node e2e booting the client tree) have no localStorage:
+   // persistence silently disables — same contract as a storage failure, minus
+   // the per-store console noise a ReferenceError would produce.
+@@ -132,14 +138,33 @@ function attachPersistence<T>(api: StoreApi<T>, name: string): void {
+   try {
+     const raw = localStorage.getItem(name)
+     if (raw !== null) {
+-      api.setState(devFreeze(JSON.parse(raw) as T), true)
++      const stored = JSON.parse(raw) as T
++      if (keys === undefined) {
++        api.setState(devFreeze(stored), true)
++      } else {
++        const initial = api.getState()
++        if (typeof initial !== 'object' || initial === null || typeof stored !== 'object' || stored === null) {
++          throw new TypeError(`snapshot store '${name}' keyed persistence requires object state`)
++        }
++        const revived = { ...initial } as T
++        for (const key of keys) {
++          if (Object.hasOwn(stored, key)) revived[key] = stored[key]
++        }
++        api.setState(devFreeze(revived), true)
++      }
+     }
+   } catch (error) {
+     console.error(`snapshot store '${name}' rehydration failed:`, error)
+   }
+   api.subscribe((state) => {
+     try {
+-      localStorage.setItem(name, JSON.stringify(state))
++      if (keys === undefined) {
++        localStorage.setItem(name, JSON.stringify(state))
++      } else {
++        const durable: Partial<T> = {}
++        for (const key of keys) durable[key] = state[key]
++        localStorage.setItem(name, JSON.stringify(durable))
++      }
+     } catch (error) {
+       console.error(`snapshot store '${name}' persistence failed:`, error)
+     }
+@@ -211,10 +236,15 @@ export function defineStore<T, A extends ActionsDecl<T>>(
+     create(scopeKey?: string): EngineStoreInstance<T, A> {
+       const persistKey = decl.persist === undefined
+         ? undefined
+-        : scopeKey === undefined ? decl.persist : `${decl.persist}.${scopeKey}`
++        : scopeKey === undefined
++          ? typeof decl.persist === 'string' ? decl.persist : decl.persist.name
++          : `${typeof decl.persist === 'string' ? decl.persist : decl.persist.name}.${scopeKey}`
++      const persistKeys = typeof decl.persist === 'object' ? decl.persist.keys : undefined
+       const store = createSnapshotStore<T>(
+         decl.init(),
+-        persistKey !== undefined ? { persist: { name: persistKey } } : undefined)
++        persistKey !== undefined
++          ? { persist: persistKeys === undefined ? { name: persistKey } : { name: persistKey, keys: persistKeys } }
++          : undefined)
+       const actions = {} as Record<string, (...params: unknown[]) => void>
+       for (const key of Object.keys(decl.actions)) {
+         const mutate = decl.actions[key] as (draft: T, ...params: unknown[]) => void
+diff --git a/packages/client/runtime/tests/store.client.spec.ts b/packages/client/runtime/tests/store.client.spec.ts
+index 3abd0483f2..6be4c7deac 100644
+--- a/packages/client/runtime/tests/store.client.spec.ts
++++ b/packages/client/runtime/tests/store.client.spec.ts
+@@ -188,6 +188,29 @@ describe('defineStore', () => {
+     expect(backing.has('spec.chat')).toBe(true)
+   })
+
++  it('persists selected top-level keys and overlays them onto fresh transient defaults', () => {
++    const backing = new Map<string, string>()
++    vi.stubGlobal('localStorage', {
++      getItem: (k: string) => backing.get(k) ?? null,
++      setItem: (k: string, v: string) => { backing.set(k, v) },
++      removeItem: (k: string) => { backing.delete(k) },
++    })
++    const handle = defineStore({
++      init: () => ({ width: 360, open: false, transient: 'fresh' }),
++      persist: { name: 'spec.partial', keys: ['width'] },
++      actions: {
++        setWidth: (d, width: number) => { d.width = width },
++        open: (d) => { d.open = true; d.transient = 'stale' },
++      },
++    })
++    const first = handle.create()
++    first.actions.setWidth(512)
++    first.actions.open()
++    expect(JSON.parse(backing.get('spec.partial')!)).toEqual({ width: 512 })
++    const revived = handle.create()
++    expect(revived.getSnapshot()).toEqual({ width: 512, open: false, transient: 'fresh' })
++  })
++
+   it('clearPersisted is a no-op without a persist declaration or without storage', () => {
+     const inst = declare().create('s1')   // no persist key declared
+     expect(() => { inst.clearPersisted() }).not.toThrow()
+diff --git a/packages/client/ui-layout/src/client/AppFrame.module.css b/packages/client/ui-layout/src/client/AppFrame.module.css
+index ae56780133..fd71a8fa77 100644
+--- a/packages/client/ui-layout/src/client/AppFrame.module.css
++++ b/packages/client/ui-layout/src/client/AppFrame.module.css
+@@ -114,6 +114,17 @@
+   pointer-events: none;
+ }
+
++.navbar {
++  position: absolute;
++  z-index: 30;
++  top: 8px;
++  right: 8px;
++  display: flex;
++  align-items: center;
++  gap: 4px;
++  pointer-events: auto;
++}
++
+ .overlayLayer > * {
+   pointer-events: auto;
+ }
+diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
+index 2696dc91fa..a01b1132f5 100644
+--- a/packages/client/ui-layout/src/client/AppFrame.tsx
++++ b/packages/client/ui-layout/src/client/AppFrame.tsx
+@@ -20,7 +20,7 @@ import css from './AppFrame.module.css'
+ /** Full composed props: runtime share + child-slot render share + store share. */
+ export type AppFrameProps =
+   & PropsRuntime<'root'>
+-  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.overlay'>
++  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.navbar.action' | 'shell.overlay'>
+   & PropsStore<ReturnType<typeof createLayoutStore>>
+
+ /** Center column grid item (session-body building block). */
+@@ -139,7 +139,8 @@ export function AppFrame({
+   const sidebarPreference = sidebarCollapsed
+     ? 0
+     : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
+-  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
++  const detailsPreference = detailsSession === undefined || !panels.detailsOpen ? 0 : panels.detailsWidth
++  const cols = computeColumns(viewport, sidebarPreference, detailsPreference)
+   const colsRef = useRef(cols)
+   colsRef.current = cols
+
+@@ -193,6 +194,13 @@ export function AppFrame({
+       <div className={css.overlayLayer} data-shell-overlay>
+         {renderSlot('shell.overlay', {})}
+       </div>
++      <nav className={css.navbar} aria-label="Application controls" data-shell-navbar>
++        {renderSlot('shell.navbar.action', {
++          detailsOpen: cols.details > 0,
++          openDetails: actions.openDetails,
++          closeDetails: actions.closeDetails,
++        })}
++      </nav>
+       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
+       {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+       {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
+diff --git a/packages/client/ui-layout/src/client/index.ts b/packages/client/ui-layout/src/client/index.ts
+index c56d83bfbb..4c7172c8a1 100644
+--- a/packages/client/ui-layout/src/client/index.ts
++++ b/packages/client/ui-layout/src/client/index.ts
+@@ -1,7 +1,7 @@
+ /**
+  * Layout plugin, browser half: one register() call contributes AppFrame into
+  * the runtime's built-in 'root' slot and, in the same breath, declares the
+- * four child slots (declaration = exclusive render authority), seats the
++ * five child slots (declaration = exclusive render authority), seats the
+  * layout store (panel geometry), and wires the panel-action service face.
+  * ctx.layout is the cross-plugin panel-action contract; navigation state lives
+  * with the runtime sessions service. A second effect seats the theme
+@@ -33,7 +33,7 @@ declare module '@deepseek-ai/cordis' {
+ declare module '@deepseek-ai/dsh-client-ui-slots' {
+   interface SlotMap {
+     // The 'root' entry itself is the runtime's built-in slot (declared
+-    // there); these four are the frame's children, declared by the same
++    // there); these five are the frame's children, declared by the same
+     // register() call that contributes AppFrame. Session owners never pass
+     // sessionId: the framework injects it as a standard prop.
+     /**
+@@ -70,6 +70,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
+      * `session` scope, and `ctx.layout` owns whether the column is open.
+      */
+     'details': { kind: 'single'; scope: 'session'; owner: DetailsOwnerProps }
++    /**
++     * Global application-navbar actions. The frame supplies the resolved
++     * details-column visibility and its open/close actions so a root-scoped
++     * control can stay synchronized without mirroring layout state.
++     */
++    'shell.navbar.action': { kind: 'list'; scope: 'root'; owner: NavbarActionOwnerProps }
+     /**
+      * Frame-wide floating layer, above every column and outside their scroll
+      * containers. Deliberately generic and unowned by any feature: a badge, a
+@@ -104,12 +110,22 @@ export interface ConvOwnerProps {}
+ /** Details owner share: empty — sessionId arrives as a framework-standard prop. */
+ export interface DetailsOwnerProps {}
+
++/** Global navbar action share: real layout state plus the authoritative writes. */
++export interface NavbarActionOwnerProps {
++  /** Whether the right column currently occupies layout width. */
++  detailsOpen: boolean
++  /** Open the right column at its remembered width. */
++  openDetails(): void
++  /** Collapse the right column without discarding its remembered width. */
++  closeDetails(): void
++}
++
+ /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
+ export const inject = ['slots', 'theme']
+
+ /**
+  * Client plugin body: provide ctx.layout, then one register() call — AppFrame
+- * into 'root' with the four child-slot declarations, the layout store seat,
++ * into 'root' with the five child-slot declarations, the layout store seat,
+  * and the inject hook that hands the store's bound actions to the service.
+  * @param ctx - client root context.
+  */
+@@ -123,6 +139,7 @@ export function apply(ctx: ClientContext): void {
+         'sidebar': { kind: 'single', scope: 'root' },
+         'conversation': { kind: 'single', scope: 'session-maybe' },
+         'details': { kind: 'single', scope: 'session' },
++        'shell.navbar.action': { kind: 'list', scope: 'root' },
+         'shell.overlay': { kind: 'list', scope: 'root' },
+       },
+       // Exclusive store: the factory itself — the framework instantiates per
+diff --git a/packages/client/ui-layout/src/client/stores.ts b/packages/client/ui-layout/src/client/stores.ts
+index d2de668a9c..af9ec6d9f0 100644
+--- a/packages/client/ui-layout/src/client/stores.ts
++++ b/packages/client/ui-layout/src/client/stores.ts
+@@ -1,6 +1,8 @@
+ /**
+- * The root entry's transient layout store: panel geometry as plain widths in
+- * px (0 = closed). Module level exports the factory only — a module-level
++ * The root entry's layout store: panel geometry and transient visibility.
++ * The right-column width preference persists independently from its open
++ * state, so every page load starts closed without forgetting the last drag.
++ * Module level exports the factory only — a module-level
+  * handle would pin the store's identity in the module
+  * cache (a de-facto singleton surviving plugin reloads). register() receives
+  * the factory (exclusive use: the framework instantiates per entry), AppFrame
+@@ -14,13 +16,20 @@ import {
+ } from './columns.ts'
+
+ /**
+- * Layout store state: panel width preferences in px (0 = closed), plus the
++ * Layout store state: panel width preferences in px plus explicit right-panel
++ * visibility. `sidebar` retains its historic 0 = closed convention. The
+  * narrow-viewport pair — `narrow` mirrors AppFrame's breakpoint reading
+  * (viewport < SIDEBAR_AUTO_COLLAPSE) so toggleSidebar can pick semantics, and
+  * `narrowExpanded` is the manual override that re-expands the auto-collapsed
+  * sidebar over the squeezed center without rewriting the width preference.
+  */
+-type LayoutState = { sidebar: number; details: number; narrow: boolean; narrowExpanded: boolean }
++type LayoutState = {
++  sidebar: number
++  detailsWidth: number
++  detailsOpen: boolean
++  narrow: boolean
++  narrowExpanded: boolean
++}
+
+ /**
+  * Annotation twin of the actions literal below (the export needs a declared
+@@ -36,21 +45,26 @@ type LayoutActions = {
+ }
+
+ /**
+- * Create the layout panel store handle. The preference IS the width, so
+- * closing a panel forgets its drag width — reopening restores the contract
+- * default. Actions are the complete write set: drag writes clamp
+- * into the panel's contract range and never cross the open/closed line;
+- * open/close transitions write 0 / the default explicitly. Below the
++ * Create the layout panel store handle. The right-column preference and
++ * visibility are separate: drag writes and persists `detailsWidth`, while
++ * open/close only flips transient `detailsOpen`. Below the
+  * auto-collapse breakpoint (AppFrame feeds setNarrow) the sidebar toggle
+  * flips the narrowExpanded override instead of the preference.
+  * @returns the store handle (spec + type + identity + factory in one).
+  */
+ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
+   const handle = defineStore({
+-    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false }),
++    init: (): LayoutState => ({
++      sidebar: SIDEBAR_DEFAULT,
++      detailsWidth: DETAILS_DEFAULT,
++      detailsOpen: false,
++      narrow: false,
++      narrowExpanded: false,
++    }),
++    persist: { name: 'dsh.layout.panels.v1', keys: ['detailsWidth'] },
+     actions: {
+       setSidebar: (d, px: number) => { d.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX) },
+-      setDetails: (d, px: number) => { d.details = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
++      setDetails: (d, px: number) => { d.detailsWidth = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
+       // Narrow toggles flip only the override: the width preference survives
+       // untouched, so re-widening restores the pre-squeeze layout.
+       toggleSidebar: (d) => {
+@@ -64,8 +78,8 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
+         d.narrow = narrow
+         d.narrowExpanded = false
+       },
+-      openDetails: (d) => { if (d.details === 0) d.details = DETAILS_DEFAULT },
+-      closeDetails: (d) => { d.details = 0 },
++      openDetails: (d) => { d.detailsOpen = true },
++      closeDetails: (d) => { d.detailsOpen = false },
+     },
+   })
+   return handle
+diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
+index d865a5c186..f5e5cc8d62 100644
+--- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
++++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
+@@ -111,6 +111,7 @@ function drag(handle: Element, fromX: number, toX: number): void {
+ }
+
+ beforeEach(() => {
++  localStorage.clear()
+   frameWidth = 1920
+   selectedSession.current = 's-test' as SessionId
+   selectedSessionBlank.current = false
+@@ -142,6 +143,23 @@ describe('AppFrame', () => {
+     expect(tracks(frame)).toEqual([280, 0])
+   })
+
++  it('supplies the global navbar with live details visibility and authoritative actions', () => {
++    const { frame, slotCalls } = mountFrame()
++    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
++      detailsOpen: boolean
++      openDetails(): void
++      closeDetails(): void
++    }
++    expect(frame.querySelector('[data-shell-navbar]')).not.toBeNull()
++    expect(owner().detailsOpen).toBe(false)
++    act(() => { owner().openDetails() })
++    expect(tracks(frame)).toEqual([280, 360])
++    expect(owner().detailsOpen).toBe(true)
++    act(() => { owner().closeDetails() })
++    expect(tracks(frame)).toEqual([280, 0])
++    expect(owner().detailsOpen).toBe(false)
++  })
++
+   it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
+     const { slotCalls, getByTestId } = mountFrame()
+     expect(getByTestId('center-content')).toBeTruthy()
+@@ -188,7 +206,7 @@ describe('AppFrame', () => {
+     selectedSessionBlank.current = true
+     act(() => { rerenderFrame() })
+     expect(tracks(frame)).toEqual([280, 0])
+-    expect(instance.getSnapshot().details).toBe(360)
++    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: true })
+
+     selectedSession.current = 's-next' as SessionId
+     selectedSessionBlank.current = false
+@@ -207,7 +225,7 @@ describe('AppFrame', () => {
+     selectedSession.current = undefined
+     const { frame, instance, rerenderFrame } = mountFrame()
+     expect(tracks(frame)).toEqual([280, 0])
+-    expect(instance.getSnapshot().details).toBe(0)
++    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
+
+     selectedSession.current = 's-first' as SessionId
+     act(() => { rerenderFrame() })
+@@ -241,7 +259,7 @@ describe('AppFrame', () => {
+     expect(tracks(frame)).toEqual([280, 330])
+     const handles = frame.querySelectorAll('[class*="handle"]')
+     drag(handles[1]!, 920, 930) // shrink by 10 from the rendered width
+-    expect(instance.getSnapshot().details).toBe(320)
++    expect(instance.getSnapshot().detailsWidth).toBe(320)
+   })
+
+   it('details column stays mounted at zero width', () => {
+diff --git a/packages/client/ui-layout/tests/apply.client.spec.ts b/packages/client/ui-layout/tests/apply.client.spec.ts
+index 95f8cad439..3360194ffd 100644
+--- a/packages/client/ui-layout/tests/apply.client.spec.ts
++++ b/packages/client/ui-layout/tests/apply.client.spec.ts
+@@ -1,6 +1,6 @@
+ // @vitest-environment jsdom
+ // Client apply wiring under the terminal register form: ctx.layout provided,
+-// ONE register() call declares the three child slots + seats the store factory
++// ONE register() call declares the five child slots + seats the store factory
+ // + wires the panel actions through the inject hook; teardown cascades
+ // (service unprovided + declarations gone + registration cleared). Node half
+ // and the invariant companion ride along — one line exposes the aggregate
+@@ -40,17 +40,19 @@ describe('ui-layout client apply', () => {
+     expect(inject).toEqual(['slots', 'theme'])
+   })
+
+-  it('provides ctx.layout and registers AppFrame into root with the three child declarations', async () => {
++  it('provides ctx.layout and registers AppFrame into root with the five child declarations', async () => {
+     const { ctx, slots } = await bench()
+     const fiber = ctx.plugin({ inject: [...inject], apply })
+     await fiber.await()
+     expect(ctx.get('layout')).toBeInstanceOf(LayoutController)
+     // The one register() call occupied 'root'…
+     expect(slots.entries('root')).toHaveLength(1)
+-    // …and declared the three children in the ledger.
++    // …and declared the five children in the ledger.
+     expect(slots.spec('sidebar')).toEqual({ kind: 'single', scope: 'root' })
+     expect(slots.spec('conversation')).toEqual({ kind: 'single', scope: 'session-maybe' })
+     expect(slots.spec('details')).toEqual({ kind: 'single', scope: 'session' })
++    expect(slots.spec('shell.navbar.action')).toEqual({ kind: 'list', scope: 'root' })
++    expect(slots.spec('shell.overlay')).toEqual({ kind: 'list', scope: 'root' })
+   })
+
+   it('injects no business face and attaches the layout actions', async () => {
+@@ -58,7 +60,7 @@ describe('ui-layout client apply', () => {
+     const fiber = ctx.plugin({ inject: [...inject], apply })
+     await fiber.await()
+     const actions = {
+-      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
++      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), setNarrow: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
+     }
+     const injected = (slots.entries('root')[0]!.inject as (actions: never) => object)(actions as never)
+     expect(injected).toEqual({})
+@@ -100,6 +102,7 @@ describe('ui-layout client apply', () => {
+     expect(ctx.get('layout')).toBeUndefined()
+     expect(slots.entries('root')).toHaveLength(0)
+     expect(slots.spec('sidebar')).toBeUndefined()
++    expect(slots.spec('shell.navbar.action')).toBeUndefined()
+     // The built-in root declaration survives entry teardown (runtime-owned).
+     expect(slots.spec('root')).toEqual({ kind: 'single', scope: 'root' })
+   })
+diff --git a/packages/client/ui-layout/tests/layout-store.client.spec.ts b/packages/client/ui-layout/tests/layout-store.client.spec.ts
+index c6f0069197..546d8517ad 100644
+--- a/packages/client/ui-layout/tests/layout-store.client.spec.ts
++++ b/packages/client/ui-layout/tests/layout-store.client.spec.ts
+@@ -1,7 +1,7 @@
+ // @vitest-environment jsdom
+ /**
+  * createLayoutStore unit account: init shape, the action write set (clamp
+- * inside actions), and the absence of browser persistence. Uses the
++ * inside actions), and right-width-only browser persistence. Uses the
+  * test-sanctioned path: factory self-call + .create() gives the
+  * real engine instance (same create path as production).
+  */
+@@ -12,14 +12,20 @@ import {
+   SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+ } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
+
+-const PERSIST_KEY = 'dsh.layout.panels'
++const PERSIST_KEY = 'dsh.layout.panels.v1'
+
+ beforeEach(() => { localStorage.clear() })
+
+ describe('createLayoutStore', () => {
+   it('initializes the sidebar at its default width, details closed, wide viewport assumed', () => {
+     const { store } = createLayoutStore().create()
+-    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false })
++    expect(store.getSnapshot()).toEqual({
++      sidebar: SIDEBAR_DEFAULT,
++      detailsWidth: DETAILS_DEFAULT,
++      detailsOpen: false,
++      narrow: false,
++      narrowExpanded: false,
++    })
+   })
+
+   it('each create() is an independent instance (factory is not a singleton)', () => {
+@@ -36,9 +42,9 @@ describe('createLayoutStore', () => {
+     actions.setSidebar(9999)
+     expect(store.getSnapshot().sidebar).toBe(SIDEBAR_MAX)
+     actions.setDetails(1)
+-    expect(store.getSnapshot().details).toBe(DETAILS_MIN)
++    expect(store.getSnapshot().detailsWidth).toBe(DETAILS_MIN)
+     actions.setDetails(9999)
+-    expect(store.getSnapshot().details).toBe(DETAILS_MAX)
++    expect(store.getSnapshot().detailsWidth).toBe(DETAILS_MAX)
+   })
+
+   it('toggleSidebar flips closed <-> contract default (drag width forgotten)', () => {
+@@ -55,7 +61,13 @@ describe('createLayoutStore', () => {
+     actions.setSidebar(400)
+     actions.setNarrow(true)
+     actions.toggleSidebar()
+-    expect(store.getSnapshot()).toEqual({ sidebar: 400, details: 0, narrow: true, narrowExpanded: true })
++    expect(store.getSnapshot()).toEqual({
++      sidebar: 400,
++      detailsWidth: DETAILS_DEFAULT,
++      detailsOpen: false,
++      narrow: true,
++      narrowExpanded: true,
++    })
+     actions.toggleSidebar()
+     expect(store.getSnapshot().narrowExpanded).toBe(false)
+     expect(store.getSnapshot().sidebar).toBe(400)
+@@ -74,28 +86,29 @@ describe('createLayoutStore', () => {
+     expect(store.getSnapshot().narrowExpanded).toBe(false)
+   })
+
+-  it('openDetails uses the contract default, preserves an open width, and closeDetails zeroes', () => {
++  it('openDetails and closeDetails do not overwrite the width preference', () => {
+     const { store, actions } = createLayoutStore().create()
+     actions.openDetails()
+-    expect(store.getSnapshot().details).toBe(DETAILS_DEFAULT)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: DETAILS_DEFAULT, detailsOpen: true })
+     actions.setDetails(500)
+     actions.openDetails()
+-    expect(store.getSnapshot().details).toBe(500)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: 500, detailsOpen: true })
+     actions.closeDetails()
+-    expect(store.getSnapshot().details).toBe(0)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: 500, detailsOpen: false })
+   })
+
+-  it('does not persist panel geometry', () => {
++  it('persists only the details width and always rehydrates closed', () => {
+     const first = createLayoutStore().create()
+     first.actions.setSidebar(400)
+     first.actions.openDetails()
+     first.actions.setDetails(500)
+-    expect(localStorage.getItem(PERSIST_KEY)).toBeNull()
++    expect(JSON.parse(localStorage.getItem(PERSIST_KEY)!)).toEqual({ detailsWidth: 500 })
+
+     const second = createLayoutStore().create()
+     expect(second.store.getSnapshot()).toEqual({
+       sidebar: SIDEBAR_DEFAULT,
+-      details: 0,
++      detailsWidth: 500,
++      detailsOpen: false,
+       narrow: false,
+       narrowExpanded: false,
+     })
+diff --git a/packages/client/ui-slots/src/store.ts b/packages/client/ui-slots/src/store.ts
+index 64e0f9b4b0..6aa8605951 100644
+--- a/packages/client/ui-slots/src/store.ts
++++ b/packages/client/ui-slots/src/store.ts
+@@ -36,6 +36,19 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
+   [K in keyof A]: A[K] extends (draft: T, ...params: infer P) => void ? (...params: P) => void : never
+ }
+
++/**
++ * Persistence declaration for an object store whose durable fields are only
++ * a subset of its live state. Rehydration overlays the stored keys onto a
++ * fresh `init()` value, so transient fields always start from their declared
++ * defaults.
++ */
++export interface StorePersistence<T> {
++  /** localStorage key (scope suffixing follows the string form). */
++  name: string
++  /** Top-level state keys that survive a new store instance. */
++  keys: readonly (keyof T)[]
++}
++
+ /**
+  * Store declaration spec: initial-state factory (a lambda so every instance
+  * gets a fresh state), optional persistence key (mechanical, framework-run),
+@@ -43,7 +56,7 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
+  */
+ export interface StoreSpec<T, A extends ActionsDecl<T>> {
+   init: () => T
+-  persist?: string
++  persist?: string | StorePersistence<T>
+   actions: A
+ }
+
+diff --git a/packages/extensions/cordis-client-runner/src/client/api-catalog.ts b/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
+index 216652dc05..d62f8880e3 100644
+--- a/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
++++ b/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
+@@ -803,7 +803,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
+   },
+   {
+     name: 'StoreSpec',
+-    declaration: 'export interface StoreSpec<T, A extends ActionsDecl<T>> {\n    init: () => T;\n    persist?: string;\n    actions: A;\n}',
++    declaration: 'export interface StoreSpec<T, A extends ActionsDecl<T>> {\n    init: () => T;\n    persist?: string | StorePersistence<T>;\n    actions: A;\n}',
+   },
+   {
+     name: 'ThemeDefinition',
+diff --git a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
+index 08b22ffdef..6f1612968b 100644
+--- a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
++++ b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
+@@ -371,7 +371,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.bar\', () => ctx.slots.register(\n      { name: \'conversation.composer.bar\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:245',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:251',
+   },
+   {
+     key: 'conversation.composer.dock',
+@@ -424,7 +424,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.dock\', () => ctx.slots.register(\n      { name: \'conversation.composer.dock\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:214',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:220',
+   },
+   {
+     key: 'conversation.details.tool',
+@@ -509,6 +509,32 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.brand.mark\', () => ctx.slots.register(\n      { name: \'conversation.hero.brand.mark\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+     source: 'packages/client/ui-conversation/src/client/contract/slots.ts:183',
+   },
++  {
++    key: 'conversation.hero.skillCatalogStart',
++    kind: 'single',
++    scope: 'root',
++    summary: 'The first-step skill-catalog choice beside the agent-preset chip on the new-session screen.',
++    doc: 'The first-step skill-catalog choice beside the agent-preset chip on the\nnew-session screen. Root scope: the choice addresses the current blank\nsession through its id and hides once a turn has run.',
++    registerOptions: [],
++    ownerProps: [
++      '/** Owner share of the hero skill-catalog choice: the shell supplies nothing. */\nexport interface HeroSkillCatalogStartOwnerProps {\n  /** Marker field: the seat owns its own read and write paths. */\n  children?: never\n}',
++    ],
++    ownerPropsReferences: [],
++    standardProps: [
++      'useSessions: SnapshotSelectorHook<SessionListState>',
++      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
++    ],
++    keyDomain: '',
++    hookContext: '',
++    slotInject: '',
++    declaredBy: 'an entry in \'conversation\' (client-ui-conversation), so it exists while that entry is mounted',
++    occupants: [
++      'client-ui-settings-skill-manager SkillCatalogStartSeat',
++    ],
++    replaceRisk: 'shadows-shipped-ui',
++    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.skillCatalogStart\', () => ctx.slots.register(\n      { name: \'conversation.hero.skillCatalogStart\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:195',
++  },
+   {
+     key: 'conversation.hero.workspace',
+     kind: 'single',
+@@ -562,7 +588,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.workspace.directoryFlow\', () => ctx.slots.register(\n      { name: \'conversation.hero.workspace.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:57',
++    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:62',
+   },
+   {
+     key: 'conversation.input.attachments',
+@@ -596,7 +622,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.attachments\', () => ctx.slots.register(\n      { name: \'conversation.input.attachments\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:247',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:253',
+   },
+   {
+     key: 'conversation.input.dock',
+@@ -651,7 +677,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.dock\', () => ctx.slots.register(\n      { name: \'conversation.input.dock\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:205',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:211',
+   },
+   {
+     key: 'conversation.input.left',
+@@ -702,7 +728,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     occupants: [],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.left\', () => ctx.slots.register(\n      { name: \'conversation.input.left\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:223',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:229',
+   },
+   {
+     key: 'conversation.input.model',
+@@ -733,7 +759,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.model\', () => ctx.slots.register(\n      { name: \'conversation.input.model\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:271',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:277',
+   },
+   {
+     key: 'conversation.input.overlay',
+@@ -813,7 +839,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.plan\', () => ctx.slots.register(\n      { name: \'conversation.input.plan\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:261',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:267',
+   },
+   {
+     key: 'conversation.input.right',
+@@ -864,7 +890,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     occupants: [],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.right\', () => ctx.slots.register(\n      { name: \'conversation.input.right\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:231',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:237',
+   },
+   {
+     key: 'conversation.message.images',
+@@ -1516,6 +1542,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+       'client-ui-settings-general GeneralSection id \'general\'',
+       'client-ui-settings-models ModelsSection id \'models\'',
+       'client-ui-settings-plugins PluginsSettingsSection id \'plugins\'',
++      'client-ui-settings-skill-manager SkillsSettingsSection id \'skills\'',
+     ],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.section\', () => ctx.slots.register(\n      { name: \'settings.section\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+@@ -1547,6 +1574,49 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.trigger\', () => ctx.slots.register(\n      { name: \'settings.trigger\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+     source: 'packages/client/ui-settings/src/client/contract/slots.ts:23',
+   },
++  {
++    key: 'shell.navbar.action',
++    kind: 'list',
++    scope: 'root',
++    summary: 'Global application-navbar actions.',
++    doc: 'Global application-navbar actions. The frame supplies the resolved\ndetails-column visibility and its open/close actions so a root-scoped\ncontrol can stay synchronized without mirroring layout state.',
++    registerOptions: [
++      {
++        name: 'id',
++        requirement: 'required',
++        type: 'string',
++        doc: 'Your cell key. Use an id of your own: a fresh id is added beside the shipped entries, while reusing a shipped id puts you in THAT cell and replaces it. Owners that filter by id address you by it.',
++      },
++      {
++        name: 'order',
++        requirement: 'optional',
++        type: 'number',
++        doc: 'Position among the entries, ascending (default 0).',
++      },
++      {
++        name: 'label',
++        requirement: 'optional',
++        type: 'string | (() => string)',
++        doc: 'Display text where the owner projects one (nav rows, tabs). A thunk is re-read on every projection, so localized text follows the active locale without re-registering.',
++      },
++    ],
++    ownerProps: [
++      '/** Global navbar action share: real layout state plus the authoritative writes. */\nexport interface NavbarActionOwnerProps {\n  /** Whether the right column currently occupies layout width. */\n  detailsOpen: boolean\n  /** Open the right column at its remembered width. */\n  openDetails(): void\n  /** Collapse the right column without discarding its remembered width. */\n  closeDetails(): void\n}',
++    ],
++    ownerPropsReferences: [],
++    standardProps: [
++      'useSessions: SnapshotSelectorHook<SessionListState>',
++      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
++    ],
++    keyDomain: '',
++    hookContext: '',
++    slotInject: '',
++    declaredBy: 'an entry in \'root\' (client-ui-layout), so it exists while that entry is mounted',
++    occupants: [],
++    replaceRisk: 'none',
++    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'shell.navbar.action\', () => ctx.slots.register(\n      { name: \'shell.navbar.action\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
++    source: 'packages/client/ui-layout/src/client/index.ts:78',
++  },
+   {
+     key: 'shell.overlay',
+     kind: 'list',
+@@ -1586,7 +1656,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     occupants: [],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'shell.overlay\', () => ctx.slots.register(\n      { name: \'shell.overlay\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-layout/src/client/index.ts:83',
++    source: 'packages/client/ui-layout/src/client/index.ts:89',
+   },
+   {
+     key: 'sidebar',
+@@ -1788,7 +1858,33 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.directoryFlow\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:59',
++    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:64',
++  },
++  {
++    key: 'sidebar.workspaces.presetGroups',
++    kind: 'single',
++    scope: 'root',
++    summary: 'Preset-group tree filling the sidebar browsing region\'s preset mode (declared by the WorkspaceBrowser entry).',
++    doc: 'Preset-group tree filling the sidebar browsing region\'s preset mode (declared by the WorkspaceBrowser entry).',
++    registerOptions: [],
++    ownerProps: [
++      '/**\n * Owner share of the preset-group tree: browser state plus the official row\n * authority needed to render an alternate grouping dimension without\n * importing another plugin\'s runtime module.\n */\nexport interface PresetGroupsOwnerProps {\n  /** True while the shell is in its wide state. */\n  wide: boolean\n  /** The browser\'s normalized search query (\'\' while the search is idle). */\n  query: string\n  /** Official projection and render seats; occupants must not clone workspace rows. */\n  rows: PresetRowsOwner\n}',
++    ],
++    ownerPropsReferences: [
++      'PresetRowsOwner',
++    ],
++    standardProps: [
++      'useSessions: SnapshotSelectorHook<SessionListState>',
++      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
++    ],
++    keyDomain: '',
++    hookContext: '',
++    slotInject: '',
++    declaredBy: 'an entry in \'sidebar.workspaces\' (client-ui-workspace), so it exists while that entry is mounted',
++    occupants: [],
++    replaceRisk: 'none',
++    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.presetGroups\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.presetGroups\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
++    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:66',
+   },
+   {
+     key: 'tool.call.toolview',

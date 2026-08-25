@@ -1,0 +1,56 @@
+{
+  "$schema": "meta-intent/0.2/state",
+  "id": "dsh-right-sidebar",
+  "revision": "0.2.0-draft.1",
+  "status": "draft",
+  "document": "STATE.md",
+  "logs": [
+    "../logs/2026-08-25-user-intent-and-embedding.md",
+    "../logs/2026-08-25-bootstrap-reality.md",
+    "../logs/2026-08-25-git-reference-decision.md"
+  ],
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2",
+    "package": "meta-intent",
+    "uri": "https://github.com/sch246/meta-intent.git",
+    "lock": "locks/protocol-0.2/LOCK.json",
+    "artifactDigest": "sha256:4353c9cb6156181dd76c08b98f8ae81b7ac46bd7bb463e1bb6a86fda75e74d79"
+  },
+  "resources": [
+    {
+      "id": "host.dsh-right-sidebar",
+      "kind": "git-worktree",
+      "uri": "file:///root/dsh-right-sidebar",
+      "baseRevision": "f04501bfd63b2898cb259f3c7676ac713a8c9cd0",
+      "scope": "local-bootstrap",
+      "worktree": "candidate-to-freeze"
+    },
+    {
+      "id": "target.deepseek-harness",
+      "kind": "git-worktree",
+      "uri": "file:///root/deepseek-harness",
+      "revision": "b642a10626a950cc95c2d6f839810cb01fe599fe",
+      "scope": "local-bootstrap",
+      "worktree": "dirty"
+    },
+    {
+      "id": "protocol.meta-intent",
+      "kind": "git-repository",
+      "uri": "https://github.com/sch246/meta-intent",
+      "revision": "6dbb0ab1f4ff2c0ccf783ee051ace8e736998685"
+    },
+    {
+      "id": "runtime.dsh-web",
+      "kind": "system-service",
+      "uri": "systemd:dsh-web"
+    },
+    {
+      "id": "assembly.web-profile",
+      "kind": "dsh-profile",
+      "uri": "dsh-profile:web"
+    }
+  ],
+  "activeLocks": [],
+  "candidateLocks": []
+}

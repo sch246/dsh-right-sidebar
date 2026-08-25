@@ -1,37 +1,70 @@
 {
-  "name": "dsh-right-sidebar",
-  "version": "0.1.0",
-  "description": "DSH Web 右侧边栏插件（真列）：接管官方 details 列，详情 tab（收编官方工具详情座位）+ 会话联动层（ctx.sessionView）+ 开放 rightbar.tab 注册槽。",
+  "name": "@dsh-external/dsh-right-sidebar",
+  "version": "0.0.1",
+  "description": "DSH Web 右侧边栏平台插件：接管官方 details 列（真列），tab 开放注册 + 会话联动层",
+  "private": true,
   "type": "module",
-  "main": "lib/index.js",
-  "exports": {
-    ".": "./lib/index.js",
-    "./client": "./lib/client.js",
-    "./cordis.patch.yml": "./cordis.patch.yml",
-    "./package.json": "./package.json"
-  },
+  "main": "./lib/index.js",
+  "types": "./lib/types/index.d.ts",
   "files": [
     "lib",
     "cordis.patch.yml",
+    "patches",
     "README.md",
     "LICENSE"
   ],
-  "keywords": [
-    "dsh",
-    "dsh-plugin",
-    "deepseek-harness",
-    "sidebar",
-    "right-sidebar",
-    "workbench",
-    "session-view"
-  ],
-  "license": "MIT",
-  "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+  "license": "BSD-3-Clause",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-llm": ">=0.0.1-rc <2",
+    "@deepseek-ai/dsh-tools": ">=0.0.1-rc <2",
+    "cordis": ">=4.0.0-rc <5",
+    "schemastery": "^3.18.0",
+    "@deepseek-ai/dsh-client-locale": ">=0.0.1-rc <2",
+    "@deepseek-ai/dsh-client-runtime": ">=0.0.1-rc <2",
+    "@deepseek-ai/dsh-client-ui-layout": ">=0.0.1-rc <2",
+    "@deepseek-ai/dsh-client-ui-slots": ">=0.0.1-rc <2",
+    "react": ">=18 <20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "~18.3.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^29.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.9.0",
+    "tsdown": "^0.22.14",
+    "vitest": "^4.1.8"
+  },
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:client": "tsdown",
+    "test": "node node_modules/vitest/vitest.mjs run"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
     }
   }
 }

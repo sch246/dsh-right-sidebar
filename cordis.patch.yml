@@ -1,11 +1,7 @@
-# dsh-right-sidebar bundle layer —— 规划基线（M0 未开工，lib/ 构建出来之前不可安装）。
-#
-# 本包为 client 端 UI 插件：Node half 是 no-op apply，browser half 通过
-# ctx.slots.inject('details', ...) 接管官方右侧 details 列（single slot，
-# scope: session），并在 children 中重新声明 'conversation.details.tool'
-# 座位以保住官方工具详情。详见 PROPOSAL.md §3。
+# dsh-right-sidebar bundle layer（lib/ 构建出来之前不可安装）。browser
+# half 将标签平台挂到官方 details 真列，并把开关放入全局 navbar。
 
 - insert:
     - id: right-sidebar
-      name: dsh-right-sidebar
+      name: '@dsh-external/dsh-right-sidebar'
       config: {}

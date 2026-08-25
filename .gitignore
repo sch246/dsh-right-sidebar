@@ -1,5 +1,4 @@
 node_modules/
 lib/
-dist/
+*.tsbuildinfo
 *.tgz
-.DS_Store

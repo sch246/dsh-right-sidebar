@@ -1,0 +1,134 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { useSyncExternalStore } from 'react'
+import { Context } from 'cordis'
+import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
+import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
+import { RightSidebarPanel } from '../src/client/RightSidebarPanel'
+import type { RightSidebarPanelProps } from '../src/client/RightSidebarPanel'
+import { RightSidebarToggle } from '../src/client/RightSidebarToggle'
+import type { RightSidebarToggleProps } from '../src/client/RightSidebarToggle'
+import type { RightbarTab } from '../src/client/contract'
+import { createRightSidebarStore } from '../src/client/stores'
+import { apply, inject } from '../src/client/index'
+
+afterEach(() => { cleanup() })
+
+it('declares every browser service used by the platform', () => {
+  expect(inject).toEqual(['slots', 'locale', 'layout'])
+})
+
+it('registers and tears down the column, navbar action, tab seat, locale, and styles', async () => {
+  const ctx = new Context()
+  const slotsFiber = ctx.plugin(SlotRegistry)
+  await slotsFiber.await()
+  const slots = ctx.get('slots') as SlotRegistry
+  const disposeOwner = slots.register({
+    name: 'root',
+    children: {
+      details: { kind: 'single', scope: 'session' },
+      'shell.navbar.action': { kind: 'list', scope: 'root' },
+    },
+  }, (() => null) as never)
+  ctx.provide('locale', new LocaleRuntime(ctx))
+  ctx.provide('layout', {
+    toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
+  } as never)
+  const fiber = ctx.plugin({ inject: [...inject], apply })
+  await fiber.await()
+  expect(slots.entries('details').some(entry => entry.options.priority === -1)).toBe(true)
+  expect(slots.entries('shell.navbar.action').map(entry => entry.options.id)).toContain('right-sidebar-toggle')
+  expect(slots.spec('rightbar.tab')).toEqual({ kind: 'list', scope: 'session' })
+  expect(document.head.querySelector('[data-plugin-css="@dsh-external/dsh-right-sidebar"]')).not.toBeNull()
+
+  await fiber.dispose()
+  expect(slots.entries('details').some(entry => entry.options.priority === -1)).toBe(false)
+  expect(slots.entries('shell.navbar.action')).toEqual([])
+  expect(slots.spec('rightbar.tab')).toBeUndefined()
+  expect(document.head.querySelector('[data-plugin-css="@dsh-external/dsh-right-sidebar"]')).toBeNull()
+  disposeOwner()
+})
+
+const copy: Record<string, string> = {
+  title: 'Sidebar', collapse: 'Collapse', expand: 'Expand', empty: 'No sidebar tabs registered',
+}
+
+function mountPanel(initialRows: readonly RightbarTab[]) {
+  const instance = createRightSidebarStore().create('session-test')
+  let rows = initialRows
+  const rendered: string[] = []
+  const setOpen = vi.fn()
+  const useStore = (<S,>(selector: (state: { activeTab: string }) => S): S =>
+    selector(useSyncExternalStore(instance.subscribe, instance.getSnapshot))) as RightSidebarPanelProps['useStore']
+  const element = () => <RightSidebarPanel {...({
+    useStore,
+    actions: instance.actions,
+    useTabs: (selector: (value: readonly RightbarTab[]) => unknown) => selector(rows),
+    renderSlot: (_name: string, _owner: object, options: { only?: string }) => {
+      rendered.push(options.only ?? '')
+      return <div data-testid="tab-content">{options.only}</div>
+    },
+    setOpen,
+    t: (key: string) => copy[key] ?? key,
+  } as unknown as RightSidebarPanelProps)} />
+  const view = render(element())
+  return {
+    ...view,
+    instance,
+    rendered,
+    setOpen,
+    setRows(next: readonly RightbarTab[]) { rows = next; view.rerender(element()) },
+  }
+}
+
+describe('RightSidebarPanel', () => {
+  it('is a feature-free platform with a useful empty state and collapse action', () => {
+    const view = mountPanel([])
+    expect(view.getByText('No sidebar tabs registered')).toBeTruthy()
+    expect(view.queryByRole('tab')).toBeNull()
+    fireEvent.click(view.getByRole('button', { name: 'Collapse' }))
+    expect(view.setOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('renders only the selected contribution and repairs selection after unload', async () => {
+    const view = mountPanel([{ id: 'files', label: 'Files' }, { id: 'outline', label: 'Outline' }])
+    expect(view.getByTestId('tab-content').textContent).toBe('files')
+    fireEvent.click(view.getByRole('tab', { name: 'Outline' }))
+    expect(view.getByTestId('tab-content').textContent).toBe('outline')
+    expect(view.instance.getSnapshot().activeTab).toBe('outline')
+
+    view.setRows([{ id: 'files', label: 'Files' }])
+    expect(view.getByTestId('tab-content').textContent).toBe('files')
+    await waitFor(() => { expect(view.instance.getSnapshot().activeTab).toBe('files') })
+  })
+
+  it('supports arrow-key tab navigation', () => {
+    const view = mountPanel([{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }])
+    const first = view.getByRole('tab', { name: 'One' })
+    const second = view.getByRole('tab', { name: 'Two' })
+    first.focus()
+    fireEvent.keyDown(first, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(second)
+    expect(view.instance.getSnapshot().activeTab).toBe('two')
+  })
+})
+
+describe('RightSidebarToggle', () => {
+  it('uses the layout owner state and actions directly', () => {
+    const openDetails = vi.fn()
+    const closeDetails = vi.fn()
+    const element = (detailsOpen: boolean) => <RightSidebarToggle {...({
+      detailsOpen,
+      openDetails,
+      closeDetails,
+      t: (key: string) => copy[key] ?? key,
+    } as unknown as RightSidebarToggleProps)} />
+    const view = render(element(false))
+    fireEvent.click(view.getByRole('button', { name: 'Expand' }))
+    expect(openDetails).toHaveBeenCalledOnce()
+    view.rerender(element(true))
+    fireEvent.click(view.getByRole('button', { name: 'Collapse' }))
+    expect(closeDetails).toHaveBeenCalledOnce()
+  })
+})
