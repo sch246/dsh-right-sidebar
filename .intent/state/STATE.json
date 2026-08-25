@@ -1,14 +1,15 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.2.0-draft.2",
+  "revision": "0.2.0-draft.3",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
     "../logs/2026-08-25-user-intent-and-embedding.md",
     "../logs/2026-08-25-bootstrap-reality.md",
     "../logs/2026-08-25-git-reference-decision.md",
-    "../logs/2026-08-25-first-realization.md"
+    "../logs/2026-08-25-first-realization.md",
+    "../logs/2026-08-25-lifecycle-experiment.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -38,7 +39,7 @@
       "id": "protocol.meta-intent",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/meta-intent",
-      "revision": "6dbb0ab1f4ff2c0ccf783ee051ace8e736998685"
+      "revision": "ba724ccc41f90d82493c4673fed2b17c8c8232f0"
     },
     {
       "id": "runtime.dsh-web",

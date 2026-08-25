@@ -27,7 +27,7 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 ## Constraints and permissions
 
 - Do not infer desired semantics from the current implementation, `PROPOSAL.md`, tests, or successful runtime behavior.
-- Do not claim the selected candidate is accepted or lifecycle-safe merely because its immutable source and build evidence are reproducible.
+- Do not claim the selected candidate is accepted or lifecycle-safe merely because its source identity is immutable or it passes in one prepared development environment.
 - A lock may reference host or target resources, but a mutable locator alone is insufficient: consequential references must bind an immutable identity and declare applicability and ownership scope.
 - Prefer public Harness services and reversible plugin lifecycle. Do not use DOM manipulation or private stores to create hidden coupling to the main interface.
 - Publishing, pushing, applying source patches, changing a live profile, restarting services, or performing destructive uninstall requires authority for that external action.
@@ -47,5 +47,7 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 ## Open tensions
 
 - Which current user-visible behaviors are intended semantics versus provisional choices in the existing implementation.
-- Whether the first candidate realization can survive a real install, target drift, maintenance, and ownership-preserving uninstall without silently promoting implementation details into intent.
+- How the build dependency closure is made retrievable and reproducible: the frozen plugin and Harness source commits do not contain the prepared vendored/package build outputs currently required by `scripts/build.sh`.
+- Whether DSH or this realization should own cleanup of the orphan `link:` symlink left after `dsh plugin remove`; manifest, lockfile, bundle configuration, and runtime dump are already clean at that point.
+- Full browser acceptance and external fixtures for tab registration plus main-view/sidebar session synchronization remain incomplete.
 - How a future protocol should machine-check a realization that contributes to both the plugin repository and a separate Harness target rather than treating the second target as manifest-only evidence.

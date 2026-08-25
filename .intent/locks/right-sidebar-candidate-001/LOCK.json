@@ -1,7 +1,7 @@
 {
   "kind": "realization",
   "id": "dsh-right-sidebar-candidate-001",
-  "revision": "0.1.0-candidate.1",
+  "revision": "0.1.0-candidate.2",
   "status": "candidate",
   "protocol": {
     "id": "meta-intent",
@@ -9,17 +9,17 @@
   },
   "package": {
     "id": "dsh-right-sidebar",
-    "revision": "0.2.0-draft.2"
+    "revision": "0.2.0-draft.3"
   },
   "state": {
-    "revision": "0.2.0-draft.2",
+    "revision": "0.2.0-draft.3",
     "entry": {
       "path": "inputs/state/STATE.json",
-      "digest": "sha256:ad81870e4fe70c7f3079c2a011ab7763e14d1c0db7be961b66012578a4a1bfad"
+      "digest": "sha256:5267621cf60143d68235fe517b2b1f108ff3e036b31eb8fecad5bb172bab0c3e"
     },
     "document": {
       "path": "inputs/state/STATE.md",
-      "digest": "sha256:d9bc5858430c105d1f1d23cf3b064e4ee42cd68b015c9e06f3862e2e892bcc3a"
+      "digest": "sha256:a48985444f633417c99b17ded3bdbf3ffd19454d51ee7ce57451a2ecf27334cd"
     }
   },
   "logs": [
@@ -38,6 +38,10 @@
     {
       "path": "../../logs/2026-08-25-first-realization.md",
       "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
     }
   ],
   "target": {
@@ -66,11 +70,15 @@
   "artifacts": [
     {
       "path": "EVIDENCE.md",
-      "digest": "sha256:bed9e098d8cde4db3816a7011ee821c07b063d20ea8f4cd14329fc077964b4a4"
+      "digest": "sha256:5279858f352598a052313495735e84d232881d8b114415d454ef23906135d960"
+    },
+    {
+      "path": "LIFECYCLE-EVIDENCE.md",
+      "digest": "sha256:b1172eee1d807b0424da7c9211ccdc55e64b700553b19a98bfb89b64731f0324"
     },
     {
       "path": "REALIZATION.json",
-      "digest": "sha256:39c4e255e23337ed21b8f83c4dcb6c2b773a052064b921875d3294797b154211"
+      "digest": "sha256:b022077a85bdce4a6fb83a2c9352c56b391ca9707088e7549b2ca0b3b2a3bdde"
     }
   ],
   "acceptance": {
@@ -87,6 +95,18 @@
         "observedOn": "2026-08-25",
         "artifact": "EVIDENCE.md",
         "result": "patch applies cleanly to the declared Harness baseline"
+      },
+      {
+        "id": "isolated-profile-and-drift-lifecycle",
+        "observedOn": "2026-08-25",
+        "artifact": "LIFECYCLE-EVIDENCE.md",
+        "result": "exact source installed in an isolated profile; source, profile, and target drift were detected; corrected uninstall preserved unrelated profile and Harness changes"
+      },
+      {
+        "id": "lifecycle-failure-boundaries",
+        "observedOn": "2026-08-25",
+        "artifact": "LIFECYCLE-EVIDENCE.md",
+        "result": "immutable source inputs did not close the build environment, and standard profile removal left an orphan link requiring guarded cleanup"
       }
     ]
   },
@@ -94,9 +114,10 @@
     "decision": "pending-user-review"
   },
   "unresolved": [
-    "clean install from the published Git reference",
-    "maintenance after real source, target, or profile drift",
-    "ownership-preserving uninstall from a modified target",
+    "fresh retrieval from the published Git reference",
+    "reproducible build dependency closure from immutable inputs",
+    "upstream DSH or pnpm ownership of orphan link cleanup",
+    "browser acceptance and external multi-tab/session-synchronization fixtures",
     "independent semantic review of provisional user-visible choices",
     "machine-checked composition across the plugin and Harness repositories"
   ]
