@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.2.0-draft.11",
+  "revision": "0.3.0-draft.6",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -17,7 +17,13 @@
     "../logs/2026-08-26-visual-chrome-deployment.md",
     "../logs/2026-08-26-navbar-control-alignment.md",
     "../logs/2026-08-26-navbar-control-deployment.md",
-    "../logs/2026-08-26-live-shell-milestone-closure.md"
+    "../logs/2026-08-26-live-shell-milestone-closure.md",
+    "../logs/2026-08-26-agent-driven-portability-and-api-authority.md",
+    "../logs/2026-08-26-new-conversation-visibility-tension.md",
+    "../logs/2026-08-26-new-conversation-visibility-repair.md",
+    "../logs/2026-08-26-new-conversation-visibility-deployment.md",
+    "../logs/2026-08-26-public-tls-followup.md",
+    "../logs/2026-08-26-new-conversation-visibility-acceptance.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -32,8 +38,9 @@
       "id": "host.dsh-right-sidebar",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
-      "revision": "aa4baa3660f0ab7a06793baf576166340343bd09",
-      "scope": "candidate-realization-source"
+      "revision": "d9bcfa3746b952f30ca4a6ffb05218309e8e15a6",
+      "scope": "historical source baseline before the Agent-driven portability refactor; exact current realization binding remains pending",
+      "worktree": "observed-dirty-before-commit"
     },
     {
       "id": "target.deepseek-harness",
@@ -50,13 +57,6 @@
       "revision": "c3c60d1cce6cf1a3cf5c4e07f183a64ef167d7ce"
     },
     {
-      "id": "adapter.dsh-std",
-      "kind": "git-repository",
-      "uri": "https://github.com/Yan-Zero/dsh-std.git",
-      "revision": "580b330323c13ec568adab2c35fabf8f8fa6b194",
-      "scope": "preferred-harness-adapter-boundary"
-    },
-    {
       "id": "runtime.dsh-web",
       "kind": "system-service",
       "uri": "systemd:dsh-web"
@@ -68,7 +68,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-candidate-006/LOCK.json"
-  ]
+  "candidateLocks": []
 }

@@ -20,6 +20,10 @@ import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
 import type { PanelInjected, RightbarTab } from './contract'
 
+// Public type entry: importing this package coordinate must activate the
+// rightbar.tab SlotMap contract without reaching into internal files.
+export type { RightbarTab, RightbarTabOwnerProps } from './contract'
+
 /** Required services: slot registry, locale, and official panel actions. */
 export const inject = ['slots', 'locale', 'layout']
 

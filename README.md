@@ -4,12 +4,13 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 
 本包不内置审阅、终端、浏览器、文件、Git、工具详情或其他业务标签。功能插件拥有自己的状态和动作，并可同时向主界面与 `rightbar.tab` 注册 UI，使两处通过同一个 session-scoped store 保持同步。
 
-当前意图、约束与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。当前候选的早期基线通过了 profile `link:` 安装和真实浏览器交互验证；当前质量与 adapter 集成切片只完成了本地构建和自动化测试，尚未重新改动 live profile 或服务。历史验证记录见 [HANDOFF.md](HANDOFF.md)。
+当前意图、稳定注册 API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。历史候选曾通过 profile `link:` 安装和真实浏览器交互验证；它们是具体 realization 证据，不限定未来宿主必须采用同一种 API、adapter 或装配机制。历史验证记录见 [HANDOFF.md](HANDOFF.md)。
 
 ## 目标交互
 
 - 右栏占据应用内容区全高，并作为第三列影响横向布局；
-- 应用 navbar 提供显示/隐藏按钮，右栏内部提供收起按钮；
+- 应用 navbar 提供唯一的显示/隐藏按钮，右栏内部不重复这一控制；
+- 新会话界面在发送第一条消息前也可展开和收起右栏；
 - 官方分隔条调整宽度，只记忆最后一次非零宽度；
 - 第三方插件可注册、排序和卸载标签页；
 - 主界面贡献和右栏标签可共享同一份 session 状态与动作。
@@ -21,7 +22,7 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 ```bash
 cd /root/dsh-right-sidebar
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
-DSH_CHECKOUT=/root/deepseek-harness DSH_STD_CHECKOUT=/root/dsh-std npm test
+DSH_CHECKOUT=/root/deepseek-harness npm test
 ```
 
 然后使用与 `dsh-warm-minimal` 相同的 profile link 模型：
@@ -50,4 +51,4 @@ git apply --check /root/dsh-right-sidebar/patches/deepseek-harness.patch
 git apply /root/dsh-right-sidebar/patches/deepseek-harness.patch
 ```
 
-升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突；本仓库不增加自动 apply/revert 或兼容层。详见 [PROPOSAL.md](PROPOSAL.md#harness-源码改动)。
+升级 Harness 时由 Agent 先重新调查目标，再根据 state 更新或重新生成具体 realization；不得为套用旧补丁而削弱意图。当前补丁仍可由 Agent 手动更新并处理冲突，本仓库不要求额外的标准运行时或固定兼容层。详见 [PROPOSAL.md](PROPOSAL.md#harness-源码改动)。

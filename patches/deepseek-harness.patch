@@ -1,7 +1,3 @@
-# Harness-Base-Commit: b642a10626a950cc95c2d6f839810cb01fe599fe
-# Harness-Base-Ref: local/master
-# Purpose: right-sidebar layout seat, durable width, unobstructed aligned navbar, and full-edge resize UX.
-# Upgrade policy: rebase this patch manually against the new official Harness commit.
 diff --git a/packages/client/runtime/src/client/contract/store.ts b/packages/client/runtime/src/client/contract/store.ts
 index 0eb7917b03..03c0616d40 100644
 --- a/packages/client/runtime/src/client/contract/store.ts
@@ -220,7 +216,7 @@ index ae56780133..fbb3195e80 100644
    pointer-events: auto;
  }
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index 2696dc91fa..fc7c843e1f 100644
+index 2696dc91fa..02edc61f83 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
 @@ -11,7 +11,7 @@
@@ -241,17 +237,34 @@ index 2696dc91fa..fc7c843e1f 100644
    & PropsStore<ReturnType<typeof createLayoutStore>>
 
  /** Center column grid item (session-body building block). */
-@@ -96,7 +96,9 @@ export function AppFrame({
-     return current !== undefined && s.byId[current]?.blank === false ? current : undefined
-   })
+@@ -91,25 +91,25 @@ export function AppFrame({
+   renderSlot,
+ }: AppFrameProps) {
+   const panels = useStore(s => s)
+-  const detailsSession = useSessions((s) => {
+-    const current = s.current
+-    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
+-  })
++  const currentSession = useSessions(s => s.current)
    const frameRef = useRef<HTMLDivElement | null>(null)
 +  const navbarRef = useRef<HTMLElement | null>(null)
    const [viewport, setViewport] = useState(() => window.innerWidth)
 +  const [navbarWidth, setNavbarWidth] = useState(28)
 
-   const lastSession = useRef(detailsSession)
+-  const lastSession = useRef(detailsSession)
++  const lastSession = useRef(currentSession)
    useLayoutEffect(() => {
-@@ -110,6 +112,7 @@ export function AppFrame({
+-    if (detailsSession === undefined) return
+-    if (lastSession.current !== undefined && lastSession.current !== detailsSession) {
++    if (currentSession === undefined) return
++    if (lastSession.current !== undefined && lastSession.current !== currentSession) {
+       actions.closeDetails()
+     }
+-    lastSession.current = detailsSession
+-  }, [actions, detailsSession])
++    lastSession.current = currentSession
++  }, [actions, currentSession])
+
    // Track the frame's own box (not the window): rAF-throttled ResizeObserver.
    useEffect(() => {
      const el = frameRef.current
@@ -259,7 +272,7 @@ index 2696dc91fa..fc7c843e1f 100644
      /* v8 ignore next -- the ref is always attached by effect time: the frame div renders unconditionally. */
      if (el === null) return
      let raf: number | null = null
-@@ -118,9 +121,12 @@ export function AppFrame({
+@@ -118,9 +118,12 @@ export function AppFrame({
          raf = null
          const width = el.getBoundingClientRect().width
          if (width > 0) setViewport(width)
@@ -272,12 +285,12 @@ index 2696dc91fa..fc7c843e1f 100644
      return () => {
        observer.disconnect()
        if (raf !== null) cancelAnimationFrame(raf)
-@@ -139,9 +145,11 @@ export function AppFrame({
+@@ -139,9 +142,11 @@ export function AppFrame({
    const sidebarPreference = sidebarCollapsed
      ? 0
      : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
 -  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
-+  const detailsPreference = detailsSession === undefined || !panels.detailsOpen ? 0 : panels.detailsWidth
++  const detailsPreference = panels.detailsOpen ? panels.detailsWidth : 0
 +  const cols = computeColumns(viewport, sidebarPreference, detailsPreference)
    const colsRef = useRef(cols)
    colsRef.current = cols
@@ -285,7 +298,7 @@ index 2696dc91fa..fc7c843e1f 100644
 
    // The drag base is the rendered width captured at drag start (grabbing a
    // concession-clamped panel must not jump back to the stored preference);
-@@ -165,7 +173,10 @@ export function AppFrame({
+@@ -165,7 +170,10 @@ export function AppFrame({
      <div
        ref={frameRef}
        className={css.frame}
@@ -297,7 +310,7 @@ index 2696dc91fa..fc7c843e1f 100644
        data-sidebar-collapsed={sidebarCollapsed || undefined}
        data-details-collapsed={cols.details === 0 || undefined}
        data-dragging={dragging || undefined}
-@@ -193,6 +204,13 @@ export function AppFrame({
+@@ -193,6 +201,13 @@ export function AppFrame({
        <div className={css.overlayLayer} data-shell-overlay>
          {renderSlot('shell.overlay', {})}
        </div>
@@ -462,7 +475,7 @@ index d2de668a9c..af9ec6d9f0 100644
    })
    return handle
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index d865a5c186..78cc700251 100644
+index d865a5c186..17a23ca307 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 @@ -111,6 +111,7 @@ function drag(handle: Element, fromX: number, toX: number): void {
@@ -483,7 +496,7 @@ index d865a5c186..78cc700251 100644
    }
    // jsdom lacks pointer capture: emulate per-element so hasPointerCapture gates pass.
    const captured = new WeakSet<Element>()
-@@ -142,6 +144,33 @@ describe('AppFrame', () => {
+@@ -142,6 +144,61 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 0])
    })
 
@@ -504,6 +517,34 @@ index d865a5c186..78cc700251 100644
 +    expect(owner().detailsOpen).toBe(false)
 +  })
 +
++  it('opens details on a blank session before the first message', () => {
++    selectedSessionBlank.current = true
++    const { frame, slotCalls } = mountFrame()
++    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
++      detailsOpen: boolean
++      openDetails(): void
++    }
++
++    act(() => { owner().openDetails() })
++
++    expect(tracks(frame)).toEqual([280, 360])
++    expect(owner().detailsOpen).toBe(true)
++  })
++
++  it('opens details on the new-conversation view without a current session', () => {
++    selectedSession.current = undefined
++    const { frame, slotCalls } = mountFrame()
++    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
++      detailsOpen: boolean
++      openDetails(): void
++    }
++
++    act(() => { owner().openDetails() })
++
++    expect(tracks(frame)).toEqual([280, 360])
++    expect(owner().detailsOpen).toBe(true)
++  })
++
 +  it('reserves measured navbar room only while details are collapsed', () => {
 +    const { frame, instance } = mountFrame()
 +    act(() => { fireResize?.(); vi.advanceTimersByTime(20) })
@@ -517,16 +558,31 @@ index d865a5c186..78cc700251 100644
    it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
      const { slotCalls, getByTestId } = mountFrame()
      expect(getByTestId('center-content')).toBeTruthy()
-@@ -188,7 +217,7 @@ describe('AppFrame', () => {
+@@ -172,7 +229,7 @@ describe('AppFrame', () => {
+     expect(slotCalls.map(c => c.key)).toContain('details')
+   })
+
+-  it('ignores unselected states and closes only when the Session id changes', () => {
++  it('closes when the Session id changes, including a blank Session', () => {
+     const { frame, instance, rerenderFrame } = mountFrame()
+     expect(tracks(frame)).toEqual([280, 0])
+
+@@ -188,12 +245,12 @@ describe('AppFrame', () => {
      selectedSessionBlank.current = true
      act(() => { rerenderFrame() })
      expect(tracks(frame)).toEqual([280, 0])
 -    expect(instance.getSnapshot().details).toBe(360)
-+    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: true })
++    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
 
      selectedSession.current = 's-next' as SessionId
      selectedSessionBlank.current = false
-@@ -207,7 +236,7 @@ describe('AppFrame', () => {
+     act(() => { rerenderFrame() })
+-    expect(tracks(frame)).toEqual([280, 360])
++    expect(tracks(frame)).toEqual([280, 0])
+
+     selectedSession.current = undefined
+     act(() => { rerenderFrame() })
+@@ -207,7 +264,7 @@ describe('AppFrame', () => {
      selectedSession.current = undefined
      const { frame, instance, rerenderFrame } = mountFrame()
      expect(tracks(frame)).toEqual([280, 0])
@@ -535,7 +591,7 @@ index d865a5c186..78cc700251 100644
 
      selectedSession.current = 's-first' as SessionId
      act(() => { rerenderFrame() })
-@@ -241,7 +270,7 @@ describe('AppFrame', () => {
+@@ -241,7 +298,7 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 330])
      const handles = frame.querySelectorAll('[class*="handle"]')
      drag(handles[1]!, 920, 930) // shrink by 10 from the rendered width
