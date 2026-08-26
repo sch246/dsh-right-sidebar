@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.7",
+  "revision": "0.3.0-draft.9",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -24,7 +24,8 @@
     "../logs/2026-08-26-new-conversation-visibility-deployment.md",
     "../logs/2026-08-26-public-tls-followup.md",
     "../logs/2026-08-26-new-conversation-visibility-acceptance.md",
-    "../logs/2026-08-26-source-region-ownership-practice.md"
+    "../logs/2026-08-26-source-region-ownership-practice.md",
+    "../logs/2026-08-26-marker-locator-simplification.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -39,9 +40,9 @@
       "id": "host.dsh-right-sidebar",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
-      "revision": "d9bcfa3746b952f30ca4a6ffb05218309e8e15a6",
-      "scope": "historical source baseline before the Agent-driven portability refactor; exact current realization binding remains pending",
-      "worktree": "observed-dirty-before-commit"
+      "revision": "da92398f33bf6f7268b3c1a704878bc2afcfc595",
+      "scope": "immutable source identity selected by candidate 7",
+      "worktree": "candidate lock metadata added after source commit"
     },
     {
       "id": "target.deepseek-harness",
@@ -55,7 +56,7 @@
       "id": "protocol.meta-intent",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/meta-intent",
-      "revision": "c3c60d1cce6cf1a3cf5c4e07f183a64ef167d7ce"
+      "revision": "5ee8ab8727932408e77c852e8b535c6af7bb4a7f"
     },
     {
       "id": "runtime.dsh-web",

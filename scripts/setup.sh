@@ -38,7 +38,7 @@ fi
 PATCH_APPLIED_BY_SETUP=false
 
 verify_source_markers() {
-  local needle='"package":"dsh-right-sidebar"'
+  local needle='@meta-intent:begin dsh-right-sidebar '
   local paths=(
     packages/client/runtime/src/client/contract/store.ts
     packages/client/ui-layout/src/client/AppFrame.tsx
