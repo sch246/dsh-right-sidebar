@@ -1,0 +1,185 @@
+{
+  "kind": "realization",
+  "id": "right-sidebar-linux-web",
+  "revision": "0.3.0-candidate.9",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.3.0-draft.14"
+  },
+  "state": {
+    "revision": "0.3.0-draft.14",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:997c6db0f1c9a2f6abce211683d778ce0347f458940f74b5792037a2340004ad"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:eca4da46dfae1c0918e2aabb848acd8c8a8be9f8896f423812a3b13c8a820d00"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
+    },
+    {
+      "path": "../../logs/2026-08-25-shell-quality-and-adapter-integration.md",
+      "digest": "sha256:1b33cebe1bb23d7799ab8ddd750aba6fb0be50b85350747f5abd962ead7fec47"
+    },
+    {
+      "path": "../../logs/2026-08-25-live-web-install.md",
+      "digest": "sha256:d72a59be471c3b6d3741a449a242ea3c4f46344d5183c00e1ab95598ea92d3d3"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-revision.md",
+      "digest": "sha256:ecf2a10118f7c6a89e7f3a57d4671b09c339040af6189a4680c73c173a5cd204"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-deployment.md",
+      "digest": "sha256:291d80ba9d341b7696b0f974612a99e2b98771e4259462d4abfaba5a44405920"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-alignment.md",
+      "digest": "sha256:675d1b94e327d99ea29ff21f2c0bda2dbde2fae2aca36e618d996d4cc99df243"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-deployment.md",
+      "digest": "sha256:6bf19f19057d9ad85f784edd4c22c5969603a26ade27f2436daa5b2d231a902d"
+    },
+    {
+      "path": "../../logs/2026-08-26-live-shell-milestone-closure.md",
+      "digest": "sha256:4ee1cbd304bb73f7517e15d51eb6e41af9c163b6bc8e54b142d1c539b405e1d9"
+    },
+    {
+      "path": "../../logs/2026-08-26-agent-driven-portability-and-api-authority.md",
+      "digest": "sha256:0d9df4e439a5018521f634164d73a7c260e4eb6f24783b38c3d47de785271a62"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-tension.md",
+      "digest": "sha256:adb12e89bda3e0c43c1950306b31c3c1888018aaea2325e641c8006aba293f04"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-repair.md",
+      "digest": "sha256:e5a1d891d17b7ab5bba436943f1c237910a377676422768b088a1313f9b02a8d"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-deployment.md",
+      "digest": "sha256:371cfdde85478a15ac9ac2d2d0342c7b4ca6f3a34b2fb96914c796ce4ee9952e"
+    },
+    {
+      "path": "../../logs/2026-08-26-public-tls-followup.md",
+      "digest": "sha256:cd63712c11d605bd69cf9af5da5622c794a907602c71252648bf1a35cb835e44"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-acceptance.md",
+      "digest": "sha256:defbe1daa9e077d2dfeb5edb16290e61466bb291a1fbc8cbc72cf4b2f01e7a17"
+    },
+    {
+      "path": "../../logs/2026-08-26-source-region-ownership-practice.md",
+      "digest": "sha256:bc297907f591bbc6d184aee063fc1ef07c7c61da40a1913fd91caa536bc31bb5"
+    },
+    {
+      "path": "../../logs/2026-08-26-marker-locator-simplification.md",
+      "digest": "sha256:03b178739c91d5f0fe2d6484cd68cd0e8c6c1ca7566b29764bb92e099db33d33"
+    },
+    {
+      "path": "../../logs/2026-08-26-purpose-comment-marker-correction.md",
+      "digest": "sha256:4bbeb1d29ed670618110af1109b24452addb20ff7d77c32512b2d8c4d580e248"
+    },
+    {
+      "path": "../../logs/2026-08-26-remote-baseline-correction.md",
+      "digest": "sha256:ce20105af370465d0edf6e201ee97b216cd222ec14c05a4dd4f6155ac50d3a69"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/acceptance.md",
+      "digest": "sha256:ba8dd928f066345efeb5729b02ed16528689eb366ee2d9d38bc04a50ea0788b2"
+    },
+    {
+      "path": "artifacts/install.md",
+      "digest": "sha256:f82485a999a27ec86d495c492e01962c987d13588623a1176f6fed9f0d1603fb"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "caa1031c139ca6567ad7f2186ff66466d5689280",
+    "paths": [
+      "README.md",
+      "package.json",
+      "cordis.patch.yml",
+      "patches/deepseek-harness.patch",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "official-remote-baseline-applicability",
+        "observedOn": "2026-08-26",
+        "artifact": "artifacts/acceptance.md",
+        "result": "the patch applies to detached origin/master b150a551 and composes there with preset-manager"
+      },
+      {
+        "id": "nearby-purpose-comment-locators",
+        "observedOn": "2026-08-26",
+        "artifact": "artifacts/acceptance.md",
+        "result": "38 package boundaries with ordinary purpose comments balance per owner; purpose prose remains navigation only"
+      },
+      {
+        "id": "exact-reverse-applicability",
+        "observedOn": "2026-08-26",
+        "artifact": "artifacts/acceptance.md",
+        "result": "the tracked patch reverses cleanly on the selected combined local assembly checkout"
+      },
+      {
+        "id": "generated-surface-composition",
+        "observedOn": "2026-08-26",
+        "artifact": "artifacts/acceptance.md",
+        "result": "shared catalogs are excluded from patch ownership and regenerated from current source contributions"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "candidate 9 build and test execution",
+    "live profile install and browser interaction",
+    "owned uninstall and unrelated-drift preservation exercise",
+    "two-way main/sidebar state synchronization and session isolation"
+  ]
+}
