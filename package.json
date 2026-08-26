@@ -38,6 +38,8 @@
   },
   "scripts": {
     "build": "bash scripts/build.sh",
+    "setup": "bash scripts/setup.sh",
+    "uninstall": "bash scripts/uninstall.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:client": "tsdown",
     "test": "node node_modules/vitest/vitest.mjs run"

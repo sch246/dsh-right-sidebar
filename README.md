@@ -15,6 +15,18 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 - 第三方插件可注册、排序和卸载标签页；
 - 主界面贡献和右栏标签可共享同一份 session 状态与动作。
 
+## 安装与回撤
+
+推荐使用带所有权收据的生命周期脚本：
+
+```bash
+DSH_CHECKOUT=/root/deepseek-harness bash scripts/setup.sh
+# 回撤同一版本 setup 实际拥有的宿主补丁与 bundle：
+DSH_CHECKOUT=/root/deepseek-harness bash scripts/uninstall.sh
+```
+
+setup 只接受“补丁尚未应用”或“完全一致地已应用”，核对就近的 `@meta-intent` source-region owner 标记，记录补丁 SHA-256、owner regions 与生成物映射。共享 slot/API catalog 不属于本包补丁；安装与卸载都从当前剩余的全部源贡献重生成，避免与其它插件争用同一生成文件。
+
 ## 本地 link 装配
 
 先构建插件：
@@ -42,7 +54,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码补丁
 
-官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，基于官方 Harness commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。
+官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，当前基于 Harness commit `b642a10626a950cc95c2d6f839810cb01fe599fe`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。补丁的每个逻辑侵入区都带有就近 owner 标记；生成 catalog 由生命周期脚本重建而不纳入静态补丁。
 
 在对应 Harness checkout 中应用：
 

@@ -1,38 +1,47 @@
 diff --git a/packages/client/runtime/src/client/contract/store.ts b/packages/client/runtime/src/client/contract/store.ts
-index 0eb7917b03..03c0616d40 100644
+index 0eb7917b03..be4d7cfa93 100644
 --- a/packages/client/runtime/src/client/contract/store.ts
 +++ b/packages/client/runtime/src/client/contract/store.ts
-@@ -20,7 +20,7 @@ import type {
+@@ -19,9 +19,11 @@ import type {
+ 
  // Store contract types are ui-slots authority; re-exported beside the engine
  // so store consumers get one import path.
++// @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"runtime-export","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Expose keyed persistence so sidebar width survives while visibility stays transient."}
  export type {
 -  ActionsDecl, BakedActions, BoundActions, StoreFactory, StoreHandle, StoreInstance, StoreSpec,
 +  ActionsDecl, BakedActions, BoundActions, StoreFactory, StoreHandle, StoreInstance, StorePersistence, StoreSpec,
  } from '@deepseek-ai/dsh-client-ui-slots'
-
++// @meta-intent:end {"region":"dsh.store.partial-persistence","part":"runtime-export"}
+ 
  /** Minimal observable snapshot source: Session objects and snapshot stores both satisfy it. */
-@@ -84,12 +84,14 @@ function rafBatch(notify: () => void): () => void {
+ export interface ObservableSnapshot<T> { getSnapshot(): T; subscribe(fn: () => void): () => void }
+@@ -84,12 +86,18 @@ function rafBatch(notify: () => void): () => void {
   * @returns the store.
   */
  export function createSnapshotStore<T>(
 -  init: T, opts?: { flush?: 'raf' | 'sync'; persist?: { name: string } }): SnapshotStore<T> {
 +  init: T,
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"snapshot-options","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Allow one store to persist selected fields without reviving transient sidebar state."}
 +  opts?: { flush?: 'raf' | 'sync'; persist?: { name: string; keys?: readonly (keyof T)[] } },
++  // @meta-intent:end {"region":"dsh.store.partial-persistence","part":"snapshot-options"}
 +): SnapshotStore<T> {
    // Immer enters through produce() in update() below (identical semantics to
    // the immer middleware without its setState-signature mutator generics).
    const withSelector = subscribeWithSelector(() => init)
    const api: StoreApi<T> = createStore<T>()(withSelector)
 -  if (opts?.persist) attachPersistence(api, opts.persist.name)
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"snapshot-attach","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Pass the keyed declaration to the persistence engine."}
 +  if (opts?.persist) attachPersistence(api, opts.persist)
-
++  // @meta-intent:end {"region":"dsh.store.partial-persistence","part":"snapshot-attach"}
+ 
    let subscribe = (fn: () => void) => api.subscribe(fn)
    if (opts?.flush === 'raf') {
-@@ -124,7 +126,11 @@ export function createSnapshotStore<T>(
+@@ -124,7 +132,12 @@ export function createSnapshotStore<T>(
   * because the corruption happens before serialization. Storage failures
   * (quota, private mode) only disable persistence, never break the store.
   */
 -function attachPersistence<T>(api: StoreApi<T>, name: string): void {
++// @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"persistence-engine","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Overlay durable width fields onto fresh transient defaults and serialize only those fields."}
 +function attachPersistence<T>(
 +  api: StoreApi<T>,
 +  options: { name: string; keys?: readonly (keyof T)[] },
@@ -41,7 +50,7 @@ index 0eb7917b03..03c0616d40 100644
    // Non-browser runs (node e2e booting the client tree) have no localStorage:
    // persistence silently disables — same contract as a storage failure, minus
    // the per-store console noise a ReferenceError would produce.
-@@ -132,14 +138,33 @@ function attachPersistence<T>(api: StoreApi<T>, name: string): void {
+@@ -132,19 +145,39 @@ function attachPersistence<T>(api: StoreApi<T>, name: string): void {
    try {
      const raw = localStorage.getItem(name)
      if (raw !== null) {
@@ -77,8 +86,17 @@ index 0eb7917b03..03c0616d40 100644
      } catch (error) {
        console.error(`snapshot store '${name}' persistence failed:`, error)
      }
-@@ -211,10 +236,15 @@ export function defineStore<T, A extends ActionsDecl<T>>(
+   })
+ }
++// @meta-intent:end {"region":"dsh.store.partial-persistence","part":"persistence-engine"}
+ 
+ /** Deep-freeze wholesale-set state outside production: set() bypasses immer's freeze. */
+ function devFreeze<T>(value: T): T {
+@@ -209,12 +242,19 @@ export function defineStore<T, A extends ActionsDecl<T>>(
+   return {
+     spec: decl,
      create(scopeKey?: string): EngineStoreInstance<T, A> {
++      // @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"declaration-resolution","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Resolve string and keyed persistence declarations into one scoped storage identity."}
        const persistKey = decl.persist === undefined
          ? undefined
 -        : scopeKey === undefined ? decl.persist : `${decl.persist}.${scopeKey}`
@@ -92,17 +110,19 @@ index 0eb7917b03..03c0616d40 100644
 +        persistKey !== undefined
 +          ? { persist: persistKeys === undefined ? { name: persistKey } : { name: persistKey, keys: persistKeys } }
 +          : undefined)
++      // @meta-intent:end {"region":"dsh.store.partial-persistence","part":"declaration-resolution"}
        const actions = {} as Record<string, (...params: unknown[]) => void>
        for (const key of Object.keys(decl.actions)) {
          const mutate = decl.actions[key] as (draft: T, ...params: unknown[]) => void
 diff --git a/packages/client/runtime/tests/store.client.spec.ts b/packages/client/runtime/tests/store.client.spec.ts
-index 3abd0483f2..6be4c7deac 100644
+index 3abd0483f2..f3989fc1bb 100644
 --- a/packages/client/runtime/tests/store.client.spec.ts
 +++ b/packages/client/runtime/tests/store.client.spec.ts
-@@ -188,6 +188,29 @@ describe('defineStore', () => {
+@@ -188,6 +188,31 @@ describe('defineStore', () => {
      expect(backing.has('spec.chat')).toBe(true)
    })
-
+ 
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"runtime-acceptance","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Protect width-only persistence and fresh visibility defaults."}
 +  it('persists selected top-level keys and overlays them onto fresh transient defaults', () => {
 +    const backing = new Map<string, string>()
 +    vi.stubGlobal('localStorage', {
@@ -125,43 +145,48 @@ index 3abd0483f2..6be4c7deac 100644
 +    const revived = handle.create()
 +    expect(revived.getSnapshot()).toEqual({ width: 512, open: false, transient: 'fresh' })
 +  })
++  // @meta-intent:end {"region":"dsh.store.partial-persistence","part":"runtime-acceptance"}
 +
    it('clearPersisted is a no-op without a persist declaration or without storage', () => {
      const inst = declare().create('s1')   // no persist key declared
      expect(() => { inst.clearPersisted() }).not.toThrow()
 diff --git a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
-index 265a0bd802..e547f16f8e 100644
+index 265a0bd802..2659faac23 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
 +++ b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
-@@ -28,7 +28,7 @@
+@@ -28,7 +28,9 @@
  .header {
    position: relative;
    flex: none;
 -  padding: 12px 28px 0 20px;
++  /* @meta-intent:begin {"region":"shell.navbar.action","part":"conversation-clearance","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Keep conversation header utilities clear of the global sidebar control."} */
 +  padding: 12px max(28px, var(--dsh-shell-navbar-clearance, 28px)) 0 20px;
++  /* @meta-intent:end {"region":"shell.navbar.action","part":"conversation-clearance"} */
    border-bottom: 1px solid transparent;
  }
-
+ 
 diff --git a/packages/client/ui-layout/src/client/AppFrame.module.css b/packages/client/ui-layout/src/client/AppFrame.module.css
-index ae56780133..fbb3195e80 100644
+index ae56780133..c168e1ee12 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.module.css
 +++ b/packages/client/ui-layout/src/client/AppFrame.module.css
-@@ -48,9 +48,8 @@
+@@ -48,9 +48,9 @@
    border-left: none;
  }
-
+ 
 -/* Drag handles are frame children (columns clip overflow): an 8px hit strip
 -   centered on the column border via inline left, above column content. Details
 -   adds a visible 12x32 pill at vertical center; sidebar keeps only the hit strip. */
++/* @meta-intent:begin {"region":"shell.details.transient-visibility","part":"divider-chrome","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Use the native full-height divider without a second floating sidebar grip."} */
 +/* Drag handles are frame children (columns clip overflow): an invisible 8px
 +   full-height hit strip centered on the column border via inline left. */
  .handle {
    position: absolute;
    top: 0;
-@@ -75,38 +74,6 @@
+@@ -74,38 +74,7 @@
+     transition: none;
    }
  }
-
+-
 -.handle[data-side='details']::after {
 -  content: '';
 -  position: absolute;
@@ -193,14 +218,15 @@ index ae56780133..fbb3195e80 100644
 -  background: var(--dsw-alias-button-floating-hover);
 -  border-color: var(--dsw-alias-border-l3);
 -}
--
++/* @meta-intent:end {"region":"shell.details.transient-visibility","part":"divider-chrome"} */
+ 
  .overlayLayer {
    position: absolute;
-   inset: 0;
-@@ -114,6 +81,17 @@
+@@ -114,6 +83,19 @@
    pointer-events: none;
  }
-
+ 
++/* @meta-intent:begin {"region":"shell.navbar.action","part":"navbar-layout","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Provide a stable application-control seat for the global sidebar toggle."} */
 +.navbar {
 +  position: absolute;
 +  z-index: 30;
@@ -211,33 +237,38 @@ index ae56780133..fbb3195e80 100644
 +  gap: 4px;
 +  pointer-events: auto;
 +}
++/* @meta-intent:end {"region":"shell.navbar.action","part":"navbar-layout"} */
 +
  .overlayLayer > * {
    pointer-events: auto;
  }
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index 2696dc91fa..02edc61f83 100644
+index 2696dc91fa..7e7ce12540 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
-@@ -11,7 +11,7 @@
+@@ -11,7 +11,9 @@
   * zero self-made hooks.
   */
  import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 -import type { ReactNode } from 'react'
++// @meta-intent:begin {"region":"shell.navbar.action","part":"frame-types","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Type the navbar clearance variable and render seat added for the global sidebar control."}
 +import type { CSSProperties, ReactNode } from 'react'
++// @meta-intent:end {"region":"shell.navbar.action","part":"frame-types"}
  import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
  import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
  import type { createLayoutStore } from './stores.ts'
-@@ -20,7 +20,7 @@ import css from './AppFrame.module.css'
+@@ -20,7 +22,9 @@ import css from './AppFrame.module.css'
  /** Full composed props: runtime share + child-slot render share + store share. */
  export type AppFrameProps =
    & PropsRuntime<'root'>
 -  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.overlay'>
++  // @meta-intent:begin {"region":"shell.navbar.action","part":"frame-slot-share","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Deliver the global navbar action seat to the root frame."}
 +  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.navbar.action' | 'shell.overlay'>
++  // @meta-intent:end {"region":"shell.navbar.action","part":"frame-slot-share"}
    & PropsStore<ReturnType<typeof createLayoutStore>>
-
+ 
  /** Center column grid item (session-body building block). */
-@@ -91,25 +91,25 @@ export function AppFrame({
+@@ -91,25 +95,29 @@ export function AppFrame({
    renderSlot,
  }: AppFrameProps) {
    const panels = useStore(s => s)
@@ -245,12 +276,13 @@ index 2696dc91fa..02edc61f83 100644
 -    const current = s.current
 -    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
 -  })
++  // @meta-intent:begin {"region":"shell.details.transient-visibility","part":"session-and-navbar-state","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Keep the right column available before the first turn, close it only on session change, and measure its global control."}
 +  const currentSession = useSessions(s => s.current)
    const frameRef = useRef<HTMLDivElement | null>(null)
 +  const navbarRef = useRef<HTMLElement | null>(null)
    const [viewport, setViewport] = useState(() => window.innerWidth)
 +  const [navbarWidth, setNavbarWidth] = useState(28)
-
+ 
 -  const lastSession = useRef(detailsSession)
 +  const lastSession = useRef(currentSession)
    useLayoutEffect(() => {
@@ -264,56 +296,68 @@ index 2696dc91fa..02edc61f83 100644
 -  }, [actions, detailsSession])
 +    lastSession.current = currentSession
 +  }, [actions, currentSession])
-
++  // @meta-intent:end {"region":"shell.details.transient-visibility","part":"session-and-navbar-state"}
+ 
    // Track the frame's own box (not the window): rAF-throttled ResizeObserver.
    useEffect(() => {
      const el = frameRef.current
++    // @meta-intent:begin {"region":"shell.navbar.action","part":"navbar-measurement","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Measure the global control so conversation utilities reserve exactly its occupied width."}
 +    const navbar = navbarRef.current
++    // @meta-intent:end {"region":"shell.navbar.action","part":"navbar-measurement"}
      /* v8 ignore next -- the ref is always attached by effect time: the frame div renders unconditionally. */
      if (el === null) return
      let raf: number | null = null
-@@ -118,9 +118,12 @@ export function AppFrame({
+@@ -118,9 +126,16 @@ export function AppFrame({
          raf = null
          const width = el.getBoundingClientRect().width
          if (width > 0) setViewport(width)
++        // @meta-intent:begin {"region":"shell.navbar.action","part":"navbar-resize","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Update clearance when registered application controls change width."}
 +        const nextNavbarWidth = navbar?.getBoundingClientRect().width ?? 0
 +        if (nextNavbarWidth > 0) setNavbarWidth(nextNavbarWidth)
++        // @meta-intent:end {"region":"shell.navbar.action","part":"navbar-resize"}
        })
      })
      observer.observe(el)
++    // @meta-intent:begin {"region":"shell.navbar.action","part":"navbar-observer","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Observe the application-control seat independently from the frame."}
 +    if (navbar !== null) observer.observe(navbar)
++    // @meta-intent:end {"region":"shell.navbar.action","part":"navbar-observer"}
      return () => {
        observer.disconnect()
        if (raf !== null) cancelAnimationFrame(raf)
-@@ -139,9 +142,11 @@ export function AppFrame({
+@@ -139,9 +154,13 @@ export function AppFrame({
    const sidebarPreference = sidebarCollapsed
      ? 0
      : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
 -  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
++  // @meta-intent:begin {"region":"shell.details.transient-visibility","part":"resolved-width","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Resolve transient open state against the remembered right-column width."}
 +  const detailsPreference = panels.detailsOpen ? panels.detailsWidth : 0
 +  const cols = computeColumns(viewport, sidebarPreference, detailsPreference)
    const colsRef = useRef(cols)
    colsRef.current = cols
 +  const shellNavbarClearance = cols.details === 0 ? Math.max(28, navbarWidth + 16) : 28
-
++  // @meta-intent:end {"region":"shell.details.transient-visibility","part":"resolved-width"}
+ 
    // The drag base is the rendered width captured at drag start (grabbing a
    // concession-clamped panel must not jump back to the stored preference);
-@@ -165,7 +170,10 @@ export function AppFrame({
+@@ -165,7 +184,12 @@ export function AppFrame({
      <div
        ref={frameRef}
        className={css.frame}
 -      style={{ gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` }}
 +      style={{
 +        gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`,
++        // @meta-intent:begin {"region":"shell.navbar.action","part":"clearance-projection","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Project measured navbar width as a shell CSS contract."}
 +        '--dsh-shell-navbar-clearance': `${shellNavbarClearance}px`,
++        // @meta-intent:end {"region":"shell.navbar.action","part":"clearance-projection"}
 +      } as CSSProperties}
        data-sidebar-collapsed={sidebarCollapsed || undefined}
        data-details-collapsed={cols.details === 0 || undefined}
        data-dragging={dragging || undefined}
-@@ -193,6 +201,13 @@ export function AppFrame({
+@@ -193,9 +217,20 @@ export function AppFrame({
        <div className={css.overlayLayer} data-shell-overlay>
          {renderSlot('shell.overlay', {})}
        </div>
++      {/* @meta-intent:begin {"region":"shell.navbar.action","part":"render-seat","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Render the additive global sidebar control with authoritative details actions."} */}
 +      <nav ref={navbarRef} className={css.navbar} aria-label="Application controls" data-shell-navbar>
 +        {renderSlot('shell.navbar.action', {
 +          detailsOpen: cols.details > 0,
@@ -321,11 +365,17 @@ index 2696dc91fa..02edc61f83 100644
 +          closeDetails: actions.closeDetails,
 +        })}
 +      </nav>
++      {/* @meta-intent:end {"region":"shell.navbar.action","part":"render-seat"} */}
        {/* The collapsed rail is fixed-width: no resize handle while closed. */}
        {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
++      {/* @meta-intent:begin {"region":"shell.details.transient-visibility","part":"resize-availability","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Expose resize only while the transient right column occupies width."} */}
        {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
++      {/* @meta-intent:end {"region":"shell.details.transient-visibility","part":"resize-availability"} */}
+     </div>
+   )
+ }
 diff --git a/packages/client/ui-layout/src/client/index.ts b/packages/client/ui-layout/src/client/index.ts
-index c56d83bfbb..4c7172c8a1 100644
+index c56d83bfbb..23585e80a7 100644
 --- a/packages/client/ui-layout/src/client/index.ts
 +++ b/packages/client/ui-layout/src/client/index.ts
 @@ -1,7 +1,7 @@
@@ -337,7 +387,7 @@ index c56d83bfbb..4c7172c8a1 100644
   * layout store (panel geometry), and wires the panel-action service face.
   * ctx.layout is the cross-plugin panel-action contract; navigation state lives
   * with the runtime sessions service. A second effect seats the theme
-@@ -33,7 +33,7 @@ declare module '@deepseek-ai/cordis' {
+@@ -33,9 +33,10 @@ declare module '@deepseek-ai/cordis' {
  declare module '@deepseek-ai/dsh-client-ui-slots' {
    interface SlotMap {
      // The 'root' entry itself is the runtime's built-in slot (declared
@@ -345,8 +395,11 @@ index c56d83bfbb..4c7172c8a1 100644
 +    // there); these five are the frame's children, declared by the same
      // register() call that contributes AppFrame. Session owners never pass
      // sessionId: the framework injects it as a standard prop.
++    // @meta-intent:begin {"region":"shell.navbar.action","part":"slot-declaration","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Declare an additive root-scoped seat for the global sidebar control."}
      /**
-@@ -70,6 +70,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
+      * The whole left column. OCCUPIED by ui-sidebar's SidebarRoot, which
+      * declares the workspace and settings seats inside it — registering here
+@@ -70,6 +71,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       * `session` scope, and `ctx.layout` owns whether the column is open.
       */
      'details': { kind: 'single'; scope: 'session'; owner: DetailsOwnerProps }
@@ -356,13 +409,15 @@ index c56d83bfbb..4c7172c8a1 100644
 +     * control can stay synchronized without mirroring layout state.
 +     */
 +    'shell.navbar.action': { kind: 'list'; scope: 'root'; owner: NavbarActionOwnerProps }
++    // @meta-intent:end {"region":"shell.navbar.action","part":"slot-declaration"}
      /**
       * Frame-wide floating layer, above every column and outside their scroll
       * containers. Deliberately generic and unowned by any feature: a badge, a
-@@ -104,12 +110,22 @@ export interface ConvOwnerProps {}
+@@ -104,12 +112,24 @@ export interface ConvOwnerProps {}
  /** Details owner share: empty — sessionId arrives as a framework-standard prop. */
  export interface DetailsOwnerProps {}
-
+ 
++// @meta-intent:begin {"region":"shell.navbar.action","part":"owner-contract","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Expose resolved visibility and authoritative open/close writes to navbar occupants."}
 +/** Global navbar action share: real layout state plus the authoritative writes. */
 +export interface NavbarActionOwnerProps {
 +  /** Whether the right column currently occupies layout width. */
@@ -372,10 +427,11 @@ index c56d83bfbb..4c7172c8a1 100644
 +  /** Collapse the right column without discarding its remembered width. */
 +  closeDetails(): void
 +}
++// @meta-intent:end {"region":"shell.navbar.action","part":"owner-contract"}
 +
  /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
  export const inject = ['slots', 'theme']
-
+ 
  /**
   * Client plugin body: provide ctx.layout, then one register() call — AppFrame
 - * into 'root' with the four child-slot declarations, the layout store seat,
@@ -383,19 +439,22 @@ index c56d83bfbb..4c7172c8a1 100644
   * and the inject hook that hands the store's bound actions to the service.
   * @param ctx - client root context.
   */
-@@ -123,6 +139,7 @@ export function apply(ctx: ClientContext): void {
+@@ -123,6 +143,9 @@ export function apply(ctx: ClientContext): void {
          'sidebar': { kind: 'single', scope: 'root' },
          'conversation': { kind: 'single', scope: 'session-maybe' },
          'details': { kind: 'single', scope: 'session' },
++        // @meta-intent:begin {"region":"shell.navbar.action","part":"runtime-registration","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Register the global navbar action child with the root frame."}
 +        'shell.navbar.action': { kind: 'list', scope: 'root' },
++        // @meta-intent:end {"region":"shell.navbar.action","part":"runtime-registration"}
          'shell.overlay': { kind: 'list', scope: 'root' },
        },
        // Exclusive store: the factory itself — the framework instantiates per
 diff --git a/packages/client/ui-layout/src/client/stores.ts b/packages/client/ui-layout/src/client/stores.ts
-index d2de668a9c..af9ec6d9f0 100644
+index d2de668a9c..d37f1b2d32 100644
 --- a/packages/client/ui-layout/src/client/stores.ts
 +++ b/packages/client/ui-layout/src/client/stores.ts
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,9 @@
++// @meta-intent:begin {"region":"shell.details.transient-visibility","part":"layout-state","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Separate remembered right-column width from transient visibility."}
  /**
 - * The root entry's transient layout store: panel geometry as plain widths in
 - * px (0 = closed). Module level exports the factory only — a module-level
@@ -406,9 +465,9 @@ index d2de668a9c..af9ec6d9f0 100644
   * handle would pin the store's identity in the module
   * cache (a de-facto singleton surviving plugin reloads). register() receives
   * the factory (exclusive use: the framework instantiates per entry), AppFrame
-@@ -14,13 +16,20 @@ import {
+@@ -14,13 +17,20 @@ import {
  } from './columns.ts'
-
+ 
  /**
 - * Layout store state: panel width preferences in px (0 = closed), plus the
 + * Layout store state: panel width preferences in px plus explicit right-panel
@@ -426,12 +485,15 @@ index d2de668a9c..af9ec6d9f0 100644
 +  narrow: boolean
 +  narrowExpanded: boolean
 +}
-
+ 
  /**
   * Annotation twin of the actions literal below (the export needs a declared
-@@ -36,21 +45,26 @@ type LayoutActions = {
+@@ -34,23 +44,30 @@ type LayoutActions = {
+   openDetails: (draft: LayoutState) => void
+   closeDetails: (draft: LayoutState) => void
  }
-
++// @meta-intent:end {"region":"shell.details.transient-visibility","part":"layout-state"}
+ 
  /**
 - * Create the layout panel store handle. The preference IS the width, so
 - * closing a panel forgets its drag width — reopening restores the contract
@@ -445,6 +507,7 @@ index d2de668a9c..af9ec6d9f0 100644
   * flips the narrowExpanded override instead of the preference.
   * @returns the store handle (spec + type + identity + factory in one).
   */
++// @meta-intent:begin {"region":"shell.details.transient-visibility","part":"layout-store","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Persist only the remembered width and keep open/close state fresh on every load."}
  export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
    const handle = defineStore({
 -    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false }),
@@ -463,7 +526,7 @@ index d2de668a9c..af9ec6d9f0 100644
        // Narrow toggles flip only the override: the width preference survives
        // untouched, so re-widening restores the pre-squeeze layout.
        toggleSidebar: (d) => {
-@@ -64,8 +78,8 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
+@@ -64,9 +81,10 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
          d.narrow = narrow
          d.narrowExpanded = false
        },
@@ -474,32 +537,39 @@ index d2de668a9c..af9ec6d9f0 100644
      },
    })
    return handle
+ }
++// @meta-intent:end {"region":"shell.details.transient-visibility","part":"layout-store"}
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index d865a5c186..17a23ca307 100644
+index d865a5c186..a10e29dcc8 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-@@ -111,6 +111,7 @@ function drag(handle: Element, fromX: number, toX: number): void {
+@@ -111,6 +111,9 @@ function drag(handle: Element, fromX: number, toX: number): void {
  }
-
+ 
  beforeEach(() => {
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"isolate persisted panel preferences between frame acceptance cases","part":"test-fixture"}
 +  localStorage.clear()
++  // @meta-intent:end {"region":"dsh.store.partial-persistence"}
    frameWidth = 1920
    selectedSession.current = 's-test' as SessionId
    selectedSessionBlank.current = false
-@@ -121,7 +122,8 @@ beforeEach(() => {
+@@ -121,7 +124,10 @@ beforeEach(() => {
    vi.stubGlobal('cancelAnimationFrame', (h: number) => { clearTimeout(h) })
    window.innerWidth = frameWidth
    Element.prototype.getBoundingClientRect = function () {
 -    return { width: frameWidth, height: 1080, top: 0, left: 0, right: frameWidth, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
++    // @meta-intent:begin {"region":"shell.navbar.action","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"model the measured global-navbar seat in frame acceptance tests","part":"test-fixture"}
 +    const width = this instanceof HTMLElement && this.hasAttribute('data-shell-navbar') ? 32 : frameWidth
++    // @meta-intent:end {"region":"shell.navbar.action"}
 +    return { width, height: 1080, top: 0, left: 0, right: width, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
    }
    // jsdom lacks pointer capture: emulate per-element so hasPointerCapture gates pass.
    const captured = new WeakSet<Element>()
-@@ -142,6 +144,61 @@ describe('AppFrame', () => {
+@@ -142,6 +148,63 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 0])
    })
-
+ 
++  // @meta-intent:begin {"region":"shell.navbar.action","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify the global navbar owner contract and measured clearance","part":"acceptance"}
 +  it('supplies the global navbar with live details visibility and authoritative actions', () => {
 +    const { frame, slotCalls } = mountFrame()
 +    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
@@ -554,68 +624,80 @@ index d865a5c186..17a23ca307 100644
 +    act(() => { instance.actions.closeDetails() })
 +    expect(frame.style.getPropertyValue('--dsh-shell-navbar-clearance')).toBe('48px')
 +  })
++  // @meta-intent:end {"region":"shell.navbar.action"}
 +
    it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
      const { slotCalls, getByTestId } = mountFrame()
      expect(getByTestId('center-content')).toBeTruthy()
-@@ -172,7 +229,7 @@ describe('AppFrame', () => {
+@@ -172,7 +235,8 @@ describe('AppFrame', () => {
      expect(slotCalls.map(c => c.key)).toContain('details')
    })
-
+ 
 -  it('ignores unselected states and closes only when the Session id changes', () => {
++  // @meta-intent:begin {"region":"shell.details.transient-visibility","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify transient details visibility across session transitions","part":"acceptance"}
 +  it('closes when the Session id changes, including a blank Session', () => {
      const { frame, instance, rerenderFrame } = mountFrame()
      expect(tracks(frame)).toEqual([280, 0])
-
-@@ -188,12 +245,12 @@ describe('AppFrame', () => {
+ 
+@@ -188,12 +252,12 @@ describe('AppFrame', () => {
      selectedSessionBlank.current = true
      act(() => { rerenderFrame() })
      expect(tracks(frame)).toEqual([280, 0])
 -    expect(instance.getSnapshot().details).toBe(360)
 +    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
-
+ 
      selectedSession.current = 's-next' as SessionId
      selectedSessionBlank.current = false
      act(() => { rerenderFrame() })
 -    expect(tracks(frame)).toEqual([280, 360])
 +    expect(tracks(frame)).toEqual([280, 0])
-
+ 
      selectedSession.current = undefined
      act(() => { rerenderFrame() })
-@@ -207,7 +264,7 @@ describe('AppFrame', () => {
+@@ -207,12 +271,13 @@ describe('AppFrame', () => {
      selectedSession.current = undefined
      const { frame, instance, rerenderFrame } = mountFrame()
      expect(tracks(frame)).toEqual([280, 0])
 -    expect(instance.getSnapshot().details).toBe(0)
 +    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
-
+ 
      selectedSession.current = 's-first' as SessionId
      act(() => { rerenderFrame() })
-@@ -241,7 +298,7 @@ describe('AppFrame', () => {
+     expect(tracks(frame)).toEqual([280, 0])
+   })
++  // @meta-intent:end {"region":"shell.details.transient-visibility"}
+ 
+   it('sidebar slot receives live concession output as owner props', () => {
+     const { slotCalls } = mountFrame()
+@@ -241,7 +306,9 @@ describe('AppFrame', () => {
      expect(tracks(frame)).toEqual([280, 330])
      const handles = frame.querySelectorAll('[class*="handle"]')
      drag(handles[1]!, 920, 930) // shrink by 10 from the rendered width
 -    expect(instance.getSnapshot().details).toBe(320)
++    // @meta-intent:begin {"region":"shell.details.transient-visibility","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify drag updates the width preference independently of visibility","part":"acceptance"}
 +    expect(instance.getSnapshot().detailsWidth).toBe(320)
++    // @meta-intent:end {"region":"shell.details.transient-visibility"}
    })
-
+ 
    it('details column stays mounted at zero width', () => {
 diff --git a/packages/client/ui-layout/tests/apply.client.spec.ts b/packages/client/ui-layout/tests/apply.client.spec.ts
-index 95f8cad439..3360194ffd 100644
+index 95f8cad439..b4eef2ad09 100644
 --- a/packages/client/ui-layout/tests/apply.client.spec.ts
 +++ b/packages/client/ui-layout/tests/apply.client.spec.ts
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,8 @@
  // @vitest-environment jsdom
  // Client apply wiring under the terminal register form: ctx.layout provided,
 -// ONE register() call declares the three child slots + seats the store factory
++// @meta-intent:begin {"region":"shell.navbar.action","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"document the additional shell-owned child slots","part":"acceptance-summary"}
 +// ONE register() call declares the five child slots + seats the store factory
++// @meta-intent:end {"region":"shell.navbar.action"}
  // + wires the panel actions through the inject hook; teardown cascades
  // (service unprovided + declarations gone + registration cleared). Node half
  // and the invariant companion ride along — one line exposes the aggregate
-@@ -40,17 +40,19 @@ describe('ui-layout client apply', () => {
+@@ -40,17 +42,21 @@ describe('ui-layout client apply', () => {
      expect(inject).toEqual(['slots', 'theme'])
    })
-
+ 
 -  it('provides ctx.layout and registers AppFrame into root with the three child declarations', async () => {
 +  it('provides ctx.layout and registers AppFrame into root with the five child declarations', async () => {
      const { ctx, slots } = await bench()
@@ -629,30 +711,36 @@ index 95f8cad439..3360194ffd 100644
      expect(slots.spec('sidebar')).toEqual({ kind: 'single', scope: 'root' })
      expect(slots.spec('conversation')).toEqual({ kind: 'single', scope: 'session-maybe' })
      expect(slots.spec('details')).toEqual({ kind: 'single', scope: 'session' })
++    // @meta-intent:begin {"region":"shell.navbar.action","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify declaration and teardown of the global navbar contract","part":"acceptance"}
 +    expect(slots.spec('shell.navbar.action')).toEqual({ kind: 'list', scope: 'root' })
 +    expect(slots.spec('shell.overlay')).toEqual({ kind: 'list', scope: 'root' })
++    // @meta-intent:end {"region":"shell.navbar.action"}
    })
-
+ 
    it('injects no business face and attaches the layout actions', async () => {
-@@ -58,7 +60,7 @@ describe('ui-layout client apply', () => {
+@@ -58,7 +64,9 @@ describe('ui-layout client apply', () => {
      const fiber = ctx.plugin({ inject: [...inject], apply })
      await fiber.await()
      const actions = {
 -      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
++      // @meta-intent:begin {"region":"shell.details.transient-visibility","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"provide the expanded layout action surface to the injection fixture","part":"acceptance-fixture"}
 +      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), setNarrow: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
++      // @meta-intent:end {"region":"shell.details.transient-visibility"}
      }
      const injected = (slots.entries('root')[0]!.inject as (actions: never) => object)(actions as never)
      expect(injected).toEqual({})
-@@ -100,6 +102,7 @@ describe('ui-layout client apply', () => {
+@@ -100,6 +108,9 @@ describe('ui-layout client apply', () => {
      expect(ctx.get('layout')).toBeUndefined()
      expect(slots.entries('root')).toHaveLength(0)
      expect(slots.spec('sidebar')).toBeUndefined()
++    // @meta-intent:begin {"region":"shell.navbar.action","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify navbar declaration removal follows plugin lifecycle","part":"teardown-acceptance"}
 +    expect(slots.spec('shell.navbar.action')).toBeUndefined()
++    // @meta-intent:end {"region":"shell.navbar.action"}
      // The built-in root declaration survives entry teardown (runtime-owned).
      expect(slots.spec('root')).toEqual({ kind: 'single', scope: 'root' })
    })
 diff --git a/packages/client/ui-layout/tests/layout-store.client.spec.ts b/packages/client/ui-layout/tests/layout-store.client.spec.ts
-index c6f0069197..546d8517ad 100644
+index c6f0069197..121c63a831 100644
 --- a/packages/client/ui-layout/tests/layout-store.client.spec.ts
 +++ b/packages/client/ui-layout/tests/layout-store.client.spec.ts
 @@ -1,7 +1,7 @@
@@ -664,16 +752,19 @@ index c6f0069197..546d8517ad 100644
   * test-sanctioned path: factory self-call + .create() gives the
   * real engine instance (same create path as production).
   */
-@@ -12,14 +12,20 @@ import {
+@@ -12,14 +12,23 @@ import {
    SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
  } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
-
+ 
 -const PERSIST_KEY = 'dsh.layout.panels'
++// @meta-intent:begin {"region":"dsh.store.partial-persistence","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"name and isolate the persisted details-width preference","part":"acceptance-fixture"}
 +const PERSIST_KEY = 'dsh.layout.panels.v1'
-
++// @meta-intent:end {"region":"dsh.store.partial-persistence"}
+ 
  beforeEach(() => { localStorage.clear() })
-
+ 
  describe('createLayoutStore', () => {
++  // @meta-intent:begin {"region":"shell.details.transient-visibility","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify width preference is independent from transient details visibility","part":"acceptance"}
    it('initializes the sidebar at its default width, details closed, wide viewport assumed', () => {
      const { store } = createLayoutStore().create()
 -    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false })
@@ -685,9 +776,9 @@ index c6f0069197..546d8517ad 100644
 +      narrowExpanded: false,
 +    })
    })
-
+ 
    it('each create() is an independent instance (factory is not a singleton)', () => {
-@@ -36,9 +42,9 @@ describe('createLayoutStore', () => {
+@@ -36,9 +45,9 @@ describe('createLayoutStore', () => {
      actions.setSidebar(9999)
      expect(store.getSnapshot().sidebar).toBe(SIDEBAR_MAX)
      actions.setDetails(1)
@@ -697,9 +788,9 @@ index c6f0069197..546d8517ad 100644
 -    expect(store.getSnapshot().details).toBe(DETAILS_MAX)
 +    expect(store.getSnapshot().detailsWidth).toBe(DETAILS_MAX)
    })
-
+ 
    it('toggleSidebar flips closed <-> contract default (drag width forgotten)', () => {
-@@ -55,7 +61,13 @@ describe('createLayoutStore', () => {
+@@ -55,7 +64,13 @@ describe('createLayoutStore', () => {
      actions.setSidebar(400)
      actions.setNarrow(true)
      actions.toggleSidebar()
@@ -714,10 +805,10 @@ index c6f0069197..546d8517ad 100644
      actions.toggleSidebar()
      expect(store.getSnapshot().narrowExpanded).toBe(false)
      expect(store.getSnapshot().sidebar).toBe(400)
-@@ -74,28 +86,29 @@ describe('createLayoutStore', () => {
+@@ -74,30 +89,34 @@ describe('createLayoutStore', () => {
      expect(store.getSnapshot().narrowExpanded).toBe(false)
    })
-
+ 
 -  it('openDetails uses the contract default, preserves an open width, and closeDetails zeroes', () => {
 +  it('openDetails and closeDetails do not overwrite the width preference', () => {
      const { store, actions } = createLayoutStore().create()
@@ -732,8 +823,10 @@ index c6f0069197..546d8517ad 100644
 -    expect(store.getSnapshot().details).toBe(0)
 +    expect(store.getSnapshot()).toMatchObject({ detailsWidth: 500, detailsOpen: false })
    })
-
++  // @meta-intent:end {"region":"shell.details.transient-visibility"}
+ 
 -  it('does not persist panel geometry', () => {
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"verify only the details-width preference is durable and visibility rehydrates closed","part":"acceptance"}
 +  it('persists only the details width and always rehydrates closed', () => {
      const first = createLayoutStore().create()
      first.actions.setSidebar(400)
@@ -741,7 +834,7 @@ index c6f0069197..546d8517ad 100644
      first.actions.setDetails(500)
 -    expect(localStorage.getItem(PERSIST_KEY)).toBeNull()
 +    expect(JSON.parse(localStorage.getItem(PERSIST_KEY)!)).toEqual({ detailsWidth: 500 })
-
+ 
      const second = createLayoutStore().create()
      expect(second.store.getSnapshot()).toEqual({
        sidebar: SIDEBAR_DEFAULT,
@@ -751,14 +844,24 @@ index c6f0069197..546d8517ad 100644
        narrow: false,
        narrowExpanded: false,
      })
+   })
++  // @meta-intent:end {"region":"dsh.store.partial-persistence"}
+ })
 diff --git a/packages/client/ui-slots/src/store.ts b/packages/client/ui-slots/src/store.ts
-index 64e0f9b4b0..6aa8605951 100644
+index 64e0f9b4b0..e238c62ac2 100644
 --- a/packages/client/ui-slots/src/store.ts
 +++ b/packages/client/ui-slots/src/store.ts
-@@ -36,6 +36,19 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
+@@ -1,5 +1,6 @@
+ /** Framework-neutral store contracts for slot registrations and the runtime engine. */
+ 
++// @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"slot-contract","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Declare the durable subset used by the sidebar layout store."}
+ /**
+  * Typed selector hook over a snapshot source. Canonical shape for the whole
+  * slot system (ui-renderer's engine hook is structurally identical; the
+@@ -36,6 +37,20 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
    [K in keyof A]: A[K] extends (draft: T, ...params: infer P) => void ? (...params: P) => void : never
  }
-
+ 
 +/**
 + * Persistence declaration for an object store whose durable fields are only
 + * a subset of its live state. Rehydration overlays the stored keys onto a
@@ -771,249 +874,19 @@ index 64e0f9b4b0..6aa8605951 100644
 +  /** Top-level state keys that survive a new store instance. */
 +  keys: readonly (keyof T)[]
 +}
++// @meta-intent:end {"region":"dsh.store.partial-persistence","part":"slot-contract"}
 +
  /**
   * Store declaration spec: initial-state factory (a lambda so every instance
   * gets a fresh state), optional persistence key (mechanical, framework-run),
-@@ -43,7 +56,7 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
+@@ -43,7 +58,9 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
   */
  export interface StoreSpec<T, A extends ActionsDecl<T>> {
    init: () => T
 -  persist?: string
++  // @meta-intent:begin {"region":"dsh.store.partial-persistence","part":"store-spec","mode":"exclusive","owners":[{"package":"dsh-right-sidebar","realization":"right-sidebar-linux-web-0.3.0-candidate.7"}],"purpose":"Accept either legacy whole-store persistence or a keyed durable subset."}
 +  persist?: string | StorePersistence<T>
++  // @meta-intent:end {"region":"dsh.store.partial-persistence","part":"store-spec"}
    actions: A
  }
-
-diff --git a/packages/extensions/cordis-client-runner/src/client/api-catalog.ts b/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
-index 216652dc05..d62f8880e3 100644
---- a/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
-+++ b/packages/extensions/cordis-client-runner/src/client/api-catalog.ts
-@@ -803,7 +803,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
-   },
-   {
-     name: 'StoreSpec',
--    declaration: 'export interface StoreSpec<T, A extends ActionsDecl<T>> {\n    init: () => T;\n    persist?: string;\n    actions: A;\n}',
-+    declaration: 'export interface StoreSpec<T, A extends ActionsDecl<T>> {\n    init: () => T;\n    persist?: string | StorePersistence<T>;\n    actions: A;\n}',
-   },
-   {
-     name: 'ThemeDefinition',
-diff --git a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
-index 08b22ffdef..6f1612968b 100644
---- a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
-+++ b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
-@@ -371,7 +371,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.bar\', () => ctx.slots.register(\n      { name: \'conversation.composer.bar\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:245',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:251',
-   },
-   {
-     key: 'conversation.composer.dock',
-@@ -424,7 +424,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.dock\', () => ctx.slots.register(\n      { name: \'conversation.composer.dock\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:214',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:220',
-   },
-   {
-     key: 'conversation.details.tool',
-@@ -509,6 +509,32 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.brand.mark\', () => ctx.slots.register(\n      { name: \'conversation.hero.brand.mark\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-     source: 'packages/client/ui-conversation/src/client/contract/slots.ts:183',
-   },
-+  {
-+    key: 'conversation.hero.skillCatalogStart',
-+    kind: 'single',
-+    scope: 'root',
-+    summary: 'The first-step skill-catalog choice beside the agent-preset chip on the new-session screen.',
-+    doc: 'The first-step skill-catalog choice beside the agent-preset chip on the\nnew-session screen. Root scope: the choice addresses the current blank\nsession through its id and hides once a turn has run.',
-+    registerOptions: [],
-+    ownerProps: [
-+      '/** Owner share of the hero skill-catalog choice: the shell supplies nothing. */\nexport interface HeroSkillCatalogStartOwnerProps {\n  /** Marker field: the seat owns its own read and write paths. */\n  children?: never\n}',
-+    ],
-+    ownerPropsReferences: [],
-+    standardProps: [
-+      'useSessions: SnapshotSelectorHook<SessionListState>',
-+      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
-+    ],
-+    keyDomain: '',
-+    hookContext: '',
-+    slotInject: '',
-+    declaredBy: 'an entry in \'conversation\' (client-ui-conversation), so it exists while that entry is mounted',
-+    occupants: [
-+      'client-ui-settings-skill-manager SkillCatalogStartSeat',
-+    ],
-+    replaceRisk: 'shadows-shipped-ui',
-+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.skillCatalogStart\', () => ctx.slots.register(\n      { name: \'conversation.hero.skillCatalogStart\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:195',
-+  },
-   {
-     key: 'conversation.hero.workspace',
-     kind: 'single',
-@@ -562,7 +588,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.workspace.directoryFlow\', () => ctx.slots.register(\n      { name: \'conversation.hero.workspace.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:57',
-+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:62',
-   },
-   {
-     key: 'conversation.input.attachments',
-@@ -596,7 +622,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.attachments\', () => ctx.slots.register(\n      { name: \'conversation.input.attachments\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:247',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:253',
-   },
-   {
-     key: 'conversation.input.dock',
-@@ -651,7 +677,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.dock\', () => ctx.slots.register(\n      { name: \'conversation.input.dock\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:205',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:211',
-   },
-   {
-     key: 'conversation.input.left',
-@@ -702,7 +728,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     occupants: [],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.left\', () => ctx.slots.register(\n      { name: \'conversation.input.left\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:223',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:229',
-   },
-   {
-     key: 'conversation.input.model',
-@@ -733,7 +759,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.model\', () => ctx.slots.register(\n      { name: \'conversation.input.model\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:271',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:277',
-   },
-   {
-     key: 'conversation.input.overlay',
-@@ -813,7 +839,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.plan\', () => ctx.slots.register(\n      { name: \'conversation.input.plan\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:261',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:267',
-   },
-   {
-     key: 'conversation.input.right',
-@@ -864,7 +890,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     occupants: [],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.right\', () => ctx.slots.register(\n      { name: \'conversation.input.right\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:231',
-+    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:237',
-   },
-   {
-     key: 'conversation.message.images',
-@@ -1516,6 +1542,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-       'client-ui-settings-general GeneralSection id \'general\'',
-       'client-ui-settings-models ModelsSection id \'models\'',
-       'client-ui-settings-plugins PluginsSettingsSection id \'plugins\'',
-+      'client-ui-settings-skill-manager SkillsSettingsSection id \'skills\'',
-     ],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.section\', () => ctx.slots.register(\n      { name: \'settings.section\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-@@ -1547,6 +1574,49 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.trigger\', () => ctx.slots.register(\n      { name: \'settings.trigger\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-     source: 'packages/client/ui-settings/src/client/contract/slots.ts:23',
-   },
-+  {
-+    key: 'shell.navbar.action',
-+    kind: 'list',
-+    scope: 'root',
-+    summary: 'Global application-navbar actions.',
-+    doc: 'Global application-navbar actions. The frame supplies the resolved\ndetails-column visibility and its open/close actions so a root-scoped\ncontrol can stay synchronized without mirroring layout state.',
-+    registerOptions: [
-+      {
-+        name: 'id',
-+        requirement: 'required',
-+        type: 'string',
-+        doc: 'Your cell key. Use an id of your own: a fresh id is added beside the shipped entries, while reusing a shipped id puts you in THAT cell and replaces it. Owners that filter by id address you by it.',
-+      },
-+      {
-+        name: 'order',
-+        requirement: 'optional',
-+        type: 'number',
-+        doc: 'Position among the entries, ascending (default 0).',
-+      },
-+      {
-+        name: 'label',
-+        requirement: 'optional',
-+        type: 'string | (() => string)',
-+        doc: 'Display text where the owner projects one (nav rows, tabs). A thunk is re-read on every projection, so localized text follows the active locale without re-registering.',
-+      },
-+    ],
-+    ownerProps: [
-+      '/** Global navbar action share: real layout state plus the authoritative writes. */\nexport interface NavbarActionOwnerProps {\n  /** Whether the right column currently occupies layout width. */\n  detailsOpen: boolean\n  /** Open the right column at its remembered width. */\n  openDetails(): void\n  /** Collapse the right column without discarding its remembered width. */\n  closeDetails(): void\n}',
-+    ],
-+    ownerPropsReferences: [],
-+    standardProps: [
-+      'useSessions: SnapshotSelectorHook<SessionListState>',
-+      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
-+    ],
-+    keyDomain: '',
-+    hookContext: '',
-+    slotInject: '',
-+    declaredBy: 'an entry in \'root\' (client-ui-layout), so it exists while that entry is mounted',
-+    occupants: [],
-+    replaceRisk: 'none',
-+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'shell.navbar.action\', () => ctx.slots.register(\n      { name: \'shell.navbar.action\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-+    source: 'packages/client/ui-layout/src/client/index.ts:78',
-+  },
-   {
-     key: 'shell.overlay',
-     kind: 'list',
-@@ -1586,7 +1656,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     occupants: [],
-     replaceRisk: 'none',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'shell.overlay\', () => ctx.slots.register(\n      { name: \'shell.overlay\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-layout/src/client/index.ts:83',
-+    source: 'packages/client/ui-layout/src/client/index.ts:89',
-   },
-   {
-     key: 'sidebar',
-@@ -1788,7 +1858,33 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
-     ],
-     replaceRisk: 'shadows-shipped-ui',
-     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.directoryFlow\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
--    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:59',
-+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:64',
-+  },
-+  {
-+    key: 'sidebar.workspaces.presetGroups',
-+    kind: 'single',
-+    scope: 'root',
-+    summary: 'Preset-group tree filling the sidebar browsing region\'s preset mode (declared by the WorkspaceBrowser entry).',
-+    doc: 'Preset-group tree filling the sidebar browsing region\'s preset mode (declared by the WorkspaceBrowser entry).',
-+    registerOptions: [],
-+    ownerProps: [
-+      '/**\n * Owner share of the preset-group tree: browser state plus the official row\n * authority needed to render an alternate grouping dimension without\n * importing another plugin\'s runtime module.\n */\nexport interface PresetGroupsOwnerProps {\n  /** True while the shell is in its wide state. */\n  wide: boolean\n  /** The browser\'s normalized search query (\'\' while the search is idle). */\n  query: string\n  /** Official projection and render seats; occupants must not clone workspace rows. */\n  rows: PresetRowsOwner\n}',
-+    ],
-+    ownerPropsReferences: [
-+      'PresetRowsOwner',
-+    ],
-+    standardProps: [
-+      'useSessions: SnapshotSelectorHook<SessionListState>',
-+      'useWorkspaces: SnapshotSelectorHook<import(\'./workspaces/service.ts\').WorkspaceListState>',
-+    ],
-+    keyDomain: '',
-+    hookContext: '',
-+    slotInject: '',
-+    declaredBy: 'an entry in \'sidebar.workspaces\' (client-ui-workspace), so it exists while that entry is mounted',
-+    occupants: [],
-+    replaceRisk: 'none',
-+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.presetGroups\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.presetGroups\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:66',
-   },
-   {
-     key: 'tool.call.toolview',
+ 
