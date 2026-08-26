@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.10",
+  "revision": "0.3.0-draft.11",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -25,7 +25,8 @@
     "../logs/2026-08-26-public-tls-followup.md",
     "../logs/2026-08-26-new-conversation-visibility-acceptance.md",
     "../logs/2026-08-26-source-region-ownership-practice.md",
-    "../logs/2026-08-26-marker-locator-simplification.md"
+    "../logs/2026-08-26-marker-locator-simplification.md",
+    "../logs/2026-08-26-purpose-comment-marker-correction.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -70,7 +71,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-linux-web-0.3.0-candidate.7/LOCK.json"
-  ]
+  "candidateLocks": []
 }
