@@ -75,6 +75,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - The user then tested the deployed browser interaction and reported success. This closes the new-conversation visibility mismatch and confirms the intended client path reached the restarted deployment; it does not close unrelated synchronization or lifecycle acceptance.
 - Realization locks cache concrete versions and evidence. Missing build outputs or an unusable historical environment require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
 - Candidate 7 practices compact package-delimited source locators on all logical Harness interventions. Begin lines carry only ordinary `(purpose: ...)` commentary for an Agent; realization identity and removal authority stay in the lock and lifecycle receipt. It excludes shared generated catalogs from the static patch and regenerates them after install or owned uninstall. This is lifecycle design evidence, not adoption or a live deployment claim.
+- The reproducible Harness target is official remote commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`. Local `b642a106` is a five-commit-ahead skill-enablement assembly context, not remote authority; the current patch applies cleanly to `b150a551` and composes there with preset-manager.
 
 ## Constraints and permissions
 

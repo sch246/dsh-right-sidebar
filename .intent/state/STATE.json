@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.12",
+  "revision": "0.3.0-draft.13",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -26,7 +26,8 @@
     "../logs/2026-08-26-new-conversation-visibility-acceptance.md",
     "../logs/2026-08-26-source-region-ownership-practice.md",
     "../logs/2026-08-26-marker-locator-simplification.md",
-    "../logs/2026-08-26-purpose-comment-marker-correction.md"
+    "../logs/2026-08-26-purpose-comment-marker-correction.md",
+    "../logs/2026-08-26-remote-baseline-correction.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -49,9 +50,9 @@
       "id": "target.deepseek-harness",
       "kind": "git-worktree",
       "uri": "file:///root/deepseek-harness",
-      "revision": "b642a10626a950cc95c2d6f839810cb01fe599fe",
-      "scope": "local-bootstrap",
-      "worktree": "dirty"
+      "revision": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+      "scope": "official-remote-reproducible-baseline",
+      "worktree": "live local assembly remains dirty on b642a106, five independent commits ahead"
     },
     {
       "id": "protocol.meta-intent",
@@ -71,7 +72,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-linux-web-0.3.0-candidate.8/LOCK.json"
-  ]
+  "candidateLocks": []
 }

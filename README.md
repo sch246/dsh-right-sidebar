@@ -54,7 +54,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码补丁
 
-官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，当前基于 Harness commit `b642a10626a950cc95c2d6f839810cb01fe599fe`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。补丁的每个逻辑侵入区都带有就近 owner 标记；生成 catalog 由生命周期脚本重建而不纳入静态补丁。
+官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，当前基于官方 Harness 远端 commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。补丁的每个逻辑侵入区都带有就近 owner 标记；生成 catalog 由生命周期脚本重建而不纳入静态补丁。
 
 在对应 Harness checkout 中应用：
 
