@@ -4,7 +4,7 @@
 
 ## 已实现
 
-- Node half 为 no-op；browser half 接管官方 `details` 真列并声明 session-scoped `rightbar.tab` list slot。
+- Node half 为 no-op；browser half 通过 Cordis `Context` 和 renderer-owned `SlotRegistry` 接管官方 `details` 真列并声明 session-scoped `rightbar.tab` list slot。
 - 生产包不注册任何业务标签；零贡献时显示平台空态。
 - 标签按 `order` 排列，一次只渲染活动项；活动贡献卸载后回退到首个可用项；支持左右方向键、Home 和 End。
 - 全局按钮注册到官方补丁新增的 `shell.navbar.action`；开合状态和动作直接来自 layout owner props，没有镜像 store。
@@ -12,13 +12,13 @@
 - 栏内收起按钮调用同一官方 layout 服务；它位于标题左侧，不与右上角全局按钮重叠。
 - 官方 layout store 将 `detailsWidth` 与 `detailsOpen` 分离，只持久化宽度。刷新默认关闭，再展开恢复最后一次拖拽宽度。
 - 功能插件可创建一个 session-scoped store handle，并把同一个 handle 交给自己的主界面贡献和 `rightbar.tab` 贡献，实现双向同步；平台不解释折叠、跳转或 session 视图等业务字段。
-- browser half 通过 framework `InjectFace`/`useTabs` 订阅标签 ledger；没有组件内手写 `useSyncExternalStore`、`ResizeObserver`、DOM 查询或私有 conversation store。
+- `activeTab` 使用 `@deepseek-ai/dsh-client-store` 的 session-scoped handle；组件通过 framework `InjectFace`/`useTabs` 订阅标签 ledger，没有手写外部订阅或私有 conversation store。
 - package 同时声明 `dsh.bundle.patch` 与 `dsh.client`；profile 使用 `link:/root/dsh-right-sidebar`。
 
 ## 官方补丁
 
 - 文件：`patches/deepseek-harness.patch`
-- 官方基线：`b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`
+- 官方基线：`cd5ef8148158c3a752a658978873241fdf8e2bbc`
 - 内容：`shell.navbar.action`、选择性 store 持久化、details 宽度/开合分离及对应测试和生成目录。
 - 已在该基线的临时 worktree 上通过 `git apply --check`。
 

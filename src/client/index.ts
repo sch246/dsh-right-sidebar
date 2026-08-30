@@ -1,5 +1,5 @@
 /**
- * @dsh-external/dsh-right-sidebar — browser half.
+ * @dsh-external/dsh-right-sidebar browser half.
  *
  * Takes over the official `details` column and turns it into a tab platform:
  *
@@ -8,8 +8,9 @@
  * - registers the expand/collapse toggle into the global application navbar;
  * - deliberately ships no feature tab: other plugins own actual behavior.
  */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
@@ -24,7 +25,7 @@ import type { PanelInjected, RightbarTab } from './contract'
 // rightbar.tab SlotMap contract without reaching into internal files.
 export type { RightbarTab, RightbarTabOwnerProps } from './contract'
 
-/** Required services: slot registry, locale, and official panel actions. */
+/** Required services: renderer-owned slots, locale, and official panel actions. */
 export const inject = ['slots', 'locale', 'layout']
 
 export function apply(ctx: ClientContext): void {

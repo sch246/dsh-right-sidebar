@@ -42,9 +42,9 @@ if [ "$RECORDED_SHA" != "$PATCH_SHA" ]; then
 elif [ "$RECORDED_OWNED" != "true" ]; then
   echo "uninstall: the matching patch predated setup; preserving Host files"
   rm -f "$STATE_FILE"
-elif git -C "$CHECKOUT" apply --check --reverse "$PATCH" 2>/dev/null; then
+elif git -C "$CHECKOUT" apply --unidiff-zero --check --reverse "$PATCH" 2>/dev/null; then
   echo "rolling back the exact recorded harness patch..."
-  git -C "$CHECKOUT" apply --reverse "$PATCH"
+  git -C "$CHECKOUT" apply --unidiff-zero --reverse "$PATCH"
   regenerate_shared_catalogs
   rm -f "$STATE_FILE"
   echo "rebuilding modified Host bundles..."

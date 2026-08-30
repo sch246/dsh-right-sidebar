@@ -40,7 +40,8 @@ PATCH_APPLIED_BY_SETUP=false
 verify_source_markers() {
   local needle='@meta-intent:begin dsh-right-sidebar '
   local paths=(
-    packages/client/runtime/src/client/contract/store.ts
+    packages/client/store/src/contract.ts
+    packages/client/store/src/index.ts
     packages/client/ui-layout/src/client/AppFrame.tsx
     packages/client/ui-layout/src/client/index.ts
     packages/client/ui-layout/src/client/stores.ts
@@ -59,16 +60,16 @@ regenerate_shared_catalogs() {
 }
 
 echo "checking tracked harness patch against $CHECKOUT..."
-if git -C "$CHECKOUT" apply --check --reverse "$PATCH" 2>/dev/null; then
+if git -C "$CHECKOUT" apply --unidiff-zero --check --reverse "$PATCH" 2>/dev/null; then
   if [ "$RECORDED_SHA" = "$PATCH_SHA" ] && [ "$RECORDED_OWNED" = "true" ]; then
     PATCH_APPLIED_BY_SETUP=true
     echo "harness patch already applied by an earlier run of this exact setup"
   else
     echo "harness patch already present; preserving external ownership"
   fi
-elif git -C "$CHECKOUT" apply --check "$PATCH"; then
+elif git -C "$CHECKOUT" apply --unidiff-zero --check "$PATCH"; then
   echo "applying harness patch..."
-  git -C "$CHECKOUT" apply "$PATCH"
+  git -C "$CHECKOUT" apply --unidiff-zero "$PATCH"
   PATCH_APPLIED_BY_SETUP=true
 else
   echo "setup: neither the patch nor its exact reverse applies" >&2
@@ -85,7 +86,7 @@ regenerate_shared_catalogs
   echo "patch_applied_by_setup=$PATCH_APPLIED_BY_SETUP"
   echo "host_head=$(git -C "$CHECKOUT" rev-parse HEAD)"
   echo "marker_schema=meta-intent-source-region/0.1"
-  echo "regions=dsh.store.partial-persistence,shell.navbar.action,shell.details.transient-visibility"
+  echo "regions=client.store.partial-persistence,shell.navbar.action,shell.details.transient-visibility"
   echo "generated_catalogs=packages/extensions/cordis-client-runner/src/client/slot-catalog.ts,packages/extensions/cordis-client-runner/src/client/api-catalog.ts"
 } > "$STATE_FILE"
 

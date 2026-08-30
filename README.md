@@ -4,7 +4,7 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 
 本包不内置审阅、终端、浏览器、文件、Git、工具详情或其他业务标签。功能插件拥有自己的状态和动作，并可同时向主界面与 `rightbar.tab` 注册 UI，使两处通过同一个 session-scoped store 保持同步。
 
-当前意图、稳定注册 API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。历史候选曾通过 profile `link:` 安装和真实浏览器交互验证；它们是具体 realization 证据，不限定未来宿主必须采用同一种 API、adapter 或装配机制。历史验证记录见 [HANDOFF.md](HANDOFF.md)。
+当前意图、稳定注册 API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。browser half 使用 Cordis `Context`、renderer-owned `SlotRegistry` 和 `dsh-client-store`，同时保留 `ui-slots` 的声明合并与 props 协议。历史验证记录见 [HANDOFF.md](HANDOFF.md)。
 
 ## 目标交互
 
@@ -54,7 +54,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码补丁
 
-官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，当前基于官方 Harness 远端 commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。补丁的每个逻辑侵入区都带有就近 owner 标记；生成 catalog 由生命周期脚本重建而不纳入静态补丁。
+官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，当前基于 Harness commit `cd5ef8148158c3a752a658978873241fdf8e2bbc`。它增加全局 navbar action slot，并让 layout store 只持久化右栏宽度、不持久化开合状态。补丁的每个逻辑侵入区都带有就近 owner 标记；生成 catalog 由生命周期脚本重建而不纳入静态补丁。
 
 在对应 Harness checkout 中应用：
 

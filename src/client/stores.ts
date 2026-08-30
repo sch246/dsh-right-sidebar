@@ -2,7 +2,7 @@
  * Per-session right-sidebar store. It owns only the selected tab; column
  * visibility and geometry remain authoritative in the official layout store.
  */
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
+import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
 
 /** Declared state shape (consumers read through useStore selectors). */
 export type RightSidebarState = {

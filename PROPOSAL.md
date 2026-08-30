@@ -2,7 +2,7 @@
 
 > 本文是实现设计资料，不是当前语义权威。意图、约束和验收条件以 [.intent/state/STATE.md](.intent/state/STATE.md) 为准。
 
-`dsh-right-sidebar` 是 DeepSeek Harness Web 的右栏平台底座。它提供全高布局、可注册标签页、显隐与宽度管理，以及主界面和右栏共享会话状态的接入方式；它不提供审阅、终端、浏览器、文件、Git、工具详情或其他业务功能。
+`dsh-right-sidebar` 是 DeepSeek Harness Web 的右栏平台底座。browser half 运行在 Cordis `Context` 中，使用 renderer-owned `SlotRegistry` 注册界面，并使用 `dsh-client-store` 保存 session-scoped 交互状态；`ui-slots` 继续拥有注册协议。它不提供审阅、终端、浏览器、文件、Git、工具详情或其他业务功能。
 
 ## 目标
 
@@ -87,7 +87,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码改动
 
-`dsh.bundle.patch` 只组合 Cordis 配置行，不修改 Harness TypeScript 源码。Harness 源码补丁由本仓库的 `patches/deepseek-harness.patch` 跟踪，基于官方 commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`。升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突，不增加自动 apply/revert 或兼容层。
+`dsh.bundle.patch` 只组合 Cordis 配置行，不修改 Harness TypeScript 源码。Harness 源码补丁由本仓库的 `patches/deepseek-harness.patch` 跟踪，基于 commit `cd5ef8148158c3a752a658978873241fdf8e2bbc`。升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突，不增加自动 apply/revert 或兼容层。
 
 ## 验收
 
