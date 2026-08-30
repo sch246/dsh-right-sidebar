@@ -23,7 +23,7 @@ index 38e39da024..bf44af0d01 100644
 +  persist?: string | StorePersistence<T>
 +  // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/store/src/index.ts b/packages/client/store/src/index.ts
-index 09414e95e6..d380bb0f2d 100644
+index 09414e95e6..fe471271a5 100644
 --- a/packages/client/store/src/index.ts
 +++ b/packages/client/store/src/index.ts
 @@ -23 +23 @@ export type {
@@ -43,7 +43,7 @@ index 09414e95e6..d380bb0f2d 100644
 +  // @meta-intent:end dsh-right-sidebar
 @@ -146 +152,6 @@ export function createSnapshotStore<T>(
 -function attachPersistence<T>(api: StoreApi<T>, name: string): void {
-+// @meta-intent:begin dsh-right-sidebar (purpose: Overlay durable width fields onto fresh transient defaults and serialize only those fields.)
++// @meta-intent:begin dsh-right-sidebar (purpose: Overlay durable width onto transient defaults and serialize only selected fields.)
 +function attachPersistence<T>(
 +  api: StoreApi<T>,
 +  options: { name: string; keys?: readonly (keyof T)[] },
@@ -189,7 +189,7 @@ index ae56780133..2908eb1517 100644
 +}
 +/* @meta-intent:end dsh-right-sidebar */
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index cbef893aed..3f03a38972 100644
+index cbef893aed..d348e14172 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
 @@ -14 +14,3 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
@@ -207,7 +207,7 @@ index cbef893aed..3f03a38972 100644
 -    const current = s.current
 -    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
 -  })
-+  // @meta-intent:begin dsh-right-sidebar (purpose: Keep the right column available before the first turn and close it only on session change.)
++  // @meta-intent:begin dsh-right-sidebar (purpose: Allow details before the first turn and close them on session change.)
 +  const currentSession = useSessions(s => s.current)
 +  // @meta-intent:end dsh-right-sidebar
 @@ -108,0 +112,4 @@ export function AppFrame({
@@ -351,63 +351,66 @@ index 7b6e2807ee..6217adaaad 100644
 @@ -70,0 +85 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 +  // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index a640480360..01f57a0eaf 100644
+index a640480360..1fe994ff1e 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-@@ -126,0 +127,3 @@ beforeEach(() => {
+@@ -50,0 +51,7 @@ let frameWidth = 1920
++type SlotCall = { key: string; props: unknown }
++
++interface NavbarOwner {
++  detailsOpen: boolean
++  openDetails(): void
++  closeDetails(): void
++}
+@@ -60 +67 @@ function mountFrame() {
+-  const slotCalls: { key: string; props: unknown }[] = []
++  const slotCalls: SlotCall[] = []
+@@ -110,0 +118,4 @@ function mountFrame() {
++function latestNavbarOwner(slotCalls: readonly SlotCall[]): NavbarOwner {
++  return slotCalls.filter(call => call.key === 'shell.navbar.action').at(-1)!.props as NavbarOwner
++}
++
+@@ -126,0 +138,3 @@ beforeEach(() => {
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Isolate persisted panel preferences between frame cases.)
 +  localStorage.clear()
 +  // @meta-intent:end dsh-right-sidebar
-@@ -138 +141,4 @@ beforeEach(() => {
+@@ -138 +152,4 @@ beforeEach(() => {
 -    return { width: frameWidth, height: 1080, top: 0, left: 0, right: frameWidth, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
 +    // @meta-intent:begin dsh-right-sidebar (purpose: Model the measured global-navbar seat in frame tests.)
 +    const width = this instanceof HTMLElement && this.hasAttribute('data-shell-navbar') ? 32 : frameWidth
 +    // @meta-intent:end dsh-right-sidebar
 +    return { width, height: 1080, top: 0, left: 0, right: width, bottom: 1080, x: 0, y: 0, toJSON: () => ({}) }
-@@ -180,0 +187,56 @@ describe('AppFrame', () => {
+@@ -180,0 +198,43 @@ describe('AppFrame', () => {
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Verify the global navbar owner contract and measured clearance.)
 +  it('supplies the global navbar with live details visibility and authoritative actions', () => {
 +    const { frame, slotCalls } = mountFrame()
-+    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
-+      detailsOpen: boolean
-+      openDetails(): void
-+      closeDetails(): void
-+    }
 +    expect(frame.querySelector('[data-shell-navbar]')).not.toBeNull()
-+    expect(owner().detailsOpen).toBe(false)
-+    act(() => { owner().openDetails() })
++    expect(latestNavbarOwner(slotCalls).detailsOpen).toBe(false)
++    act(() => { latestNavbarOwner(slotCalls).openDetails() })
 +    expect(tracks(frame)).toEqual([280, 360])
-+    expect(owner().detailsOpen).toBe(true)
-+    act(() => { owner().closeDetails() })
++    expect(latestNavbarOwner(slotCalls).detailsOpen).toBe(true)
++    act(() => { latestNavbarOwner(slotCalls).closeDetails() })
 +    expect(tracks(frame)).toEqual([280, 0])
-+    expect(owner().detailsOpen).toBe(false)
++    expect(latestNavbarOwner(slotCalls).detailsOpen).toBe(false)
 +  })
 +
 +  it('opens details on a blank session before the first message', () => {
 +    selectedSessionBlank.current = true
 +    const { frame, slotCalls } = mountFrame()
-+    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
-+      detailsOpen: boolean
-+      openDetails(): void
-+    }
-+    act(() => { owner().openDetails() })
++    act(() => { latestNavbarOwner(slotCalls).openDetails() })
 +    expect(tracks(frame)).toEqual([280, 360])
-+    expect(owner().detailsOpen).toBe(true)
++    expect(latestNavbarOwner(slotCalls).detailsOpen).toBe(true)
 +  })
 +
 +  it('opens details without a current session and keeps it open when the first Session materializes', () => {
 +    selectedSession.current = undefined
 +    const { frame, slotCalls, rerenderFrame } = mountFrame()
-+    const owner = () => slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props as {
-+      detailsOpen: boolean
-+      openDetails(): void
-+    }
-+    act(() => { owner().openDetails() })
++    act(() => { latestNavbarOwner(slotCalls).openDetails() })
 +    expect(tracks(frame)).toEqual([280, 360])
 +    selectedSession.current = 's-first' as SessionId
 +    act(() => { rerenderFrame() })
 +    expect(tracks(frame)).toEqual([280, 360])
-+    expect(owner().detailsOpen).toBe(true)
++    expect(latestNavbarOwner(slotCalls).detailsOpen).toBe(true)
 +  })
 +
 +  it('reserves measured navbar room only while details are collapsed', () => {
@@ -421,17 +424,17 @@ index a640480360..01f57a0eaf 100644
 +  })
 +  // @meta-intent:end dsh-right-sidebar
 +
-@@ -213 +275,2 @@ describe('AppFrame', () => {
+@@ -213 +273,2 @@ describe('AppFrame', () => {
 -  it('ignores unselected states and closes only when the Session id changes', () => {
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Verify transient details visibility across session transitions.)
 +  it('closes when the Session id changes, including a blank Session', () => {
-@@ -229 +292 @@ describe('AppFrame', () => {
+@@ -229 +290 @@ describe('AppFrame', () => {
 -    expect(instance.getSnapshot().details).toBe(360)
 +    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
-@@ -234 +297 @@ describe('AppFrame', () => {
+@@ -234 +295 @@ describe('AppFrame', () => {
 -    expect(tracks(frame)).toEqual([280, 360])
 +    expect(tracks(frame)).toEqual([280, 0])
-@@ -243,11 +306 @@ describe('AppFrame', () => {
+@@ -243,11 +304 @@ describe('AppFrame', () => {
 -
 -  it('keeps details closed when the first Session materializes', () => {
 -    selectedSession.current = undefined
@@ -444,10 +447,10 @@ index a640480360..01f57a0eaf 100644
 -    expect(tracks(frame)).toEqual([280, 0])
 -  })
 +  // @meta-intent:end dsh-right-sidebar
-@@ -282 +335 @@ describe('AppFrame', () => {
+@@ -282 +333 @@ describe('AppFrame', () => {
 -    expect(instance.getSnapshot().details).toBe(320)
 +    expect(instance.getSnapshot().detailsWidth).toBe(320)
-@@ -325,0 +379,9 @@ describe('AppFrame — narrow-viewport auto-collapse', () => {
+@@ -325,0 +377,9 @@ describe('AppFrame — narrow-viewport auto-collapse', () => {
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Reject a hidden open state when the concession chain cannot show details.)
 +  it('repairs details visibility when the narrow layout cannot allocate the column', () => {
 +    frameWidth = 980
