@@ -1,16 +1,18 @@
 /**
  * Global navbar expand/collapse toggle for the right sidebar. The layout
- * owner supplies both the resolved visibility and the authoritative actions,
- * so the control never mirrors geometry in plugin state.
+ * owner supplies resolved visibility while the injected callback writes
+ * through the authoritative layout service. Plugin state never mirrors geometry.
  */
-import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ToggleInjected } from './contract'
 
 /** Full composed props: runtime share + store + injected face + locale. */
 export type RightSidebarToggleProps =
   & PropsRuntime<'shell.navbar.action'>
+  & InjectFace<ToggleInjected>
   & PropsLocale<'right-sidebar'>
 
-export function RightSidebarToggle({ detailsOpen, openDetails, closeDetails, t }: RightSidebarToggleProps) {
+export function RightSidebarToggle({ detailsOpen, toggleDetails, t }: RightSidebarToggleProps) {
   const label = detailsOpen ? t('collapse') : t('expand')
   return (
     <button
@@ -19,7 +21,7 @@ export function RightSidebarToggle({ detailsOpen, openDetails, closeDetails, t }
       aria-label={label}
       title={label}
       aria-pressed={detailsOpen}
-      onClick={detailsOpen ? closeDetails : openDetails}
+      onClick={() => { toggleDetails(detailsOpen) }}
     >
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
         <rect x="2.25" y="2.25" width="11.5" height="11.5" rx="2" fill="none" stroke="currentColor" strokeWidth="1.25" />

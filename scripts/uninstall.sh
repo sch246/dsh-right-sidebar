@@ -36,6 +36,23 @@ regenerate_shared_catalogs() {
   (cd "$CHECKOUT" && pnpm run gen-client-catalog && pnpm run gen-cordis-api)
 }
 
+rebuild_modified_host() {
+  echo "rebuilding modified Host libraries and Web frontend..."
+  (cd "$CHECKOUT" && pnpm exec tsc -b \
+    packages/client/store/tsconfig.json \
+    packages/client/ui-slots/tsconfig.json \
+    packages/client/ui-layout/tsconfig.json \
+    packages/client/ui-conversation/tsconfig.json \
+    packages/client/web/tsconfig.json)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-store exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-slots exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-layout bundle)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-conversation bundle)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-primitives exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-web exec tsdown)
+  (cd "$CHECKOUT" && pnpm run build:web)
+}
+
 if [ "$RECORDED_SHA" != "$PATCH_SHA" ]; then
   echo "uninstall: no matching setup provenance; preserving Host files" >&2
   echo "uninstall: run setup from this exact plugin revision before uninstalling its patch" >&2
@@ -47,9 +64,7 @@ elif git -C "$CHECKOUT" apply --unidiff-zero --check --reverse "$PATCH" 2>/dev/n
   git -C "$CHECKOUT" apply --unidiff-zero --reverse "$PATCH"
   regenerate_shared_catalogs
   rm -f "$STATE_FILE"
-  echo "rebuilding modified Host bundles..."
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-layout bundle)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-conversation bundle)
+  rebuild_modified_host
 else
   echo "uninstall: recorded patch no longer reverses cleanly; preserving Host files" >&2
   echo "uninstall: resolve overlapping edits before retrying" >&2

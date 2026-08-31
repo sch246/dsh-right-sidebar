@@ -19,7 +19,7 @@ import { RightSidebarToggle } from './RightSidebarToggle'
 import { createRightSidebarStore } from './stores'
 import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
-import type { PanelInjected, RightbarTab } from './contract'
+import type { PanelInjected, RightbarTab, ToggleInjected } from './contract'
 
 // Public type entry: importing this package coordinate must activate the
 // rightbar.tab SlotMap contract without reaching into internal files.
@@ -93,5 +93,11 @@ export function apply(ctx: ClientContext): void {
     id: 'right-sidebar-toggle',
     order: 100,
     locale: NS,
+    inject: (): ToggleInjected => ({
+      toggleDetails: (detailsOpen) => {
+        if (detailsOpen) ctx.layout.closeDetails()
+        else ctx.layout.openDetails()
+      },
+    }),
   }, RightSidebarToggle))
 }

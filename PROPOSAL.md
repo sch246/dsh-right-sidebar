@@ -44,7 +44,7 @@ Harness 补丁由 `ui-layout` 自己持久化最后一次非零宽度：通用 s
 - 按 slot ledger 的胜出顺序显示标签；
 - 每次只渲染活动标签；
 - 活动标签卸载后选择下一个可用标签；
-- 没有标签时显示平台空态，不注册示例或默认业务标签；
+- 没有标签时不显示 tab chrome、提示或占位内容，也不注册示例或默认业务标签；
 - HMR 或插件卸载时移除对应标签和资源，不留下样式、状态或注册项。
 
 第三方标签组件通过标准四 shares 获取运行时 session hooks（`PropsRuntime`）、子 slot renderer（`PropsRenderSlots`）、entry store（`PropsStore`）和 injected callbacks；组件不接收 `ctx`，也不自行订阅外部对象。
@@ -87,7 +87,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码改动
 
-`dsh.bundle.patch` 只组合 Cordis 配置行，不修改 Harness TypeScript 源码。Harness 源码补丁由本仓库的 `patches/deepseek-harness.patch` 跟踪，基于 commit `cd5ef8148158c3a752a658978873241fdf8e2bbc`。升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突，不增加自动 apply/revert 或兼容层。
+`dsh.bundle.patch` 只组合 Cordis 配置行，不修改 Harness TypeScript 源码。Harness 源码补丁由本仓库的 `patches/deepseek-harness.patch` 跟踪，基于 alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。补丁复用原生三列 frame、拖拽求解器和 `ctx.layout` 服务，只补 state 要求而 alpha.2 未提供的 Host 行为。升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突，不增加兼容路径。
 
 ## 验收
 

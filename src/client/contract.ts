@@ -26,6 +26,12 @@ export interface PanelInjected {
   }
 }
 
+/** Injected face of the application navbar toggle. */
+export interface ToggleInjected {
+  /** Toggle the details column from its resolved visible state through ctx.layout. */
+  toggleDetails(detailsOpen: boolean): void
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /**

@@ -42,9 +42,12 @@ verify_source_markers() {
   local paths=(
     packages/client/store/src/contract.ts
     packages/client/store/src/index.ts
+    packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
+    packages/client/ui-layout/src/client/AppFrame.module.css
     packages/client/ui-layout/src/client/AppFrame.tsx
     packages/client/ui-layout/src/client/index.ts
     packages/client/ui-layout/src/client/stores.ts
+    packages/client/ui-slots/src/store.ts
   )
   for path in "${paths[@]}"; do
     if ! grep -Fq "$needle" "$CHECKOUT/$path"; then
@@ -57,6 +60,23 @@ verify_source_markers() {
 regenerate_shared_catalogs() {
   echo "regenerating shared client catalogs from all currently installed source contributions..."
   (cd "$CHECKOUT" && pnpm run gen-client-catalog && pnpm run gen-cordis-api)
+}
+
+rebuild_modified_host() {
+  echo "rebuilding modified Host libraries and Web frontend..."
+  (cd "$CHECKOUT" && pnpm exec tsc -b \
+    packages/client/store/tsconfig.json \
+    packages/client/ui-slots/tsconfig.json \
+    packages/client/ui-layout/tsconfig.json \
+    packages/client/ui-conversation/tsconfig.json \
+    packages/client/web/tsconfig.json)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-store exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-slots exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-layout bundle)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-conversation bundle)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-primitives exec tsdown)
+  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-web exec tsdown)
+  (cd "$CHECKOUT" && pnpm run build:web)
 }
 
 echo "checking tracked harness patch against $CHECKOUT..."
@@ -86,13 +106,11 @@ regenerate_shared_catalogs
   echo "patch_applied_by_setup=$PATCH_APPLIED_BY_SETUP"
   echo "host_head=$(git -C "$CHECKOUT" rev-parse HEAD)"
   echo "marker_schema=meta-intent-source-region/0.1"
-  echo "regions=client.store.partial-persistence,shell.navbar.action,shell.details.transient-visibility"
+  echo "regions=client.store.partial-persistence,shell.navbar.action,shell.navbar.clearance,shell.details.transient-visibility,shell.details.divider"
   echo "generated_catalogs=packages/extensions/cordis-client-runner/src/client/slot-catalog.ts,packages/extensions/cordis-client-runner/src/client/api-catalog.ts"
 } > "$STATE_FILE"
 
-echo "rebuilding modified Host bundles..."
-(cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-layout bundle)
-(cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-conversation bundle)
+rebuild_modified_host
 
 echo "building dsh-right-sidebar..."
 DSH_CHECKOUT="$CHECKOUT" bash "$REPO_DIR/scripts/build.sh"
