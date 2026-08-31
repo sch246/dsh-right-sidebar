@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.14",
+  "revision": "0.3.0-draft.15",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -27,7 +27,8 @@
     "../logs/2026-08-26-source-region-ownership-practice.md",
     "../logs/2026-08-26-marker-locator-simplification.md",
     "../logs/2026-08-26-purpose-comment-marker-correction.md",
-    "../logs/2026-08-26-remote-baseline-correction.md"
+    "../logs/2026-08-26-remote-baseline-correction.md",
+    "../logs/2026-09-01-target-drift-and-recomposition.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -42,17 +43,17 @@
       "id": "host.dsh-right-sidebar",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
-      "revision": "caa1031c139ca6567ad7f2186ff66466d5689280",
-      "scope": "immutable source identity selected by candidate 7",
-      "worktree": "candidate lock metadata added after source commit"
+      "revision": "513ff0f056fdcc8004e729904561cb1036adda40",
+      "scope": "current unsealed source and migration evidence; no selected realization",
+      "worktree": "split-client migration commits are implementation facts pending alpha.2 recomposition"
     },
     {
       "id": "target.deepseek-harness",
-      "kind": "git-worktree",
-      "uri": "file:///root/deepseek-harness",
-      "revision": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
-      "scope": "official-remote-reproducible-baseline",
-      "worktree": "live local assembly remains dirty on b642a106, five independent commits ahead"
+      "kind": "git-repository",
+      "uri": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "revision": "0a53fb55bea101816fa226bb964ae2bed71c343b",
+      "scope": "official dsh-v0.1.2-alpha.2 recomposition target",
+      "worktree": "target requires a new realization synthesized from current state"
     },
     {
       "id": "protocol.meta-intent",
@@ -72,7 +73,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-linux-web-0.3.0-candidate.9/LOCK.json"
-  ]
+  "candidateLocks": []
 }

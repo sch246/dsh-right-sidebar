@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package after an Agent-driven portability refactor. C1 through C6 remain immutable historical implementation, installation and lifecycle evidence. No current realization is selected until this refactor is committed and sealed against a concrete target.
+Status: draft embedded intent package awaiting recomposition on DeepSeek Harness `dsh-v0.1.2-alpha.2`. C1 through C6 and candidate 9 remain immutable historical implementation, installation and lifecycle evidence. No realization is currently selected for the alpha.2 target.
 
 ## Intent
 
@@ -55,6 +55,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - The selected protocol defines how the embedded semantic package and its bootstrap are discovered; those concrete names are protocol realization, not sidebar intent.
 - Local plugin and Harness worktrees are bootstrap evidence only. Local paths and dirty states are not portable acceptance.
 - Earlier C2 through C6 experiments used local dsh-std commit `580b330323c13ec568adab2c35fabf8f8fa6b194` to test one portable mapping and lifecycle design. Those frozen locks remain historical evidence, not a current dependency or preferred architecture.
+- The current recomposition target is the official Harness `dsh-v0.1.2-alpha.2` release commit `0a53fb55bea101816fa226bb964ae2bed71c343b`. Source commit `513ff0f056fdcc8004e729904561cb1036adda40` records unsealed migration work only; neither resource is a selected realization.
 
 ## Current decisions
 
@@ -74,8 +75,8 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - The user authorized installation and restart. The existing linked profile was retained, right-sidebar and ui-layout artifacts were rebuilt, and `dsh-web` restarted active. Local HTTP remained healthy. The public root initially returned HTTP 200, while later requests from this host failed during TLS negotiation; the intended browser path was subsequently verified by the user.
 - The user then tested the deployed browser interaction and reported success. This closes the new-conversation visibility mismatch and confirms the intended client path reached the restarted deployment; it does not close unrelated synchronization or lifecycle acceptance.
 - Realization locks cache concrete versions and evidence. Missing build outputs or an unusable historical environment require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
-- Candidate 7 practices compact package-delimited source locators on all logical Harness interventions. Begin lines carry only ordinary `(purpose: ...)` commentary for an Agent; realization identity and removal authority stay in the lock and lifecycle receipt. It excludes shared generated catalogs from the static patch and regenerates them after install or owned uninstall. This is lifecycle design evidence, not adoption or a live deployment claim.
-- The reproducible Harness target is official remote commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`. Local `b642a106` is a five-commit-ahead skill-enablement assembly context, not remote authority; the current patch applies cleanly to `b150a551` and composes there with preset-manager.
+- Candidate 9 preserves the source-locator, generated-catalog and patch-composition evidence gathered on official Harness commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`. That target and lock are historical implementation evidence, not current installation instructions.
+- The official alpha.2 target is `0a53fb55bea101816fa226bb964ae2bed71c343b`. Existing split-client migration commits adapt one implementation to moved Cordis, renderer, store and layout APIs; those exact Harness coordinates and commits are migration facts, not stable requirements. An Agent must inspect alpha.2 and seal a new realization without changing the sidebar semantics.
 
 ## Constraints and permissions
 
@@ -103,6 +104,6 @@ Exact commands, local paths, profile representation, target commits and patch pr
 
 - Whether DSH or this realization should own cleanup of the orphan `link:` symlink left after `dsh plugin remove`; manifest, lockfile, bundle configuration, and runtime dump are already clean at that point.
 - User live observation now confirms the deployed shell runs and the reported chrome/layout defects are resolved. Automated browser evidence for contributed tabs and main-view/sidebar session synchronization remains incomplete; component tests cover empty, loading, failure/retry, focus repair and keyboard tab navigation.
-- Candidate 7 is being prepared as the first lock for the current direct realization. Its source-region attribution and exact patch lifecycle are candidate evidence until an immutable source commit is bound and the candidate bundle is sealed; live install/uninstall evidence remains absent.
+- Candidate 9 is a frozen historical bundle for the `b150a551` baseline. No lock is selected for alpha.2; source-region attribution, patch lifecycle, live installation and acceptance must be established by a newly sealed realization.
 - Automated browser evidence for the two-way/session-isolated fixture required by `SIDEBAR-005` remains incomplete.
 - Historical C3 install and restart succeeded, but target drift maintenance and owned uninstall have not been rerun for the current direct realization model.
