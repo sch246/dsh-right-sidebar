@@ -64,11 +64,14 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
   const instance = createRightSidebarStore().create('session-test')
   let rows = initialRows
   const rendered: string[] = []
+  const unmountOpenTabApi = vi.fn()
+  const mountOpenTabApi = vi.fn(() => unmountOpenTabApi)
   const useStore = (<S,>(selector: (state: { activeTab: string }) => S): S =>
     selector(useSyncExternalStore(instance.subscribe, instance.getSnapshot))) as RightSidebarPanelProps['useStore']
   const element = () => <RightSidebarPanel {...({
     useStore,
     actions: instance.actions,
+    mountOpenTabApi,
     useTabs: (selector: (value: readonly RightbarTab[]) => unknown) => selector(rows),
     renderSlot: (_name: string, _owner: object, options: { only?: string }) => {
       rendered.push(options.only ?? '')
@@ -80,6 +83,8 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
   return {
     ...view,
     instance,
+    mountOpenTabApi,
+    unmountOpenTabApi,
     rendered,
     setRows(next: readonly RightbarTab[]) { rows = next; view.rerender(element()) },
   }
@@ -88,11 +93,14 @@ function mountPanel(initialRows: readonly RightbarTab[], content?: () => React.R
 describe('RightSidebarPanel', () => {
   it('keeps an empty platform mounted without redundant visible chrome', () => {
     const view = mountPanel([])
+    expect(view.mountOpenTabApi).toHaveBeenCalledOnce()
     expect(view.container.querySelector('.dsh-rightbar-root')).not.toBeNull()
     expect(view.queryByText('No sidebar tabs registered')).toBeNull()
     expect(view.queryByText('Sidebar')).toBeNull()
     expect(view.queryByRole('button', { name: 'Collapse' })).toBeNull()
     expect(view.queryByRole('tab')).toBeNull()
+    view.unmount()
+    expect(view.unmountOpenTabApi).toHaveBeenCalledOnce()
   })
 
   it('renders only the selected contribution and repairs selection after unload', async () => {
@@ -173,8 +181,7 @@ describe('RightSidebarToggle', () => {
     const closeDetails = vi.fn()
     const element = (detailsOpen: boolean) => <RightSidebarToggle {...({
       detailsOpen,
-      openDetails,
-      closeDetails,
+      toggleDetails: detailsOpen ? closeDetails : openDetails,
       t: (key: string) => copy[key] ?? key,
     } as unknown as RightSidebarToggleProps)} />
     const view = render(element(false))

@@ -17,19 +17,38 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { RightSidebarPanel } from './RightSidebarPanel'
 import { RightSidebarToggle } from './RightSidebarToggle'
 import { createRightSidebarStore } from './stores'
+import { RightSidebarRuntime } from './service'
 import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
-import type { PanelInjected, RightbarTab, ToggleInjected } from './contract'
+import type {
+  PanelInjected, RightbarTab, RightSidebarService, RightSidebarSessionId, ToggleInjected,
+} from './contract'
 
 // Public type entry: importing this package coordinate must activate the
 // rightbar.tab SlotMap contract without reaching into internal files.
-export type { RightbarTab, RightbarTabOwnerProps } from './contract'
+export {
+  RightSidebarOpenTabError,
+  type RightSidebarOpenTabErrorCode,
+  type RightSidebarService,
+  type RightSidebarSessionId,
+  type RightbarTab,
+  type RightbarTabOwnerProps,
+} from './contract'
 
 /** Required services: renderer-owned slots, locale, and official panel actions. */
 export const inject = ['slots', 'locale', 'layout']
 
 export function apply(ctx: ClientContext): void {
   const store = createRightSidebarStore()
+  const rightSidebar = new RightSidebarRuntime(ctx)
+  const rightSidebarService: RightSidebarService = Object.freeze({
+    openTab: (sessionId: RightSidebarSessionId, tabId: string): void => {
+      rightSidebar.openTab(sessionId, tabId)
+    },
+  })
+
+  ctx.provide('rightSidebar', rightSidebarService)
+  ctx.effect(() => () => { rightSidebar.dispose() }, 'right-sidebar: invalidate client service')
 
   // Tab-ledger projection: a cached array rebuilt on ledger/locale revision
   // keeps framework selector snapshots referentially stable.
@@ -84,7 +103,10 @@ export function apply(ctx: ClientContext): void {
       'rightbar.tab': { kind: 'list', scope: 'session' },
     },
     store,
-    inject: (): PanelInjected => ({ hooks: { tabs } }),
+    inject: (sessionId, actions): PanelInjected => ({
+      hooks: { tabs },
+      mountOpenTabApi: () => rightSidebar.mount(sessionId, actions),
+    }),
   }, RightSidebarPanel))
 
   // Root-scoped global navbar toggle; visibility comes from owner props.

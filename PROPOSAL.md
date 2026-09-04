@@ -66,6 +66,14 @@ Harness 补丁由 `ui-layout` 自己持久化最后一次非零宽度：通用 s
 
 切换 session 时，活动标签和功能状态随 session 切换，宽度偏好不变；layout 保留官方的 session 切换关闭策略。右栏显隐不由某个功能标签修改。
 
+## 编程式打开标签
+
+公开 client coordinate 还提供 `ctx.rightSidebar.openTab(sessionId, tabId)`。这是外部功能从主界面或其它入口选择并展示其右栏标签的唯一编程式写入口；调用方只获得方法，不获得 `activeTab` store、baked actions 或 registry。
+
+`details` registration 的 framework inject 接收 renderer 解析出的 session id 和该 session store 的 actions。panel 挂载期间将这一对设为 service 的当前 binding，session 切换、panel 卸载、重注入和插件销毁都会使旧 binding 失效。service 不自行解析 current session，也不创建第二份 session 状态。
+
+调用按固定顺序执行：要求 panel 已挂载，要求请求 session 等于当前 binding，要求 `tabId` 存在于 `ctx.slots.entries('rightbar.tab')` 的 live ledger；全部通过后写入 `activeTab` 并调用 `ctx.layout.openDetails()`。前三类验证错误分别使用 `not-mounted`、`session-mismatch`、`unknown-tab`，验证失败无选择或布局副作用。
+
 ## 包装与装配
 
 本包同时提供 Node no-op half、browser half 和 bundle patch。`package.json` 必须声明 `dsh.bundle.patch` 与 `dsh.client`，`cordis.patch.yml` 使用实际包名 `@dsh-external/dsh-right-sidebar` 注册 loader entry。

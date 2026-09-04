@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.15",
+  "revision": "0.3.0-draft.16",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -28,7 +28,8 @@
     "../logs/2026-08-26-marker-locator-simplification.md",
     "../logs/2026-08-26-purpose-comment-marker-correction.md",
     "../logs/2026-08-26-remote-baseline-correction.md",
-    "../logs/2026-09-01-target-drift-and-recomposition.md"
+    "../logs/2026-09-01-target-drift-and-recomposition.md",
+    "../logs/2026-09-05-programmatic-tab-opening-api.md"
   ],
   "protocol": {
     "id": "meta-intent",

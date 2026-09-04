@@ -17,12 +17,16 @@ export type RightSidebarPanelProps =
   & InjectFace<PanelInjected>
   & PropsLocale<'right-sidebar'>
 
-export function RightSidebarPanel({ useStore, actions, renderSlot, useTabs, t }: RightSidebarPanelProps) {
+export function RightSidebarPanel({
+  useStore, actions, renderSlot, useTabs, mountOpenTabApi, t,
+}: RightSidebarPanelProps) {
   const activeTab = useStore(s => s.activeTab)
   const tabList = useTabs(rows => rows)
   const selected = tabList.find(tab => tab.id === activeTab) ?? tabList[0]
   const tabsId = useId()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  useEffect(() => mountOpenTabApi(), [mountOpenTabApi])
 
   // Repair selection when the active contribution unloads. The rendered
   // fallback is immediate; this write keeps other consumers of the same

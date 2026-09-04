@@ -18,9 +18,10 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 - `SIDEBAR-006`: A cold Agent starting at the host repository can locate this package through the selected protocol bootstrap, inspect the target and any applicable realization, install a conforming implementation, maintain or re-synthesize it after detected drift, and uninstall only its owned contribution. Missing target support leads to investigation and an explicit tension, not silent intent weakening.
 - `SIDEBAR-007`: Every required host source change is attributable to a selected realization, bound to a checked target baseline, and removable without erasing unrelated later changes; logical interventions carry nearby source-region ownership markers. Generated aggregations are regenerated from remaining source contributions rather than statically owned by one package, and no second implementation silently shares ownership of the same target effect.
 - `SIDEBAR-008`: An empty platform stays visually quiet; tab chrome appears only when contributions exist, while populated, overflow, narrow-width, loading and contribution-failure states remain understandable and usable. Focus, keyboard operation, labels, hit targets and motion follow the host's accessibility and interaction conventions.
-- `SIDEBAR-009`: The same sidebar intent can be realized on another host without requiring one shared runtime ABI. A conforming realization preserves the stable registration API below or supplies an Agent-generated adaptation for consumers; target-specific layout, registration and cleanup remain realization details.
+- `SIDEBAR-009`: The same sidebar intent can be realized on another host without requiring one shared runtime ABI. A conforming realization preserves the stable client API below or supplies an Agent-generated adaptation for consumers; target-specific layout, registration and cleanup remain realization details.
+- `SIDEBAR-010`: An external client can ask the mounted sidebar to select and open a live tab for the currently bound session without receiving its store or actions. An absent mount, a different session, or an unknown tab fails explicitly before changing selection or layout, and replaced or disposed bindings cannot keep acting on an old session.
 
-## Stable registration API
+## Stable client API
 
 The DeepSeek Harness realization exposes the public client coordinate `@dsh-external/dsh-right-sidebar/client` and the additive `rightbar.tab` registration seat. An incompatible change to this API is a state revision, not routine lock regeneration.
 
@@ -30,6 +31,10 @@ The DeepSeek Harness realization exposes the public client coordinate `@dsh-exte
 - The platform renders one selected contribution at a time, keeps selection session-scoped, and repairs selection when the active contribution disappears.
 - Contribution lifetime follows its registering feature. Removal must release its registration, styles, subscriptions and other owned resources.
 - The platform contributes no business tab and does not own feature state. A feature may share one session-scoped state/action owner between its main-view and sidebar contributions.
+
+The same public client coordinate merges the `ctx.rightSidebar` service into Cordis `Context`. `ctx.rightSidebar.openTab(sessionId, tabId)` returns `void`; for the currently mounted session and a tab id present in the authoritative `rightbar.tab` ledger, it selects that tab and then opens the details column. Missing mount, session mismatch, and unknown tab are stable error categories and have no selection or layout side effect. Store handles and baked actions remain private to the platform.
+
+The service binding follows the mounted details occurrence. A replacement binding invalidates the prior one, panel unmount removes its binding, and plugin disposal removes both the binding and service. A retained stale service or injected callback cannot select a tab after its owning runtime is disposed.
 
 Exact Harness owner slots, layout stores, injection services, component prop machinery and patch locations are not part of this stable API. Another host may expose an equivalent native contract or use an Agent-generated adapter while preserving these semantics.
 
@@ -62,7 +67,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - Within the sidebar platform scope, completeness and product-quality UX are required. Agent-owned interaction details may be chosen autonomously when they preserve these acceptance effects and introduce no undeclared user-visible trade-off.
 - Long-lived changes to official DeepSeek Harness are permitted. Avoiding upstream modification is not a reason to weaken full-height layout, width persistence, extensibility or synchronized state.
 - Portability is carried by this state and regenerated per target by an Agent. A shared standard or adapter may be selected inside a realization, but dsh-std is not a required dependency, authority or migration destination.
-- API stability is explicit only for the registration semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.
+- API stability is explicit for the registration and programmatic tab-opening semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.
 - C2 `a522fb187a8afef060216f919ec32448caf98129` contains loading and failure chrome, retry, focus repair, narrow-width treatment, keyboard focus styling, and a real source-level adapter/slot/shell lifecycle fixture. These are candidate facts, not live-browser or production-loader acceptance.
 - C3 records user-authorized installation of that same source plus adapter commit `580b330323c13ec568adab2c35fabf8f8fa6b194` into the live `web` profile. Both local links, boot-manifest entries and served bundles were observed, and `dsh-web` restarted successfully. Client execution and visible interaction remain unobserved.
 - Live inspection revised the chrome requirements: reserve room for the global toggle instead of overlapping session utilities, keep the full divider edge draggable without a visible pill, remove the panel-internal collapse/title, and render no empty-state notice or empty tab strip.

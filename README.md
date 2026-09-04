@@ -4,7 +4,7 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 
 本包不内置审阅、终端、浏览器、文件、Git、工具详情或其他业务标签。功能插件拥有自己的状态和动作，并可同时向主界面与 `rightbar.tab` 注册 UI，使两处通过同一个 session-scoped store 保持同步。
 
-当前意图、稳定注册 API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。browser half 使用 Cordis `Context`、renderer-owned `SlotRegistry`、`dsh-client-store` 和 alpha.2 原生 `ctx.layout` 服务；Host frame 提供解析后的显隐状态，插件不镜像布局几何。实现与机械验证记录见 [HANDOFF.md](HANDOFF.md)。
+当前意图、稳定 client API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。browser half 使用 Cordis `Context`、renderer-owned `SlotRegistry`、`dsh-client-store` 和 alpha.2 原生 `ctx.layout` 服务；Host frame 提供解析后的显隐状态，插件不镜像布局几何。实现与机械验证记录见 [HANDOFF.md](HANDOFF.md)。
 
 ## 目标交互
 
@@ -13,7 +13,27 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 - 新会话界面在发送第一条消息前也可展开和收起右栏；
 - 官方分隔条调整宽度，只记忆最后一次非零宽度；
 - 第三方插件可注册、排序和卸载标签页；
+- 第三方插件可通过稳定的 client service 选择并展开当前 session 的已注册标签页；
 - 主界面贡献和右栏标签可共享同一份 session 状态与动作。
+
+## 稳定 client API
+
+`@dsh-external/dsh-right-sidebar/client` 声明两个跨插件入口：session-scoped additive `rightbar.tab` 注册位，以及 `ctx.rightSidebar.openTab(sessionId, tabId)`。调用方插件应注入 `rightSidebar` 服务，并使用当前 session 的 framework identity：
+
+```ts
+import type { Context } from '@deepseek-ai/cordis'
+import type { RightSidebarSessionId } from '@dsh-external/dsh-right-sidebar/client'
+
+export const inject = ['rightSidebar']
+
+export function openFiles(ctx: Context, sessionId: RightSidebarSessionId): void {
+  ctx.rightSidebar.openTab(sessionId, 'files')
+}
+```
+
+`openTab()` 返回 `void`。当前 details panel 已挂载、`sessionId` 与其绑定一致且 `tabId` 存在于 live `rightbar.tab` ledger 时，它先选择标签，再调用官方 layout service 展开右栏。验证失败抛出 `RightSidebarOpenTabError`；稳定 `code` 为 `not-mounted`、`session-mismatch` 或 `unknown-tab`，且选择和布局均不改变。平台不会向调用方暴露 store、actions 或 raw slot registry。
+
+标签注册卸载会从 live ledger 移除 id；panel 卸载和插件销毁会撤销对应 binding。替换后的旧 binding 与已销毁 runtime 不能继续选择标签。注册示例见 [tests/fixtures/rightbar-consumer.ts](tests/fixtures/rightbar-consumer.ts)。
 
 ## 安装与回撤
 
