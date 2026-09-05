@@ -231,8 +231,8 @@ describe('RightSidebarToggle', () => {
     }
     const maximize = view.getByRole('button', { name: maximizeLabel })
     expect(maximize.getAttribute('title')).toBe(maximizeLabel)
-    expect(maximize.hasAttribute('aria-pressed')).toBe(false)
-    expect(maximize.hasAttribute('data-active')).toBe(false)
+    expect(maximize.getAttribute('aria-pressed')).toBe(String(detailsMaximized))
+    expect(maximize.getAttribute('data-active')).toBe(String(detailsMaximized))
     fireEvent.click(maximize)
     expect(toggleDetailsMaximized).toHaveBeenCalledOnce()
   })

@@ -9,9 +9,10 @@ DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标�
 ## 目标交互
 
 - 右栏占据应用内容区全高，并作为第三列影响横向布局；
-- 应用 navbar 提供唯一的显示/隐藏按钮，右栏内部不重复这一控制；
+- 应用 navbar 在右栏关闭时提供一个显示按钮，在打开时提供最大化/还原与关闭按钮；
 - 新会话界面在发送第一条消息前也可展开和收起右栏；
-- 官方分隔条调整宽度，只记忆最后一次非零宽度；
+- 官方分隔条调整普通模式宽度，不设固定最大值；最大化模式占据左栏以外的区域；
+- 普通宽度和最大化偏好跨收起、session 切换与刷新保留，右栏可见性仍在启动时重置；
 - 第三方插件可注册、排序和卸载标签页；
 - 第三方插件可通过稳定的 client service 选择并展开当前 session 的已注册标签页；
 - 主界面贡献和右栏标签可共享同一份 session 状态与动作。
@@ -73,7 +74,7 @@ dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 
 ## Harness 源码补丁
 
-官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，基于 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它保留原生三列 frame、拖拽求解器和 `ctx.layout` 服务，只增加全局 navbar action seat、blank/new-session details 几何、最后非零 details 宽度持久化、header clearance 和无浮动 grip 的全高分隔条。补丁不修改 Host 行为测试；每个逻辑侵入区都带有就近 owner 标记，生成 catalog 由生命周期脚本从当前源贡献重建。
+官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，基于 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它保留原生三列 frame、拖拽求解器和 `ctx.layout` 服务，增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好持久化、无固定最大宽度的普通拖拽、保留左栏的最大化布局、header clearance 和无浮动 grip 的全高分隔条。补丁携带对应的 Host 行为测试；每个逻辑侵入区都带有就近 owner 标记，生成 catalog 由生命周期脚本从当前源贡献重建。
 
 在对应 Harness checkout 中应用：
 

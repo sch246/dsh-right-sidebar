@@ -1,5 +1,5 @@
 diff --git a/packages/client/store/src/contract.ts b/packages/client/store/src/contract.ts
-index 38e39da024ab4f112e429caac5968f88c1239cb4..1dddf35001f26c93623a2e47d03347515eba26a1 100644
+index 38e39da024..1dddf35001 100644
 --- a/packages/client/store/src/contract.ts
 +++ b/packages/client/store/src/contract.ts
 @@ -50,0 +51,10 @@ export type BakedActions<T, A extends ActionsDecl<T>> = {
@@ -22,7 +22,7 @@ index 38e39da024ab4f112e429caac5968f88c1239cb4..1dddf35001f26c93623a2e47d0334751
 +  persist?: string | StorePersistence<T>
 +  // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/store/src/index.ts b/packages/client/store/src/index.ts
-index 09414e95e68895021df4aded5b3f42ea7f2c9c66..34846379a000f34fd5d4a3d42a90e648651e9c12 100644
+index 09414e95e6..34846379a0 100644
 --- a/packages/client/store/src/index.ts
 +++ b/packages/client/store/src/index.ts
 @@ -23 +23 @@ export type {
@@ -94,7 +94,7 @@ index 09414e95e68895021df4aded5b3f42ea7f2c9c66..34846379a000f34fd5d4a3d42a90e648
 +          : { persist: persistKeys === undefined ? { name: persistKey } : { name: persistKey, keys: persistKeys } })
 +      // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
-index 73c5fccb73d045aaceb43b877f53d74471ce9161..bed50452affe66ae81640c6aed0a26373f2fe1f1 100644
+index 73c5fccb73..bed50452af 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
 +++ b/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css
 @@ -40 +40,3 @@
@@ -103,7 +103,7 @@ index 73c5fccb73d045aaceb43b877f53d74471ce9161..bed50452affe66ae81640c6aed0a2637
 +  padding: 12px max(28px, var(--dsh-shell-navbar-clearance, 28px)) 0 20px;
 +  /* @meta-intent:end dsh-right-sidebar */
 diff --git a/packages/client/ui-layout/src/client/AppFrame.module.css b/packages/client/ui-layout/src/client/AppFrame.module.css
-index ae56780133ee4a4a08b4381ff37aa8d4fdc55247..2908eb1517af929ff42ace0c2f277988d5b849dc 100644
+index ae56780133..2908eb1517 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.module.css
 +++ b/packages/client/ui-layout/src/client/AppFrame.module.css
 @@ -51,3 +51,3 @@
@@ -161,7 +161,7 @@ index ae56780133ee4a4a08b4381ff37aa8d4fdc55247..2908eb1517af929ff42ace0c2f277988
 +}
 +/* @meta-intent:end dsh-right-sidebar */
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index cbef893aed6d633fda18994befa890f39f162a3b..a51e2253aab23f7b04b30f22b98b43d12dcd0868 100644
+index cbef893aed..b3c15db609 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
 @@ -14 +14,3 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
@@ -174,7 +174,24 @@ index cbef893aed6d633fda18994befa890f39f162a3b..a51e2253aab23f7b04b30f22b98b43d1
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Deliver the global navbar action seat to the root frame.)
 +  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.navbar.action' | 'shell.overlay'>
 +  // @meta-intent:end dsh-right-sidebar
-@@ -100,4 +104,3 @@ export function AppFrame({
+@@ -31,2 +35,12 @@ export type AppFrameProps =
+-function CenterColumn(props: { children?: ReactNode }) {
+-  return <div className={css.centerCol}>{props.children}</div>
++// @meta-intent:begin dsh-right-sidebar (purpose: Keep the mounted center non-interactive while maximized details cover its track.)
++function CenterColumn(props: { children?: ReactNode; inert: boolean }) {
++  const inertAttribute = props.inert ? { inert: '' } : {}
++  return (
++    <div
++      className={css.centerCol}
++      aria-hidden={props.inert || undefined}
++      {...inertAttribute}
++    >
++      {props.children}
++    </div>
++  )
+@@ -33,0 +48 @@ function CenterColumn(props: { children?: ReactNode }) {
++// @meta-intent:end dsh-right-sidebar
+@@ -100,4 +115,3 @@ export function AppFrame({
 -  const detailsSession = useSessions((s) => {
 -    const current = s.current
 -    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
@@ -182,61 +199,114 @@ index cbef893aed6d633fda18994befa890f39f162a3b..a51e2253aab23f7b04b30f22b98b43d1
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Allow details before the first turn and close them on session change.)
 +  const currentSession = useSessions(s => s.current)
 +  // @meta-intent:end dsh-right-sidebar
-@@ -109,0 +113,4 @@ export function AppFrame({
+@@ -109,0 +124,4 @@ export function AppFrame({
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Measure the global control so conversation utilities reserve its occupied width.)
 +  const navbarRef = useRef<HTMLDivElement | null>(null)
 +  const [navbarWidth, setNavbarWidth] = useState(28)
 +  // @meta-intent:end dsh-right-sidebar
-@@ -111 +118 @@ export function AppFrame({
+@@ -111 +129 @@ export function AppFrame({
 -  const lastSession = useRef(detailsSession)
 +  const lastSession = useRef(currentSession)
-@@ -113,2 +120,2 @@ export function AppFrame({
+@@ -113,2 +131,2 @@ export function AppFrame({
 -    if (detailsSession === undefined) return
 -    if (lastSession.current !== undefined && lastSession.current !== detailsSession) {
 +    if (currentSession === undefined) return
 +    if (lastSession.current !== undefined && lastSession.current !== currentSession) {
-@@ -117,2 +124,2 @@ export function AppFrame({
+@@ -117,2 +135,2 @@ export function AppFrame({
 -    lastSession.current = detailsSession
 -  }, [actions, detailsSession])
 +    lastSession.current = currentSession
 +  }, [actions, currentSession])
-@@ -122,0 +130 @@ export function AppFrame({
+@@ -122,0 +141 @@ export function AppFrame({
 +    const navbar = navbarRef.current
-@@ -130,0 +139,4 @@ export function AppFrame({
+@@ -130,0 +150,4 @@ export function AppFrame({
 +        // @meta-intent:begin dsh-right-sidebar (purpose: Update clearance when registered application controls change width.)
 +        const nextNavbarWidth = navbar?.getBoundingClientRect().width ?? 0
 +        if (nextNavbarWidth > 0) setNavbarWidth(nextNavbarWidth)
 +        // @meta-intent:end dsh-right-sidebar
-@@ -133,0 +146,3 @@ export function AppFrame({
+@@ -133,0 +157,3 @@ export function AppFrame({
 +    // @meta-intent:begin dsh-right-sidebar (purpose: Observe the application-control seat independently from the frame.)
 +    if (navbar !== null) observer.observe(navbar)
 +    // @meta-intent:end dsh-right-sidebar
-@@ -152 +167,8 @@ export function AppFrame({
+@@ -152 +178,9 @@ export function AppFrame({
 -  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Resolve transient open state against the remembered right-column width.)
 +  const detailsPreference = panels.detailsOpen ? panels.detailsWidth : 0
-+  const cols = computeColumns(viewport, sidebarPreference, detailsPreference)
++  const detailsMaximized = panels.detailsOpen && panels.detailsMaximized
++  const cols = computeColumns(viewport, sidebarPreference, detailsPreference, detailsMaximized)
 +  const shellNavbarClearance = cols.details === 0 ? Math.max(28, navbarWidth + 16) : 28
 +  useEffect(() => {
 +    if (panels.detailsOpen && cols.details === 0) actions.closeDetails()
 +  }, [actions, cols.details, panels.detailsOpen])
 +  // @meta-intent:end dsh-right-sidebar
-@@ -179 +201,6 @@ export function AppFrame({
+@@ -179 +213,8 @@ export function AppFrame({
 -      style={{ gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` }}
 +      style={{
-+        gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`,
++        gridTemplateColumns: detailsMaximized
++          ? `${cols.sidebar}px 0px ${cols.details}px`
++          : `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`,
 +        // @meta-intent:begin dsh-right-sidebar (purpose: Project measured navbar width as a shell CSS variable.)
 +        '--dsh-shell-navbar-clearance': `${shellNavbarClearance}px`,
 +        // @meta-intent:end dsh-right-sidebar
 +      } as CSSProperties}
-@@ -212,0 +240,5 @@ export function AppFrame({
+@@ -181,0 +223 @@ export function AppFrame({
++      data-details-maximized={detailsMaximized || undefined}
+@@ -205 +247 @@ export function AppFrame({
+-        <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
++        <CenterColumn inert={detailsMaximized}>{renderSlot('conversation', {})}</CenterColumn>
+@@ -212,0 +255,8 @@ export function AppFrame({
 +      {/* @meta-intent:begin dsh-right-sidebar (purpose: Render the additive global sidebar control with resolved details visibility.) */}
 +      <div ref={navbarRef} className={css.navbar} data-shell-navbar>
-+        {renderSlot('shell.navbar.action', { detailsOpen: cols.details > 0 })}
++        {renderSlot('shell.navbar.action', {
++          detailsOpen: cols.details > 0,
++          detailsMaximized: panels.detailsMaximized,
++        })}
 +      </div>
 +      {/* @meta-intent:end dsh-right-sidebar */}
+@@ -215 +265 @@ export function AppFrame({
+-      {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
++      {cols.details > 0 && !detailsMaximized && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
+diff --git a/packages/client/ui-layout/src/client/columns.ts b/packages/client/ui-layout/src/client/columns.ts
+index 374ce64703..97730b5ef7 100644
+--- a/packages/client/ui-layout/src/client/columns.ts
++++ b/packages/client/ui-layout/src/client/columns.ts
+@@ -3,3 +3,6 @@
+- * Chain order is fixed by contract: keep center >= CENTER_MIN by shrinking
+- * details, then auto-closing it (derived zero width — preferred width
+- * preferences are never rewritten, so widening the window restores them).
++ * Normal-mode chain order is fixed by contract: keep center >= CENTER_MIN by
++ * shrinking details, then auto-closing it (derived zero width — preferred
++ * width preferences are never rewritten, so widening the window restores
++ * them). Normal details have no fixed ceiling: the viewport, retained sidebar,
++ * and center floor determine their rendered maximum. Maximized details retain
++ * the resolved sidebar, set center to zero, and occupy the remaining viewport.
+@@ -36,2 +38,0 @@ export const DETAILS_MIN = 300
+-/** Details drag clamp ceiling. */
+-export const DETAILS_MAX = 520
+@@ -56 +57,2 @@ export function clampWidth(px: number, min: number, max: number): number {
+- * store boundary and callers may still supply stale ranges.
++ * store boundary and callers may still supply stale sidebar values or details
++ * values below the minimum.
+@@ -59,0 +62 @@ export function clampWidth(px: number, min: number, max: number): number {
++ * @param detailsMaximized - whether open details occupy all space after the sidebar.
+@@ -62 +65,6 @@ export function clampWidth(px: number, min: number, max: number): number {
+-export function computeColumns(viewport: number, sidebar: number, details: number): Columns {
++export function computeColumns(
++  viewport: number,
++  sidebar: number,
++  details: number,
++  detailsMaximized = false,
++): Columns {
+@@ -65 +73,6 @@ export function computeColumns(viewport: number, sidebar: number, details: numbe
+-  const d0 = details === 0 ? 0 : clampWidth(details, DETAILS_MIN, DETAILS_MAX)
++  // @meta-intent:begin dsh-right-sidebar (purpose: Let ordinary details grow to the center floor and maximize across the center.)
++  if (details !== 0 && detailsMaximized) {
++    return { sidebar: s, center: 0, details: Math.max(0, viewport - s) }
++  }
++  const d0 = details === 0 ? 0 : Math.max(DETAILS_MIN, Math.round(details))
++  // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/ui-layout/src/client/index.ts b/packages/client/ui-layout/src/client/index.ts
-index 56afec15e3baa1cb1088eb578db001f999d6a8a9..c1b37f35521c09dd5d040f05bab5a77d2b2703d9 100644
+index 56afec15e3..e9ae69fa5a 100644
 --- a/packages/client/ui-layout/src/client/index.ts
 +++ b/packages/client/ui-layout/src/client/index.ts
 @@ -4 +4 @@
@@ -250,78 +320,349 @@ index 56afec15e3baa1cb1088eb578db001f999d6a8a9..c1b37f35521c09dd5d040f05bab5a77d
 +    /** Application-level controls anchored at the frame's top-right corner. */
 +    'shell.navbar.action': { kind: 'list'; scope: 'root'; owner: NavbarActionOwnerProps }
 +    // @meta-intent:end dsh-right-sidebar
-@@ -109,0 +114,8 @@ export interface DetailsOwnerProps {}
+@@ -109,0 +114,10 @@ export interface DetailsOwnerProps {}
 +// @meta-intent:begin dsh-right-sidebar (purpose: Expose resolved visibility to navbar occupants while writes stay on ctx.layout.)
 +/** Application-control owner share supplied by the frame. */
 +export interface NavbarActionOwnerProps {
 +  /** Whether the details column currently occupies layout width. */
 +  detailsOpen: boolean
++  /** Whether details use the maximized layout when open. */
++  detailsMaximized: boolean
 +}
 +// @meta-intent:end dsh-right-sidebar
 +
-@@ -115 +127 @@ export const inject = ['slots', 'theme', 'locale']
+@@ -115 +129 @@ export const inject = ['slots', 'theme', 'locale']
 - * into 'root' with the four child-slot declarations, the layout store seat,
 + * into 'root' with the five child-slot declarations, the layout store seat,
-@@ -129,0 +142,3 @@ export function apply(ctx: ClientContext): void {
+@@ -129,0 +144,3 @@ export function apply(ctx: ClientContext): void {
 +        // @meta-intent:begin dsh-right-sidebar (purpose: Register the global navbar action child with the root frame.)
 +        'shell.navbar.action': { kind: 'list', scope: 'root' },
 +        // @meta-intent:end dsh-right-sidebar
+diff --git a/packages/client/ui-layout/src/client/service.ts b/packages/client/ui-layout/src/client/service.ts
+index 2b2e50e5d5..24cb142be3 100644
+--- a/packages/client/ui-layout/src/client/service.ts
++++ b/packages/client/ui-layout/src/client/service.ts
+@@ -29,0 +30,4 @@ export interface ILayout {
++  // @meta-intent:begin dsh-right-sidebar (purpose: Expose the right-column maximization action to its navbar control.)
++  /** Toggle whether details occupy all space after the sidebar when open. */
++  toggleDetailsMaximized(): void
++  // @meta-intent:end dsh-right-sidebar
+@@ -61,0 +66,7 @@ export class LayoutController implements ILayout {
++  // @meta-intent:begin dsh-right-sidebar (purpose: Forward right-column maximization through the layout service.)
++  /** Toggle whether details occupy all space after the sidebar when open. */
++  toggleDetailsMaximized(): void {
++    this.#require().toggleDetailsMaximized()
++  }
++  // @meta-intent:end dsh-right-sidebar
++
 diff --git a/packages/client/ui-layout/src/client/stores.ts b/packages/client/ui-layout/src/client/stores.ts
-index 7b6e2807ee50a86487e3c0058e888bb7cbcc3a39..0b0815ddc268a414dd88dd92c92bce7cb730779a 100644
+index 7b6e2807ee..3e048a08d5 100644
 --- a/packages/client/ui-layout/src/client/stores.ts
 +++ b/packages/client/ui-layout/src/client/stores.ts
-@@ -2,2 +2,2 @@
+@@ -2,3 +2,3 @@
 - * The root entry's transient layout store: panel geometry as plain widths in
 - * px (0 = closed). Module level exports the factory only — a module-level
-+ * The root entry's layout store: transient panel state plus the durable
-+ * details-width preference. Module level exports the factory only — a module-level
-@@ -17 +17 @@ import {
+- * handle would pin the store's identity in the module
++ * The root entry's layout store: transient panel state plus durable details
++ * width and maximization preferences. Module level exports the factory only —
++ * a module-level handle would pin the store's identity in the module
+@@ -12 +12 @@ import {
+-  clampWidth, DETAILS_DEFAULT, DETAILS_MAX, DETAILS_MIN,
++  clampWidth, DETAILS_DEFAULT, DETAILS_MIN,
+@@ -17,2 +17,2 @@ import {
 - * Layout store state: panel width preferences in px (0 = closed), plus the
-+ * Layout store state: panel width preferences, transient details visibility, plus the
-@@ -23 +23,9 @@ import {
+- * narrow-viewport pair — `narrow` mirrors AppFrame's breakpoint reading
++ * Layout store state: panel preferences, transient details visibility, plus
++ * the narrow-viewport pair — `narrow` mirrors AppFrame's breakpoint reading
+@@ -23 +23,10 @@ import {
 -type LayoutState = { sidebar: number; details: number; narrow: boolean; narrowExpanded: boolean }
 +// @meta-intent:begin dsh-right-sidebar (purpose: Separate remembered right-column width from transient visibility.)
 +type LayoutState = {
 +  sidebar: number
 +  detailsWidth: number
 +  detailsOpen: boolean
++  detailsMaximized: boolean
 +  narrow: boolean
 +  narrowExpanded: boolean
 +}
 +// @meta-intent:end dsh-right-sidebar
-@@ -39,5 +47,3 @@ type LayoutActions = {
+@@ -35,0 +45 @@ type LayoutActions = {
++  toggleDetailsMaximized: (draft: LayoutState) => void
+@@ -39,5 +49,3 @@ type LayoutActions = {
 - * Create the layout panel store handle. The preference IS the width, so
 - * closing a panel forgets its drag width — reopening restores the contract
 - * default. Actions are the complete write set: drag writes clamp
 - * into the panel's contract range and never cross the open/closed line;
 - * open/close transitions write 0 / the default explicitly. Below the
-+ * Create the layout panel store handle. The right-column width and visibility
-+ * are separate: dragging changes the durable width, while open and close only
-+ * change transient visibility. Below the
-@@ -48,0 +55 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
-+  // @meta-intent:begin dsh-right-sidebar (purpose: Persist only the remembered width and keep open/close state fresh on every load.)
-@@ -50 +57,8 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
++ * Create the layout panel store handle. Right-column width, visibility, and
++ * maximization are separate: dragging changes durable width, open and close
++ * only change transient visibility, and maximization survives close. Below the
+@@ -48,0 +57 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
++  // @meta-intent:begin dsh-right-sidebar (purpose: Persist details preferences while keeping open/close state fresh on every load.)
+@@ -50 +59,9 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 -    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false }),
 +    init: (): LayoutState => ({
 +      sidebar: SIDEBAR_DEFAULT,
 +      detailsWidth: DETAILS_DEFAULT,
 +      detailsOpen: false,
++      detailsMaximized: false,
 +      narrow: false,
 +      narrowExpanded: false,
 +    }),
-+    persist: { name: 'dsh.layout.panels.v1', keys: ['detailsWidth'] },
-@@ -53 +67 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
++    persist: { name: 'dsh.layout.panels.v1', keys: ['detailsWidth', 'detailsMaximized'] },
+@@ -53 +70 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 -      setDetails: (d, px: number) => { d.details = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
-+      setDetails: (d, px: number) => { d.detailsWidth = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
-@@ -67,2 +81,2 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
++      setDetails: (d, px: number) => { d.detailsWidth = Math.max(DETAILS_MIN, Math.round(px)) },
+@@ -67,2 +84,3 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 -      openDetails: (d) => { if (d.details === 0) d.details = DETAILS_DEFAULT },
 -      closeDetails: (d) => { d.details = 0 },
 +      openDetails: (d) => { d.detailsOpen = true },
 +      closeDetails: (d) => { d.detailsOpen = false },
-@@ -70,0 +85 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
++      toggleDetailsMaximized: (d) => { d.detailsMaximized = !d.detailsMaximized },
+@@ -70,0 +89 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 +  // @meta-intent:end dsh-right-sidebar
+diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
+index a640480360..9ec360c346 100644
+--- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
++++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
+@@ -126,0 +127 @@ beforeEach(() => {
++  localStorage.clear()
+@@ -213 +214 @@ describe('AppFrame', () => {
+-  it('ignores unselected states and closes only when the Session id changes', () => {
++  it('a Session id change closes details without clearing maximization', () => {
+@@ -215,4 +216,5 @@ describe('AppFrame', () => {
+-    expect(tracks(frame)).toEqual([280, 0])
+-
+-    act(() => { instance.actions.openDetails() })
+-    expect(tracks(frame)).toEqual([280, 360])
++    act(() => {
++      instance.actions.openDetails()
++      instance.actions.toggleDetailsMaximized()
++    })
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
+@@ -222,0 +225 @@ describe('AppFrame', () => {
++    expect(instance.getSnapshot()).toMatchObject({ detailsOpen: false, detailsMaximized: true })
+@@ -224,0 +228 @@ describe('AppFrame', () => {
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
+@@ -229,6 +233,6 @@ describe('AppFrame', () => {
+-    expect(instance.getSnapshot().details).toBe(360)
+-
+-    selectedSession.current = 's-next' as SessionId
+-    selectedSessionBlank.current = false
+-    act(() => { rerenderFrame() })
+-    expect(tracks(frame)).toEqual([280, 360])
++    expect(instance.getSnapshot()).toMatchObject({
++      detailsWidth: 360,
++      detailsOpen: false,
++      detailsMaximized: true,
++    })
++  })
+@@ -235,0 +240 @@ describe('AppFrame', () => {
++  it('an open no-session layout stays open when the first Session materializes', () => {
+@@ -236,0 +242,8 @@ describe('AppFrame', () => {
++    const { frame, instance, rerenderFrame } = mountFrame()
++    act(() => {
++      instance.actions.toggleDetailsMaximized()
++      instance.actions.openDetails()
++    })
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
++
++    selectedSession.current = 's-first' as SessionId
+@@ -238,4 +251,2 @@ describe('AppFrame', () => {
+-    expect(tracks(frame)).toEqual([280, 0])
+-    selectedSession.current = 's-test' as SessionId
+-    act(() => { rerenderFrame() })
+-    expect(tracks(frame)).toEqual([280, 0])
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
++    expect(instance.getSnapshot()).toMatchObject({ detailsOpen: true, detailsMaximized: true })
+@@ -248 +259 @@ describe('AppFrame', () => {
+-    expect(instance.getSnapshot().details).toBe(0)
++    expect(instance.getSnapshot()).toMatchObject({ detailsWidth: 360, detailsOpen: false })
+@@ -274,0 +286,9 @@ describe('AppFrame', () => {
++  it('normal details drag has no fixed ceiling before the center floor', () => {
++    const { frame, instance } = mountFrame()
++    act(() => { instance.actions.openDetails() })
++    const handles = frame.querySelectorAll('[class*="handle"]')
++    drag(handles[1]!, 1560, 800)
++    expect(tracks(frame)[1]).toBe(1000)
++    expect(instance.getSnapshot().detailsWidth).toBe(1120)
++  })
++
+@@ -282 +302 @@ describe('AppFrame', () => {
+-    expect(instance.getSnapshot().details).toBe(320)
++    expect(instance.getSnapshot().detailsWidth).toBe(320)
+@@ -322,0 +343,32 @@ describe('AppFrame', () => {
++
++  it('maximized details retain the sidebar, hide and inert the mounted center, and omit the details handle', () => {
++    const { frame, instance, getByTestId, slotCalls } = mountFrame()
++    act(() => {
++      instance.actions.openDetails()
++      instance.actions.toggleDetailsMaximized()
++    })
++
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
++    expect(frame.hasAttribute('data-details-maximized')).toBe(true)
++    const center = getByTestId('center-content').parentElement!
++    expect(center.hasAttribute('inert')).toBe(true)
++    expect(center.getAttribute('aria-hidden')).toBe('true')
++    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(1)
++    expect(slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props).toEqual({
++      detailsOpen: true,
++      detailsMaximized: true,
++    })
++
++    act(() => { instance.actions.closeDetails() })
++    expect(tracks(frame)).toEqual([280, 0])
++    expect(center.hasAttribute('inert')).toBe(false)
++    expect(center.hasAttribute('aria-hidden')).toBe(false)
++    expect(instance.getSnapshot()).toMatchObject({ detailsOpen: false, detailsMaximized: true })
++    expect(slotCalls.filter(c => c.key === 'shell.navbar.action').at(-1)!.props).toEqual({
++      detailsOpen: false,
++      detailsMaximized: true,
++    })
++
++    act(() => { instance.actions.openDetails() })
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
++  })
+diff --git a/packages/client/ui-layout/tests/apply.client.spec.ts b/packages/client/ui-layout/tests/apply.client.spec.ts
+index e546294445..8c81c64c4a 100644
+--- a/packages/client/ui-layout/tests/apply.client.spec.ts
++++ b/packages/client/ui-layout/tests/apply.client.spec.ts
+@@ -37 +37 @@ describe('ui-layout client apply', () => {
+-  it('provides ctx.layout and registers AppFrame into root with the three child declarations', async () => {
++  it('provides ctx.layout and registers AppFrame into root with its child declarations', async () => {
+@@ -44 +44 @@ describe('ui-layout client apply', () => {
+-    // …and declared the three children in the ledger.
++    // …and declared its children in the ledger.
+@@ -47,0 +48,2 @@ describe('ui-layout client apply', () => {
++    expect(slots.spec('shell.navbar.action')).toEqual({ kind: 'list', scope: 'root' })
++    expect(slots.spec('shell.overlay')).toEqual({ kind: 'list', scope: 'root' })
+@@ -55,0 +58 @@ describe('ui-layout client apply', () => {
++      toggleDetailsMaximized: vi.fn(),
+@@ -60,0 +64 @@ describe('ui-layout client apply', () => {
++    layout.toggleDetailsMaximized()
+@@ -61,0 +66 @@ describe('ui-layout client apply', () => {
++    expect(actions.toggleDetailsMaximized).toHaveBeenCalledOnce()
+@@ -96,0 +102 @@ describe('ui-layout client apply', () => {
++    expect(slots.spec('shell.navbar.action')).toBeUndefined()
+diff --git a/packages/client/ui-layout/tests/columns.client.spec.ts b/packages/client/ui-layout/tests/columns.client.spec.ts
+index ae8c39a117..908d616de8 100644
+--- a/packages/client/ui-layout/tests/columns.client.spec.ts
++++ b/packages/client/ui-layout/tests/columns.client.spec.ts
+@@ -30 +30 @@ describe('computeColumns', () => {
+-  it('preferences beyond the clamp range are clamped before solving', () => {
++  it('sidebar and details minima are enforced before solving', () => {
+@@ -35,0 +36,19 @@ describe('computeColumns', () => {
++
++  it('normal details have no fixed ceiling beyond the retained sidebar and center floor', () => {
++    expect(computeColumns(2500, open(SIDEBAR_DEFAULT), open(1500)))
++      .toEqual({ sidebar: SIDEBAR_DEFAULT, center: 720, details: 1500 })
++    expect(computeColumns(2200, open(SIDEBAR_DEFAULT), open(9999)))
++      .toEqual({ sidebar: SIDEBAR_DEFAULT, center: CENTER_MIN, details: 1280 })
++  })
++
++  it('maximized details retain the sidebar and occupy the remaining viewport', () => {
++    expect(computeColumns(1920, open(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT), true))
++      .toEqual({ sidebar: SIDEBAR_DEFAULT, center: 0, details: 1920 - SIDEBAR_DEFAULT })
++    expect(computeColumns(1000, closed(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT), true))
++      .toEqual({ sidebar: SIDEBAR_COLLAPSED, center: 0, details: 1000 - SIDEBAR_COLLAPSED })
++  })
++
++  it('a remembered maximized preference does not open closed details', () => {
++    expect(computeColumns(1920, open(SIDEBAR_DEFAULT), closed(DETAILS_DEFAULT), true))
++      .toEqual({ sidebar: SIDEBAR_DEFAULT, center: 1920 - SIDEBAR_DEFAULT, details: 0 })
++  })
+diff --git a/packages/client/ui-layout/tests/layout-store.client.spec.ts b/packages/client/ui-layout/tests/layout-store.client.spec.ts
+index c6f0069197..2ecbda40c4 100644
+--- a/packages/client/ui-layout/tests/layout-store.client.spec.ts
++++ b/packages/client/ui-layout/tests/layout-store.client.spec.ts
+@@ -3,2 +3,2 @@
+- * createLayoutStore unit account: init shape, the action write set (clamp
+- * inside actions), and the absence of browser persistence. Uses the
++ * createLayoutStore unit account: init state, the action write set (clamp
++ * inside actions), and selective browser persistence. Uses the
+@@ -11 +11 @@ import {
+-  DETAILS_DEFAULT, DETAILS_MAX, DETAILS_MIN,
++  DETAILS_DEFAULT, DETAILS_MIN,
+@@ -15 +15 @@ import {
+-const PERSIST_KEY = 'dsh.layout.panels'
++const PERSIST_KEY = 'dsh.layout.panels.v1'
+@@ -22 +22,8 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false })
++    expect(store.getSnapshot()).toEqual({
++      sidebar: SIDEBAR_DEFAULT,
++      detailsWidth: DETAILS_DEFAULT,
++      detailsOpen: false,
++      detailsMaximized: false,
++      narrow: false,
++      narrowExpanded: false,
++    })
+@@ -32 +39 @@ describe('createLayoutStore', () => {
+-  it('setSidebar/setDetails clamp into the contract ranges', () => {
++  it('setSidebar clamps to its range while details has only a minimum', () => {
+@@ -39 +46 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot().details).toBe(DETAILS_MIN)
++    expect(store.getSnapshot().detailsWidth).toBe(DETAILS_MIN)
+@@ -41 +48 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot().details).toBe(DETAILS_MAX)
++    expect(store.getSnapshot().detailsWidth).toBe(9999)
+@@ -58 +65 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot()).toEqual({ sidebar: 400, details: 0, narrow: true, narrowExpanded: true })
++    expect(store.getSnapshot()).toMatchObject({ sidebar: 400, narrow: true, narrowExpanded: true })
+@@ -77 +84 @@ describe('createLayoutStore', () => {
+-  it('openDetails uses the contract default, preserves an open width, and closeDetails zeroes', () => {
++  it('open and close change only transient visibility', () => {
+@@ -80 +87 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot().details).toBe(DETAILS_DEFAULT)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: DETAILS_DEFAULT, detailsOpen: true })
+@@ -83 +90 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot().details).toBe(500)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: 500, detailsOpen: true })
+@@ -85 +92 @@ describe('createLayoutStore', () => {
+-    expect(store.getSnapshot().details).toBe(0)
++    expect(store.getSnapshot()).toMatchObject({ detailsWidth: 500, detailsOpen: false })
+@@ -88 +95,11 @@ describe('createLayoutStore', () => {
+-  it('does not persist panel geometry', () => {
++  it('close preserves maximization and reopening restores it', () => {
++    const { store, actions } = createLayoutStore().create()
++    actions.openDetails()
++    actions.toggleDetailsMaximized()
++    actions.closeDetails()
++    expect(store.getSnapshot()).toMatchObject({ detailsOpen: false, detailsMaximized: true })
++    actions.openDetails()
++    expect(store.getSnapshot()).toMatchObject({ detailsOpen: true, detailsMaximized: true })
++  })
++
++  it('persists only details width and maximization', () => {
+@@ -93 +110,5 @@ describe('createLayoutStore', () => {
+-    expect(localStorage.getItem(PERSIST_KEY)).toBeNull()
++    first.actions.toggleDetailsMaximized()
++    expect(JSON.parse(localStorage.getItem(PERSIST_KEY)!)).toEqual({
++      detailsWidth: 500,
++      detailsMaximized: true,
++    })
+@@ -98 +119,3 @@ describe('createLayoutStore', () => {
+-      details: 0,
++      detailsWidth: 500,
++      detailsOpen: false,
++      detailsMaximized: true,
+diff --git a/packages/client/ui-layout/tests/service.client.spec.ts b/packages/client/ui-layout/tests/service.client.spec.ts
+index ea4118927c..724d169276 100644
+--- a/packages/client/ui-layout/tests/service.client.spec.ts
++++ b/packages/client/ui-layout/tests/service.client.spec.ts
+@@ -12,0 +13 @@ function fakePanels(): PanelActions {
++    toggleDetailsMaximized: vi.fn(),
+@@ -17 +18 @@ describe('LayoutController', () => {
+-  it('forwards the three panel actions to the attached set', () => {
++  it('forwards the panel actions to the attached set', () => {
+@@ -24,0 +26 @@ describe('LayoutController', () => {
++    service.toggleDetailsMaximized()
+@@ -28,0 +31 @@ describe('LayoutController', () => {
++    expect(panels.toggleDetailsMaximized).toHaveBeenCalledTimes(1)
+@@ -37,0 +41 @@ describe('LayoutController', () => {
++    expect(() => { service.toggleDetailsMaximized() }).toThrow(/panel actions not wired/)
 diff --git a/packages/client/ui-slots/src/store.ts b/packages/client/ui-slots/src/store.ts
-index 907762b7b48673b4b95588d28a8983b8e882817b..e67613e8a58fa10b142199b4ce334b0ec830c703 100644
+index 907762b7b4..e67613e8a5 100644
 --- a/packages/client/ui-slots/src/store.ts
 +++ b/packages/client/ui-slots/src/store.ts
 @@ -15,0 +16,3 @@ export type {

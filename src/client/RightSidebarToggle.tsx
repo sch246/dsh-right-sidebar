@@ -29,6 +29,8 @@ export function RightSidebarToggle({
           className="dsh-rightbar-toggle"
           aria-label={maximizeLabel}
           title={maximizeLabel}
+          aria-pressed={detailsMaximized}
+          data-active={detailsMaximized}
           onClick={toggleDetailsMaximized}
         >
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden>
