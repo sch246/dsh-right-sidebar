@@ -39,7 +39,8 @@
     "../logs/2026-09-05-internal-tab-drag-protocol.md",
     "../logs/2026-09-05-grouped-workbench-deployment.md",
     "../logs/2026-09-06-tab-gesture-regions.md",
-    "../logs/2026-09-06-tab-gesture-browser-evidence.md"
+    "../logs/2026-09-06-tab-gesture-browser-evidence.md",
+    "../logs/2026-09-06-compact-ui-activation.md"
   ],
   "protocol": {
     "id": "meta-intent",

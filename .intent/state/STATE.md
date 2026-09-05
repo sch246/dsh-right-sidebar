@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with a privately browser-checked tab-gesture candidate selected in `STATE.json`. [Browser evidence](../logs/2026-09-06-tab-gesture-browser-evidence.md) records bounded Agent observations; [tab gesture clarification](../logs/2026-09-06-tab-gesture-regions.md) defines the current interaction requirements. The current candidate is not recorded as installed or activated. Historical locks remain immutable evidence. No realization is active or user-accepted.
+Status: draft embedded intent package with a privately browser-checked tab-gesture candidate selected in `STATE.json`. [Browser evidence](../logs/2026-09-06-tab-gesture-browser-evidence.md) records bounded Agent observations; [tab gesture clarification](../logs/2026-09-06-tab-gesture-regions.md) defines the current interaction requirements. [Deployment evidence](../logs/2026-09-06-compact-ui-activation.md) records installation and managed activation. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock.
 
 ## Intent
 

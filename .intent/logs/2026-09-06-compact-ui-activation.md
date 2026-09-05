@@ -1,0 +1,9 @@
+# Compact workbench activation
+
+The user authorized installation and restart, then requested minimal additional testing. The existing focused tests and builds were retained without rerunning their suites. Private browser checks covered tab insertion, content-left splitting, ordinary and Shift wheel scrolling, compact controls, and the new home-trash Remote. A fresh private page loaded with no page or console errors.
+
+On 2026-09-06, the managed checkout fast-forwarded to source `74aa95eb54d6585d28a8d8a5525432a0e744c3da` and candidate metadata `2771e749b73822db9bf62d6e9e6389b44978e7c5`; viewer source is `7edd4e9a36988d181f69dd68dc6b3463e62b0e8f`, manager source is `0732a57f818a283ebc39de681d18399068aa1a9e`. Existing linked profile targets and Bundle membership were unchanged. The owned builds completed against `/root/deepseek-harness` at `0a53fb55bea101816fa226bb964ae2bed71c343b`, preserving its unrelated changes and existing Host patches. All three deployed Client digests match the private candidate artifacts.
+
+The profile verification script confirmed all five workbench dependencies, lockfile resolutions, symlinks and composed rows: 18 dependencies, 19 Bundles, configuration SHA-256 `221aadc95e3ffa8548fc731d9a8aa01120f06a0bd2d00c3d57e280eecf81582c`. The resource-links receipt retains its applied status and patch digest `ad72f4fd54e8d42324af29ad88bba6a75fa7d7fec1e7e21d8e2fd0d35b510cc2`.
+
+After the authorized stop/build/start, `dsh-web` is active with MainPID `1973273`, zero automatic restarts, HTTP 200, and a fresh browser reporting no page or console errors. No user document was written or deleted, and no session message was added. Recovery artifacts are at `/root/dsh-compact-ui-deploy.NRO2Q3/pre-activation.tar.gz`. Installation and startup do not establish user visual acceptance; immutable candidate locks are unchanged.
