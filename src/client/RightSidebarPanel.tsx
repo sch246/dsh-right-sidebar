@@ -552,8 +552,14 @@ function LauncherHome({
           </SidebarContentBoundary>
         ))}
       </div>
-      <fieldset className="dsh-rightbar-default-setting">
-        <legend>{t('defaultTabOrientation')}</legend>
+      <div
+        className="dsh-rightbar-default-setting"
+        role="group"
+        aria-labelledby={`${orientationName}-label`}
+        aria-describedby={`${orientationName}-hint`}
+        title={t('newGroupsOnly')}
+      >
+        <span id={`${orientationName}-label`} className="dsh-rightbar-default-setting-label">{t('defaultTabOrientation')}</span>
         {(['horizontal', 'vertical'] as const).map(orientation => (
           <label key={orientation}>
             <input
@@ -566,8 +572,8 @@ function LauncherHome({
             {t(orientation === 'horizontal' ? 'horizontalTabs' : 'verticalTabs')}
           </label>
         ))}
-        <p>{t('newGroupsOnly')}</p>
-      </fieldset>
+        <span id={`${orientationName}-hint`} hidden>{t('newGroupsOnly')}</span>
+      </div>
     </div>
   )
 }
