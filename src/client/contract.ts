@@ -67,6 +67,8 @@ export interface PanelInjected {
 export interface ToggleInjected {
   /** Toggle the details column from its resolved visible state through ctx.layout. */
   toggleDetails(detailsOpen: boolean): void
+  /** Toggle whether the open details column occupies the full application width. */
+  toggleDetailsMaximized(): void
 }
 
 declare module '@deepseek-ai/cordis' {

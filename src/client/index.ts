@@ -120,6 +120,7 @@ export function apply(ctx: ClientContext): void {
         if (detailsOpen) ctx.layout.closeDetails()
         else ctx.layout.openDetails()
       },
+      toggleDetailsMaximized: () => { ctx.layout.toggleDetailsMaximized() },
     }),
   }, RightSidebarToggle))
 }

@@ -12,22 +12,46 @@ export type RightSidebarToggleProps =
   & InjectFace<ToggleInjected>
   & PropsLocale<'right-sidebar'>
 
-export function RightSidebarToggle({ detailsOpen, toggleDetails, t }: RightSidebarToggleProps) {
-  const label = detailsOpen ? t('collapse') : t('expand')
+export function RightSidebarToggle({
+  detailsOpen,
+  detailsMaximized,
+  toggleDetails,
+  toggleDetailsMaximized,
+  t,
+}: RightSidebarToggleProps) {
+  const sidebarLabel = detailsOpen ? t('closeSidebar') : t('openSidebar')
+  const maximizeLabel = detailsMaximized ? t('restoreSidebar') : t('maximizeSidebar')
   return (
-    <button
-      type="button"
-      className="dsh-rightbar-toggle"
-      aria-label={label}
-      title={label}
-      aria-pressed={detailsOpen}
-      onClick={() => { toggleDetails(detailsOpen) }}
-    >
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-        <rect x="2.25" y="2.25" width="11.5" height="11.5" rx="2" fill="none" stroke="currentColor" strokeWidth="1.25" />
-        <path d="M9.5 2.75v10.5" stroke="currentColor" strokeWidth="1.25" />
-        {detailsOpen && <path d="M7.1 5.5 4.6 8l2.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />}
-      </svg>
-    </button>
+    <>
+      {detailsOpen && (
+        <button
+          type="button"
+          className="dsh-rightbar-toggle"
+          aria-label={maximizeLabel}
+          title={maximizeLabel}
+          onClick={toggleDetailsMaximized}
+        >
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden>
+            {detailsMaximized
+              ? <path d="M2.75 6.25h3.5v-3.5M13.25 9.75h-3.5v3.5M6.25 2.75 2.75 6.25m7 7 3.5-3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+              : <path d="M6.25 2.75h-3.5v3.5M9.75 13.25h3.5v-3.5M2.75 2.75l3.5 3.5m7 7-3.5-3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />}
+          </svg>
+        </button>
+      )}
+      <button
+        type="button"
+        className="dsh-rightbar-toggle"
+        aria-label={sidebarLabel}
+        title={sidebarLabel}
+        aria-pressed={detailsOpen}
+        data-active={detailsOpen}
+        onClick={() => { toggleDetails(detailsOpen) }}
+      >
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden>
+          <rect x="2.25" y="2.25" width="11.5" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.25" />
+          <path d="M9.5 2.75v10.5" stroke="currentColor" strokeWidth="1.25" />
+        </svg>
+      </button>
+    </>
   )
 }

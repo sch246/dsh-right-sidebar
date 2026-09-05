@@ -9,7 +9,7 @@ import { RightSidebarPanel } from '../src/client/RightSidebarPanel'
 import type { RightSidebarPanelProps } from '../src/client/RightSidebarPanel'
 import { RightSidebarToggle } from '../src/client/RightSidebarToggle'
 import type { RightSidebarToggleProps } from '../src/client/RightSidebarToggle'
-import type { RightbarTab } from '../src/client/contract'
+import type { RightbarTab, ToggleInjected } from '../src/client/contract'
 import { createRightSidebarStore } from '../src/client/stores'
 import { apply, inject } from '../src/client/index'
 import { PANEL_CSS } from '../src/client/panel.css'
@@ -33,13 +33,25 @@ it('registers and tears down the column, navbar action, tab seat, locale, and st
     },
   }, (() => null) as never)
   ctx.provide('locale', new LocaleRuntime(ctx))
+  const openDetails = vi.fn()
+  const closeDetails = vi.fn()
+  const toggleDetailsMaximized = vi.fn()
   ctx.provide('layout', {
-    toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
+    toggleSidebar: vi.fn(), openDetails, closeDetails, toggleDetailsMaximized,
   } as never)
   const fiber = ctx.plugin({ inject: [...inject], apply })
   await fiber.await()
   expect(slots.entries('details').some(entry => entry.options.priority === -1)).toBe(true)
   expect(slots.entries('shell.navbar.action').map(entry => entry.options.id)).toContain('right-sidebar-toggle')
+  const toggleEntry = slots.entries('shell.navbar.action')
+    .find(entry => entry.options.id === 'right-sidebar-toggle')
+  const injected = toggleEntry?.inject?.() as ToggleInjected
+  injected.toggleDetails(false)
+  injected.toggleDetails(true)
+  injected.toggleDetailsMaximized()
+  expect(openDetails).toHaveBeenCalledOnce()
+  expect(closeDetails).toHaveBeenCalledOnce()
+  expect(toggleDetailsMaximized).toHaveBeenCalledOnce()
   expect(slots.spec('rightbar.tab')).toEqual({ kind: 'list', scope: 'session' })
   expect(document.head.querySelector('[data-plugin-css="@dsh-external/dsh-right-sidebar"]')).not.toBeNull()
 
@@ -52,7 +64,8 @@ it('registers and tears down the column, navbar action, tab seat, locale, and st
 })
 
 const copy: Record<string, string> = {
-  title: 'Sidebar', collapse: 'Collapse', expand: 'Expand',
+  title: 'Sidebar', openSidebar: 'Open sidebar', closeSidebar: 'Close sidebar',
+  maximizeSidebar: 'Maximize sidebar', restoreSidebar: 'Restore sidebar',
   loading: 'Loading sidebar content…', failed: 'This sidebar content could not be displayed', retry: 'Retry',
 }
 
@@ -173,22 +186,54 @@ describe('RightSidebarToggle', () => {
   it('matches host header-control geometry without a resting edge or shadow', () => {
     expect(PANEL_CSS).toContain('width:32px;height:32px')
     expect(PANEL_CSS).toContain('padding:0;border:none;border-radius:8px;background:transparent')
+    expect(PANEL_CSS).toContain(".dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-bg-layer-1,transparent)")
     expect(PANEL_CSS).not.toContain('box-shadow')
   })
 
-  it('uses the layout owner state and actions directly', () => {
-    const openDetails = vi.fn()
-    const closeDetails = vi.fn()
-    const element = (detailsOpen: boolean) => <RightSidebarToggle {...({
+  it.each([
+    {
+      state: 'closed', detailsOpen: false, detailsMaximized: false,
+      labels: ['Open sidebar'], sidebarLabel: 'Open sidebar', maximizeLabel: undefined,
+    },
+    {
+      state: 'open', detailsOpen: true, detailsMaximized: false,
+      labels: ['Maximize sidebar', 'Close sidebar'], sidebarLabel: 'Close sidebar', maximizeLabel: 'Maximize sidebar',
+    },
+    {
+      state: 'maximized', detailsOpen: true, detailsMaximized: true,
+      labels: ['Restore sidebar', 'Close sidebar'], sidebarLabel: 'Close sidebar', maximizeLabel: 'Restore sidebar',
+    },
+  ])('renders and operates the $state state', ({
+    detailsOpen, detailsMaximized, labels, sidebarLabel, maximizeLabel,
+  }) => {
+    const toggleDetails = vi.fn()
+    const toggleDetailsMaximized = vi.fn()
+    const view = render(<RightSidebarToggle {...({
       detailsOpen,
-      toggleDetails: detailsOpen ? closeDetails : openDetails,
+      detailsMaximized,
+      toggleDetails,
+      toggleDetailsMaximized,
       t: (key: string) => copy[key] ?? key,
-    } as unknown as RightSidebarToggleProps)} />
-    const view = render(element(false))
-    fireEvent.click(view.getByRole('button', { name: 'Expand' }))
-    expect(openDetails).toHaveBeenCalledOnce()
-    view.rerender(element(true))
-    fireEvent.click(view.getByRole('button', { name: 'Collapse' }))
-    expect(closeDetails).toHaveBeenCalledOnce()
+    } as unknown as RightSidebarToggleProps)} />)
+
+    expect(view.getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(labels)
+    const sidebar = view.getByRole('button', { name: sidebarLabel })
+    expect(sidebar.getAttribute('title')).toBe(sidebarLabel)
+    expect(sidebar.getAttribute('aria-pressed')).toBe(String(detailsOpen))
+    expect(sidebar.getAttribute('data-active')).toBe(String(detailsOpen))
+    fireEvent.click(sidebar)
+    expect(toggleDetails).toHaveBeenCalledOnce()
+    expect(toggleDetails).toHaveBeenCalledWith(detailsOpen)
+
+    if (maximizeLabel === undefined) {
+      expect(toggleDetailsMaximized).not.toHaveBeenCalled()
+      return
+    }
+    const maximize = view.getByRole('button', { name: maximizeLabel })
+    expect(maximize.getAttribute('title')).toBe(maximizeLabel)
+    expect(maximize.hasAttribute('aria-pressed')).toBe(false)
+    expect(maximize.hasAttribute('data-active')).toBe(false)
+    fireEvent.click(maximize)
+    expect(toggleDetailsMaximized).toHaveBeenCalledOnce()
   })
 })
