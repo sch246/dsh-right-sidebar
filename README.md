@@ -94,19 +94,30 @@ DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
 
 该命令构建 Node no-op entry、browser declarations 和 browser bundle。它只重建本 checkout 的 `lib/` 并刷新本地 `node_modules` dependency links，不安装 profile、不应用 Host patch，也不重启服务。
 
-## 安装与回撤
+## 安装、维护与移除
 
-生命周期脚本会检查目标基线、Host patch 所有权和 setup receipt。运行前必须按当前 state 重新调查目标并获得外部写权限：
+从 [STATE 操作地图](.intent/state/STATE.md#installation-maintenance-and-removal) 选择入口并确认目标、消费者和权限。当前脚本默认 profile 为 `web`，可用 `DSH_PROFILE` 指定；`DSH_CHECKOUT` 指向已准备好依赖和工具链的 Harness Git checkout。私有 `DSH_HOME` 只隔离 CLI profile 数据，Host 补丁和构建仍写入指定 checkout。
 
 ```bash
-DSH_CHECKOUT=/root/deepseek-harness bash scripts/setup.sh
-DSH_CHECKOUT=/root/deepseek-harness bash scripts/uninstall.sh
+DSH_CHECKOUT=/root/deepseek-harness DSH_PROFILE=web bash scripts/setup.sh
 ```
 
-当前 grouped revision 尚未执行 candidate profile 安装或回撤。上述命令属于目标 realization 流程，不由本轮 build 结果证明。
+[setup.sh](scripts/setup.sh) 按顺序检查补丁正向或反向可应用性、应用缺失补丁、检查源码标记、执行 `gen-client-catalog` 与 `gen-cordis-api`、写入 Git 私有目录中的 `dsh-right-sidebar.patch-state` receipt、重建 Host libraries 和 Web、构建插件，最后调用 `dsh plugin --profile "$PROFILE" add .`。它优先使用 PATH 上的 `dsh`，再回退到 checkout 的构建 CLI 或 pnpm source launcher；必须确认命令对应目标安装。脚本不执行服务重启。
+
+安装不是原子事务：目录生成失败时 Host 补丁可能已应用而 receipt 尚未写入；Host 构建失败时 receipt 可能已存在。遇到失败先核对源码、receipt、构建产物和 profile，不应重复运行来推断首次写入的所有权。脚本检查适用性而不强制 Host HEAD 等于补丁基线。CLI 不存在时脚本只打印手动注册命令，因此退出成功也不是安装完成证据。
+
+Host 支持已就绪且仅更新插件时，运行 [build.sh](scripts/build.sh)；需要登记 profile 时使用 `dsh plugin --profile web add /absolute/plugin-checkout`。该命令不补齐 Host 源码能力。Host 漂移维护应检查被修改的源文件、共享消费者和生成目录，再选择重建或适配补丁，不能强套历史补丁。
+
+```bash
+DSH_CHECKOUT=/root/deepseek-harness DSH_PROFILE=web bash scripts/uninstall.sh
+```
+
+[uninstall.sh](scripts/uninstall.sh) 仅在 receipt digest 匹配、`patch_applied_by_setup=true` 且反向检查通过时反转整份 Host 补丁，随后重新生成目录并重建 Host；它最后才移除 profile 包。receipt 缺失或不匹配、外部所有权、重叠修改都会保留 Host 文件。脚本不会检测其它插件对共享源码的依赖，也不能做部分所有权转移；执行前必须完成 [消费者检查](.intent/state/STATE.md#host-prerequisites-and-shared-ownership)。`dsh plugin remove` 失败会被捕获并打印说明，末尾的完成提示不能证明移除成功；生成或构建失败也可能在 profile 移除前中止。
+
+每次安装或移除后，都按 [完成条件](.intent/state/STATE.md#observable-completion-and-limits) 核对依赖、lockfile、实际解析路径、Bundle、组合配置和 Host 源码。生成目录从剩余源贡献重新生成；忽略目录中的旧 bundle 不会因为 Git 源码回退而消失。浏览器布局与草稿不由卸载脚本清除。历史部署记录存在，但 grouped revision 的目标漂移维护与拥有权回撤尚无演练证据。
 
 ## Host 源码补丁
 
-[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条。
+[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条；并在 Host store 及 slot store API 增加选定字段持久化，使宽度和最大化偏好持久保存、可见性保持临时状态。
 
-Grouped workbench 没有增加 `groupId` owner prop，也没有改变 Host slot catalog。升级 Harness 时，Agent 必须从 state 与新目标重新合成 realization；补丁可应用不等于目标仍满足当前意图。
+Grouped workbench 没有增加 `groupId` owner prop，也没有改变 Host slot catalog。升级 Harness 时，先按 STATE 检查目标差异与消费者，再决定保留、修复或重新生成适配；补丁可应用不等于目标仍满足当前意图。

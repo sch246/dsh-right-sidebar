@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.6",
+  "revision": "0.4.0-draft.7",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -42,7 +42,8 @@
     "../logs/2026-09-06-tab-gesture-browser-evidence.md",
     "../logs/2026-09-06-compact-ui-activation.md",
     "../logs/2026-09-06-remove-tab-menu.md",
-    "../logs/2026-09-06-tab-menu-removal-activation.md"
+    "../logs/2026-09-06-tab-menu-removal-activation.md",
+    "../logs/2026-09-06-chat-alignment-and-operation-map.md"
   ],
   "protocol": {
     "id": "meta-intent",
