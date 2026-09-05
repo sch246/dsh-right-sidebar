@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with no selected candidate after the [tab-menu removal](../logs/2026-09-06-remove-tab-menu.md). [Deployment evidence](../logs/2026-09-06-compact-ui-activation.md) records the preceding tab-gesture installation. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock.
+Status: draft embedded intent package with no selected candidate after the [tab-menu removal](../logs/2026-09-06-remove-tab-menu.md). [Deployment evidence](../logs/2026-09-06-tab-menu-removal-activation.md) records its managed activation. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock.
 
 ## Intent
 

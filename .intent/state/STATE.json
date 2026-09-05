@@ -41,7 +41,8 @@
     "../logs/2026-09-06-tab-gesture-regions.md",
     "../logs/2026-09-06-tab-gesture-browser-evidence.md",
     "../logs/2026-09-06-compact-ui-activation.md",
-    "../logs/2026-09-06-remove-tab-menu.md"
+    "../logs/2026-09-06-remove-tab-menu.md",
+    "../logs/2026-09-06-tab-menu-removal-activation.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -56,8 +57,8 @@
       "id": "host.dsh-right-sidebar",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
-      "revision": "74aa95eb54d6585d28a8d8a5525432a0e744c3da",
-      "scope": "grouped-workbench tab-gesture candidate implementation",
+      "revision": "cab4f29ee4ff317cb835f3b48723a897e6f6bf63",
+      "scope": "grouped-workbench implementation without redundant tab menus",
       "worktree": "plugin-owned source and reversible Host patch; local deployment evidence is recorded in logs"
     },
     {
