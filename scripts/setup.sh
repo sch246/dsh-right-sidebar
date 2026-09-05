@@ -108,7 +108,7 @@ regenerate_shared_catalogs
   echo "patch_applied_by_setup=$PATCH_APPLIED_BY_SETUP"
   echo "host_head=$(git -C "$CHECKOUT" rev-parse HEAD)"
   echo "marker_schema=meta-intent-source-region/0.1"
-  echo "regions=client.store.partial-persistence,shell.navbar.action,shell.navbar.clearance,shell.details.transient-visibility,shell.details.divider,shell.details.maximized-layout,shell.details.unbounded-normal-width"
+  echo "regions=client.store.partial-persistence,shell.navbar.action,shell.navbar.clearance,shell.details.session-preferences,shell.details.divider,shell.details.maximized-layout,shell.details.unbounded-normal-width"
   echo "generated_catalogs=packages/extensions/cordis-client-runner/src/client/slot-catalog.ts,packages/extensions/cordis-client-runner/src/client/api-catalog.ts"
 } > "$STATE_FILE"
 
