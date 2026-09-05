@@ -1,10 +1,10 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with one unaccepted alpha.2 realization under evaluation. C1 through C6 and candidate 9 remain immutable historical implementation, installation and lifecycle evidence. No realization is active or accepted.
+Status: draft embedded intent package with no selected realization. Existing locks remain immutable historical implementation, installation and lifecycle evidence. No realization is active or accepted.
 
 ## Intent
 
-Provide a product-quality, default-hidden, full-height right-sidebar platform for DeepSeek Harness Web. It participates in horizontal layout, has an ordinary resizable mode without a fixed maximum width, can maximize into all space after the left sidebar, remembers width and maximization independently from visibility, exposes global navbar controls, permits other plugins to register tabs, and lets a feature share session-scoped state and actions between its main-view and sidebar contributions.
+Provide a product-quality, default-hidden, full-height right-sidebar workbench for DeepSeek Harness Web. It participates in horizontal layout, has an ordinary resizable mode without a fixed maximum width, can maximize into all space after the left sidebar, remembers width and maximization independently from visibility, exposes global navbar controls, and permits other plugins to register launchers and static views that create multiple session-retained editor or selector instances.
 
 The platform itself supplies no review, terminal, browser, file, Git, tool-detail, session-analysis, or other business feature. That absence is not permission to leave the platform skeletal: registration lifecycle, interaction states, accessibility, responsive behavior, error containment and cross-surface coordination are part of the product.
 
@@ -13,29 +13,28 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 - `SIDEBAR-001`: Opening the sidebar creates a full-height layout column that reduces main-content width; closing it leaves the main view unobstructed. This works on the ordinary new-conversation interface before the first message as well as in established conversations.
 - `SIDEBAR-002`: A closed sidebar shows one unselected navbar icon. An open sidebar shows a maximize or restore icon followed by the selected sidebar icon; that sidebar icon closes it. The controls stay consistent with actual visibility, do not overlap per-session header utilities, and align with Host header controls without a standalone resting border or shadow. The platform does not add the unrelated bottom-panel control from the visual reference and does not repeat visibility controls inside the panel.
 - `SIDEBAR-003`: The full-height layout divider resizes ordinary mode without a separate visible grip or fixed maximum width; the retained left sidebar and center minimum determine the rendered limit. Refresh restores the last ordinary width while visibility still starts hidden.
-- `SIDEBAR-004`: An external fixture can register, switch, and remove multiple tabs while the platform itself contributes no business tab.
-- `SIDEBAR-005`: A fixture using one session-scoped state/action owner from the main view and a sidebar tab observes immediate two-way synchronization and session isolation.
+- `SIDEBAR-004`: External fixtures can register launchers and static view renderers, open multiple ordered instances, switch, rename and close them, while the platform itself contributes no business launcher or view.
+- `SIDEBAR-005`: Each session retains its own ordered instances and active selection across mounted-session changes without a second state mirror.
 - `SIDEBAR-006`: A cold Agent starting at the host repository can locate this package through the selected protocol bootstrap, inspect the target and any applicable realization, install a conforming implementation, maintain or re-synthesize it after detected drift, and uninstall only its owned contribution. Missing target support leads to investigation and an explicit tension, not silent intent weakening.
 - `SIDEBAR-007`: Every required host source change is attributable to a selected realization, bound to a checked target baseline, and removable without erasing unrelated later changes; logical interventions carry nearby source-region ownership markers. Generated aggregations are regenerated from remaining source contributions rather than statically owned by one package, and no second implementation silently shares ownership of the same target effect.
-- `SIDEBAR-008`: An empty platform stays visually quiet; tab chrome appears only when contributions exist, while populated, overflow, narrow-width, loading and contribution-failure states remain understandable and usable. Focus, keyboard operation, labels, hit targets and motion follow the host's accessibility and interaction conventions.
+- `SIDEBAR-008`: The launcher home is shown when no instance is active. The compact tab row keeps its launcher and Host controls fixed while labels scroll, and populated, overflow, narrow-width, loading and contribution-failure states remain understandable and usable. Focus, keyboard operation, labels, close actions, hit targets and motion follow the host's accessibility and interaction conventions.
 - `SIDEBAR-009`: The same sidebar intent can be realized on another host without requiring one shared runtime ABI. A conforming realization preserves the stable client API below or supplies an Agent-generated adaptation for consumers; target-specific layout, registration and cleanup remain realization details.
-- `SIDEBAR-010`: An external client can ask the mounted sidebar to select and open a live tab for the currently bound session without receiving its store or actions. An absent mount, a different session, or an unknown tab fails explicitly before changing selection or layout, and replaced or disposed bindings cannot keep acting on an old session.
+- `SIDEBAR-010`: An external client can register a launcher and create, activate, rename or close workbench instances without receiving Host layout state. Opening validates the mounted session and live view registration before changing instance state or layout; replaced or disposed bindings cannot keep acting on an old session.
 - `SIDEBAR-011`: Maximization retains the left session sidebar, sets the center track to zero, keeps its subtree mounted but non-interactive, and assigns all remaining application width to details. Closing, changing session, and browser reload preserve the maximization preference; reopening restores it, while restore returns to the remembered ordinary width.
 
 ## Stable client API
 
-The DeepSeek Harness realization exposes the public client coordinate `@dsh-external/dsh-right-sidebar/client` and the additive `rightbar.tab` registration seat. An incompatible change to this API is a state revision, not routine lock regeneration.
+The DeepSeek Harness realization exposes the public client coordinate `@dsh-external/dsh-right-sidebar/client` and the additive session-scoped `rightbar.view` registration seat. An incompatible change to this API is a state revision, not routine lock regeneration.
 
-- `rightbar.tab` is a session-scoped list of independently owned contributions.
-- A contribution supplies a stable identity, user-facing label, ordering value and renderable content.
-- Multiple plugins can register concurrently. Registration and removal update the visible ledger without discovery-order ownership or last-writer-wins replacement.
-- The platform renders one selected contribution at a time, keeps selection session-scoped, and repairs selection when the active contribution disappears.
-- Contribution lifetime follows its registering feature. Removal must release its registration, styles, subscriptions and other owned resources.
-- The platform contributes no business tab and does not own feature state. A feature may share one session-scoped state/action owner between its main-view and sidebar contributions.
+- Each `rightbar.view` registration supplies a stable renderer id. The active instance selects that renderer, and the platform passes its opaque `instanceId` as owner props.
+- Multiple plugins can register static renderers concurrently. Registration lifetime follows the contributing feature and removal updates the live ledger.
+- The platform contributes no business launcher or view and does not own feature-specific editor, selector or document state.
 
-The same public client coordinate merges the `ctx.rightSidebar` service into Cordis `Context`. `ctx.rightSidebar.openTab(sessionId, tabId)` returns `void`; for the currently mounted session and a tab id present in the authoritative `rightbar.tab` ledger, it selects that tab and then opens the details column. Missing mount, session mismatch, and unknown tab are stable error categories and have no selection or layout side effect. Store handles and baked actions remain private to the platform.
+The same public client coordinate merges `ctx.rightSidebar` into Cordis `Context` with these methods: `registerLauncher({ id, label, open })`, `launch(sessionId, launcherId, selection?)`, `openInstance(sessionId, { id, viewId, title, onClose? })`, `activateInstance(sessionId, id)`, `updateInstance(sessionId, id, { title? })`, and `closeInstance(sessionId, id)`. Launcher registration returns its disposer, `launch` and `closeInstance` are asynchronous, and the remaining operations return `void`.
 
-The service binding follows the mounted details occurrence. A replacement binding invalidates the prior one, panel unmount removes its binding, and plugin disposal removes both the binding and service. A retained stale service or injected callback cannot select a tab after its owning runtime is disposed.
+The runtime is the sole authority for each session's ordered instance ledger and active instance. `openInstance` validates the live view ledger and mounted session before side effects, deduplicates an existing id, activates the instance and reveals the details column. `closeInstance` honors an asynchronous `false` veto and guards against stale completion. The launcher home is selected when no instance is active; opening it does not remove instances.
+
+The service binding follows the mounted details occurrence. A replacement binding invalidates the prior one, panel unmount removes its binding, and plugin disposal removes both the binding and service. A retained stale service or injected callback cannot mutate a disposed runtime. Layout width, visibility and maximization remain Host-owned.
 
 Exact Harness owner slots, layout stores, injection services, component prop machinery and patch locations are not part of this stable API. Another host may expose an equivalent native contract or use an Agent-generated adapter while preserving these semantics.
 
@@ -68,7 +67,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - Within the sidebar platform scope, completeness and product-quality UX are required. Agent-owned interaction details may be chosen autonomously when they preserve these acceptance effects and introduce no undeclared user-visible trade-off.
 - This repository has no authority to land changes in DeepSeek Harness upstream. A realization may carry an attributable, reversible Host patch and apply it to an explicitly authorized local deployment without presenting that patch as an upstream DSH contribution.
 - Portability is carried by this state and regenerated per target by an Agent. A shared standard or adapter may be selected inside a realization, but dsh-std is not a required dependency, authority or migration destination.
-- API stability is explicit for the registration and programmatic tab-opening semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.
+- API stability is explicit for the launcher, instance and static view semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.
 - Navbar interaction follows the Codex references: closed has one sidebar icon; ordinary open has maximize plus the selected sidebar icon; maximized has restore plus the selected sidebar icon. Width and maximization are durable preferences, while visibility is transient.
 - C2 `a522fb187a8afef060216f919ec32448caf98129` contains loading and failure chrome, retry, focus repair, narrow-width treatment, keyboard focus styling, and a real source-level adapter/slot/shell lifecycle fixture. These are candidate facts, not live-browser or production-loader acceptance.
 - C3 records user-authorized installation of that same source plus adapter commit `580b330323c13ec568adab2c35fabf8f8fa6b194` into the live `web` profile. Both local links, boot-manifest entries and served bundles were observed, and `dsh-web` restarted successfully. Client execution and visible interaction remain unobserved.
@@ -84,6 +83,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - Realization locks cache concrete versions and evidence. Missing build outputs or an unusable historical environment require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
 - Candidate 9 preserves the source-locator, generated-catalog and patch-composition evidence gathered on official Harness commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`. That target and lock are historical implementation evidence, not current installation instructions.
 - The official alpha.2 target is `0a53fb55bea101816fa226bb964ae2bed71c343b`. Existing split-client migration commits adapt one implementation to moved Cordis, renderer, store and layout APIs; those exact Harness coordinates and commits are migration facts, not stable requirements. An Agent must inspect alpha.2 and seal a new realization without changing the sidebar semantics.
+- The multi-instance workbench replaces the `rightbar.tab` registration seat and `openTab` service. Static `rightbar.view` renderers receive an instance id, launchers create feature-owned instances, and one runtime owns all session instance ordering and selection.
 
 ## Constraints and permissions
 
@@ -113,5 +113,5 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - User live observation now confirms the deployed shell runs and the reported chrome/layout defects are resolved. Automated browser evidence for contributed tabs and main-view/sidebar session synchronization remains incomplete; component tests cover empty, loading, failure/retry, focus repair and keyboard tab navigation.
 - Candidate 9 is a frozen historical bundle for the `b150a551` baseline. The current alpha.2 candidate binds the plugin-owned Host patch, source-region attribution, local installation receipt, focused tests, bundle builds, and browser interaction evidence; it remains unaccepted.
 - Global Cordis API catalog regeneration is blocked by the existing `chat/open-workspace-file` rendering-projection partition violation. The local receipt identifies that deferred generated artifact; candidate acceptance cannot describe the complete catalog workflow as passing until its owning feature resolves the violation.
-- Automated browser evidence for the two-way/session-isolated fixture required by `SIDEBAR-005` remains incomplete.
+- Automated browser evidence for multi-instance launcher, editor and session-retention behavior remains incomplete.
 - Historical C3 install and restart succeeded, but target drift maintenance and owned uninstall have not been rerun for the current direct realization model.
