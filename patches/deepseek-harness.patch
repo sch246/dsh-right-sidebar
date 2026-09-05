@@ -161,11 +161,13 @@ index ae56780133..2908eb1517 100644
 +}
 +/* @meta-intent:end dsh-right-sidebar */
 diff --git a/packages/client/ui-layout/src/client/AppFrame.tsx b/packages/client/ui-layout/src/client/AppFrame.tsx
-index cbef893aed..b3c15db609 100644
+index cbef893aed..e9d801a4b8 100644
 --- a/packages/client/ui-layout/src/client/AppFrame.tsx
 +++ b/packages/client/ui-layout/src/client/AppFrame.tsx
-@@ -14 +14,3 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
+@@ -13,2 +13,4 @@
+-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 -import type { ReactNode } from 'react'
++import { useCallback, useEffect, useRef, useState } from 'react'
 +// @meta-intent:begin dsh-right-sidebar (purpose: Type the navbar clearance variable and render seat added for the global sidebar control.)
 +import type { CSSProperties, ReactNode } from 'react'
 +// @meta-intent:end dsh-right-sidebar
@@ -191,44 +193,40 @@ index cbef893aed..b3c15db609 100644
 +  )
 @@ -33,0 +48 @@ function CenterColumn(props: { children?: ReactNode }) {
 +// @meta-intent:end dsh-right-sidebar
-@@ -100,4 +115,3 @@ export function AppFrame({
+@@ -100,4 +114,0 @@ export function AppFrame({
 -  const detailsSession = useSessions((s) => {
 -    const current = s.current
 -    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
 -  })
-+  // @meta-intent:begin dsh-right-sidebar (purpose: Allow details before the first turn and close them on session change.)
-+  const currentSession = useSessions(s => s.current)
-+  // @meta-intent:end dsh-right-sidebar
-@@ -109,0 +124,4 @@ export function AppFrame({
+@@ -109,0 +121,4 @@ export function AppFrame({
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Measure the global control so conversation utilities reserve its occupied width.)
 +  const navbarRef = useRef<HTMLDivElement | null>(null)
 +  const [navbarWidth, setNavbarWidth] = useState(28)
 +  // @meta-intent:end dsh-right-sidebar
-@@ -111 +129 @@ export function AppFrame({
+@@ -111,8 +126,3 @@ export function AppFrame({
 -  const lastSession = useRef(detailsSession)
-+  const lastSession = useRef(currentSession)
-@@ -113,2 +131,2 @@ export function AppFrame({
+-  useLayoutEffect(() => {
 -    if (detailsSession === undefined) return
 -    if (lastSession.current !== undefined && lastSession.current !== detailsSession) {
-+    if (currentSession === undefined) return
-+    if (lastSession.current !== undefined && lastSession.current !== currentSession) {
-@@ -117,2 +135,2 @@ export function AppFrame({
+-      actions.closeDetails()
+-    }
 -    lastSession.current = detailsSession
 -  }, [actions, detailsSession])
-+    lastSession.current = currentSession
-+  }, [actions, currentSession])
-@@ -122,0 +141 @@ export function AppFrame({
++  // @meta-intent:begin dsh-right-sidebar (purpose: Keep layout visibility independent from session-owned workbench contents.)
++  // Session changes replace details content without changing its open preference.
++  // @meta-intent:end dsh-right-sidebar
+@@ -122,0 +133 @@ export function AppFrame({
 +    const navbar = navbarRef.current
-@@ -130,0 +150,4 @@ export function AppFrame({
+@@ -130,0 +142,4 @@ export function AppFrame({
 +        // @meta-intent:begin dsh-right-sidebar (purpose: Update clearance when registered application controls change width.)
 +        const nextNavbarWidth = navbar?.getBoundingClientRect().width ?? 0
 +        if (nextNavbarWidth > 0) setNavbarWidth(nextNavbarWidth)
 +        // @meta-intent:end dsh-right-sidebar
-@@ -133,0 +157,3 @@ export function AppFrame({
+@@ -133,0 +149,3 @@ export function AppFrame({
 +    // @meta-intent:begin dsh-right-sidebar (purpose: Observe the application-control seat independently from the frame.)
 +    if (navbar !== null) observer.observe(navbar)
 +    // @meta-intent:end dsh-right-sidebar
-@@ -152 +178,9 @@ export function AppFrame({
+@@ -152 +170,9 @@ export function AppFrame({
 -  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
 +  // @meta-intent:begin dsh-right-sidebar (purpose: Resolve transient open state against the remembered right-column width.)
 +  const detailsPreference = panels.detailsOpen ? panels.detailsWidth : 0
@@ -239,7 +237,7 @@ index cbef893aed..b3c15db609 100644
 +    if (panels.detailsOpen && cols.details === 0) actions.closeDetails()
 +  }, [actions, cols.details, panels.detailsOpen])
 +  // @meta-intent:end dsh-right-sidebar
-@@ -179 +213,8 @@ export function AppFrame({
+@@ -179 +205,9 @@ export function AppFrame({
 -      style={{ gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` }}
 +      style={{
 +        gridTemplateColumns: detailsMaximized
@@ -247,14 +245,15 @@ index cbef893aed..b3c15db609 100644
 +          : `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`,
 +        // @meta-intent:begin dsh-right-sidebar (purpose: Project measured navbar width as a shell CSS variable.)
 +        '--dsh-shell-navbar-clearance': `${shellNavbarClearance}px`,
++        '--dsh-shell-navbar-width': `${navbarWidth + 16}px`,
 +        // @meta-intent:end dsh-right-sidebar
 +      } as CSSProperties}
-@@ -181,0 +223 @@ export function AppFrame({
+@@ -181,0 +216 @@ export function AppFrame({
 +      data-details-maximized={detailsMaximized || undefined}
-@@ -205 +247 @@ export function AppFrame({
+@@ -205 +240 @@ export function AppFrame({
 -        <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
 +        <CenterColumn inert={detailsMaximized}>{renderSlot('conversation', {})}</CenterColumn>
-@@ -212,0 +255,8 @@ export function AppFrame({
+@@ -212,0 +248,8 @@ export function AppFrame({
 +      {/* @meta-intent:begin dsh-right-sidebar (purpose: Render the additive global sidebar control with resolved details visibility.) */}
 +      <div ref={navbarRef} className={css.navbar} data-shell-navbar>
 +        {renderSlot('shell.navbar.action', {
@@ -263,7 +262,7 @@ index cbef893aed..b3c15db609 100644
 +        })}
 +      </div>
 +      {/* @meta-intent:end dsh-right-sidebar */}
-@@ -215 +265 @@ export function AppFrame({
+@@ -215 +258 @@ export function AppFrame({
 -      {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
 +      {cols.details > 0 && !detailsMaximized && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
 diff --git a/packages/client/ui-layout/src/client/columns.ts b/packages/client/ui-layout/src/client/columns.ts
@@ -422,14 +421,14 @@ index 7b6e2807ee..3e048a08d5 100644
 @@ -70,0 +89 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
 +  // @meta-intent:end dsh-right-sidebar
 diff --git a/packages/client/ui-layout/tests/app-frame.client.spec.tsx b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
-index a640480360..9ec360c346 100644
+index a640480360..a65ee575c1 100644
 --- a/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 +++ b/packages/client/ui-layout/tests/app-frame.client.spec.tsx
 @@ -126,0 +127 @@ beforeEach(() => {
 +  localStorage.clear()
 @@ -213 +214 @@ describe('AppFrame', () => {
 -  it('ignores unselected states and closes only when the Session id changes', () => {
-+  it('a Session id change closes details without clearing maximization', () => {
++  it('a Session id change retains visibility, width and maximization', () => {
 @@ -215,4 +216,5 @@ describe('AppFrame', () => {
 -    expect(tracks(frame)).toEqual([280, 0])
 -
@@ -440,20 +439,24 @@ index a640480360..9ec360c346 100644
 +      instance.actions.toggleDetailsMaximized()
 +    })
 +    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
-@@ -222,0 +225 @@ describe('AppFrame', () => {
-+    expect(instance.getSnapshot()).toMatchObject({ detailsOpen: false, detailsMaximized: true })
+@@ -222 +224,2 @@ describe('AppFrame', () => {
+-    expect(tracks(frame)).toEqual([280, 0])
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
++    expect(instance.getSnapshot()).toMatchObject({ detailsOpen: true, detailsMaximized: true })
 @@ -224,0 +228 @@ describe('AppFrame', () => {
 +    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
-@@ -229,6 +233,6 @@ describe('AppFrame', () => {
+@@ -228,7 +232,7 @@ describe('AppFrame', () => {
+-    expect(tracks(frame)).toEqual([280, 0])
 -    expect(instance.getSnapshot().details).toBe(360)
 -
 -    selectedSession.current = 's-next' as SessionId
 -    selectedSessionBlank.current = false
 -    act(() => { rerenderFrame() })
 -    expect(tracks(frame)).toEqual([280, 360])
++    expect(frame.style.gridTemplateColumns).toBe('280px 0px 1640px')
 +    expect(instance.getSnapshot()).toMatchObject({
 +      detailsWidth: 360,
-+      detailsOpen: false,
++      detailsOpen: true,
 +      detailsMaximized: true,
 +    })
 +  })

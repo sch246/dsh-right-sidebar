@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.18",
+  "revision": "0.3.0-draft.19",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -31,7 +31,8 @@
     "../logs/2026-09-01-target-drift-and-recomposition.md",
     "../logs/2026-09-05-programmatic-tab-opening-api.md",
     "../logs/2026-09-05-sidebar-maximization-and-host-ownership.md",
-    "../logs/2026-09-05-multi-instance-workbench.md"
+    "../logs/2026-09-05-multi-instance-workbench.md",
+    "../logs/2026-09-05-workbench-verification.md"
   ],
   "protocol": {
     "id": "meta-intent",

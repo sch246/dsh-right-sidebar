@@ -317,7 +317,7 @@ describe('RightSidebarPanel', () => {
   })
 
   it('makes tab labels scroll while launcher and Host-control clearance stay fixed', () => {
-    expect(PANEL_CSS).toContain('padding:5px var(--dsh-shell-navbar-width,80px) 5px 7px')
+    expect(PANEL_CSS).toContain('padding:12px var(--dsh-shell-navbar-width,80px) 12px 7px')
     expect(PANEL_CSS).toContain('overflow-x:auto;scrollbar-width:thin;flex:1 1 auto')
     expect(PANEL_CSS).toContain('.dsh-rightbar-launcher-toggle')
     expect(PANEL_CSS).toContain('flex:none')

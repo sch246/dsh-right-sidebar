@@ -100,6 +100,9 @@ describe('ctx.rightSidebar workbench', () => {
       ],
     })
     expect(bench.layout.openDetails).toHaveBeenCalledTimes(3)
+    bench.layout.openDetails.mockClear()
+    bench.service().activateInstance('session-1', 'editor:a')
+    expect(bench.layout.openDetails).toHaveBeenCalledOnce()
 
     disposeLauncher()
     expect(panel.hooks.launchers.getSnapshot()).toEqual([])

@@ -136,6 +136,7 @@ export class RightSidebarRuntime implements RightSidebarService {
   activateInstance(sessionId: RightSidebarSessionId, id: string): void {
     this.#assertMounted(sessionId)
     this.#activate(sessionId, id)
+    this.#ctx.layout.openDetails()
   }
 
   /** @inheritdoc */
