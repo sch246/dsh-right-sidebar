@@ -30,7 +30,7 @@ launcher 是 service-owned lifecycle registration，包含 id、可延迟解析�
 
 重复 instance id 只激活已有实例；非 preview 打开同时固定它。`switchInstanceView()` 在同一 id、group 和顺序中替换 renderer 与 restore binding。`updateInstance()` 更改 title 或 JSON-safe restore descriptor checkpoint，不更改 renderer、group、顺序或 close callbacks。
 
-布局和 opaque restore descriptor 写入 versioned browser storage。renderer 或 restorer 缺失时实例保留 placeholder；restorer rejection 保留可重试状态。损坏的 durable tree 因 duplicate ids、multiple previews 或非法结构被拒绝，原始 JSON 留作恢复。
+布局和 opaque restore descriptor 写入 versioned browser storage。renderer 或 restorer 缺失时实例保留 placeholder；restorer rejection 保留可重试状态。restorer 可返回同步 `onRestored`，runtime 只在 exact restoring identity 提交 ready 并安装 close callbacks 后通知，使 feature 在明确 commit point flush 恢复期间发现的 descriptor。stale、failed、unregistered 或 disposed restoration 不通知，通知异常不回滚 ready。损坏的 durable tree 因 duplicate ids、multiple previews 或非法结构被拒绝，原始 JSON 留作恢复。
 
 ## Docking 与 renderer 保留
 

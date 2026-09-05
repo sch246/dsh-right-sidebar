@@ -75,7 +75,7 @@ declare function restoreEditorState(
 - `openInstance(sessionId, input, { target?, preview? })` 异步返回实际 group id。target 是 `{ groupId }`，或 `{ fromInstanceId, direction }`；direction 为 `center | left | right | up | down`。
 - `getInstanceGroup()` 返回实例归属；`resolveTarget()` 只查找现有组，不修改布局。
 - `pinInstance()` 固定 preview；`switchInstanceView()` 在相同 id、group 和顺序中切换已注册 renderer。
-- `registerRestorer(viewId, callback)` 为持久化实例恢复 feature state。callback 在 durable-input 边界校验 opaque descriptor，并可返回 runtime-only `onClose`。
+- `registerRestorer(viewId, callback)` 为持久化实例恢复 feature state。callback 在 durable-input 边界校验 opaque descriptor，并可返回 runtime-only close callbacks 与同步 `onRestored`。`onRestored` 仅在 exact restoration 提交 ready 后调用，供 feature flush 恢复期间发现的 descriptor，不依赖 timer。
 - `onClose` 只决定能否关闭；同步 `onClosed` 仅在 sidebar 提交删除该 exact instance 后释放 feature state。veto、stale 或 superseded 操作不会调用它，通知异常不会回滚已提交 layout。
 - `activateInstance()`、`updateInstance()` 和 `closeInstance()` 分别负责激活、标题或 restore descriptor checkpoint 更新和安全关闭。并发关闭共享一次决策；过期完成不能删除 updated、moved、switched、restored 或 reopened instance。
 

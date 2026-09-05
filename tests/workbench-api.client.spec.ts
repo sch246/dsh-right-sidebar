@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
-import { apply, inject, RightSidebarError, type RightSidebarService } from '../src/client/index'
+import {
+  apply,
+  inject,
+  RightSidebarError,
+  type RightSidebarRestoreResult,
+  type RightSidebarService,
+} from '../src/client/index'
 import type { PanelInjected, RightSidebarGroup, RightSidebarSplit } from '../src/client/contract'
 import { groupsOf } from '../src/client/layout'
 
@@ -67,6 +73,24 @@ function group(panel: PanelInjected, instanceId: string): RightSidebarGroup {
     .find(candidate => candidate.instances.some(instance => instance.id === instanceId))
   if (value === undefined) throw new Error(`fixture: group for ${instanceId} is absent`)
   return value
+}
+
+function seedRestoredSessions(instanceIds: readonly string[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    version: 1,
+    sessions: Object.fromEntries(instanceIds.map(instanceId => [instanceId, {
+      root: {
+        kind: 'group', id: `group-${instanceId}`, tabOrientation: 'horizontal', verticalRailWidth: 180,
+        instances: [{
+          id: instanceId, viewId: 'editor', title: instanceId, preview: false,
+          restoreDescriptor: { revision: 1 },
+        }],
+        activeInstanceId: instanceId,
+      },
+      activeGroupId: `group-${instanceId}`,
+      defaultTabOrientation: 'horizontal',
+    }])),
+  }))
 }
 
 describe('ctx.rightSidebar grouped workbench', () => {
@@ -383,21 +407,111 @@ describe('ctx.rightSidebar grouped workbench', () => {
     const panel = second.face('restore-failure')
     const unmount = panel.mountWorkbench()
     let failing = true
+    const restored = vi.fn()
     const restore = vi.fn(async () => {
       if (failing) throw new Error('fixture restore failure')
+      return { onRestored: restored }
     })
     const disposeRestorer = second.service().registerRestorer('editor', restore)
     expectCode(() => second.service().registerRestorer('editor', () => {}), 'duplicate-restorer')
     await vi.waitFor(() => { expect(group(panel, 'doc').instances[0]?.availability).toBe('failed') })
+    expect(restored).not.toHaveBeenCalled()
     failing = false
     await panel.retryRestore('doc')
     expect(group(panel, 'doc').instances[0]?.availability).toBe('ready')
     expect(restore).toHaveBeenCalledTimes(2)
+    expect(restored).toHaveBeenCalledOnce()
 
     disposeRestorer()
     unmount()
     disposeView()
     await second.dispose()
+  })
+
+  it('acknowledges only an exact committed restoration after installing close callbacks', async () => {
+    seedRestoredSessions(['success-doc', 'stale-doc', 'unregistered-doc'])
+    const bench = await createBench()
+    const disposeView = bench.registerView('editor')
+    const successPanel = bench.face('success-doc')
+    const stalePanel = bench.face('stale-doc')
+    const unregisteredPanel = bench.face('unregistered-doc')
+    const closeDecision = vi.fn(() => true)
+    const closed = vi.fn()
+    const successAck = vi.fn()
+    const staleAck = vi.fn()
+    const unregisteredAck = vi.fn()
+    const notificationFailure = new Error('restore notification failed')
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let finishStale: ((result: RightSidebarRestoreResult) => void) | undefined
+    let finishUnregistered: ((result: RightSidebarRestoreResult) => void) | undefined
+    const disposeRestorer = bench.service().registerRestorer('editor', ({ instanceId }) => {
+      if (instanceId === 'stale-doc') {
+        return new Promise(resolve => { finishStale = resolve })
+      }
+      if (instanceId === 'unregistered-doc') {
+        return new Promise(resolve => { finishUnregistered = resolve })
+      }
+      return {
+        onClose: closeDecision,
+        onClosed: closed,
+        onRestored: () => {
+          expect(group(successPanel, 'success-doc').instances[0]?.availability).toBe('ready')
+          bench.service().updateInstance('success-doc', 'success-doc', {
+            restoreDescriptor: { revision: 2 },
+          })
+          successAck()
+          throw notificationFailure
+        },
+      }
+    })
+    await vi.waitFor(() => { expect(successAck).toHaveBeenCalledOnce() })
+    expect(report).toHaveBeenCalledWith(
+      'right-sidebar: onRestored notification failed for instance "success-doc":', notificationFailure,
+    )
+    await bench.service().closeInstance('success-doc', 'success-doc')
+    expect(closeDecision).toHaveBeenCalledOnce()
+    expect(closed).toHaveBeenCalledOnce()
+
+    await vi.waitFor(() => {
+      expect(group(stalePanel, 'stale-doc').instances[0]?.availability).toBe('restoring')
+      expect(group(unregisteredPanel, 'unregistered-doc').instances[0]?.availability).toBe('restoring')
+    })
+    bench.service().updateInstance('stale-doc', 'stale-doc', {
+      restoreDescriptor: { revision: 2 },
+    })
+    finishStale?.({ onRestored: staleAck })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(staleAck).not.toHaveBeenCalled()
+
+    disposeRestorer()
+    finishUnregistered?.({ onRestored: unregisteredAck })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(unregisteredAck).not.toHaveBeenCalled()
+    report.mockRestore()
+    disposeView()
+    await bench.dispose()
+  })
+
+  it('does not acknowledge restoration after runtime disposal', async () => {
+    seedRestoredSessions(['disposed-doc'])
+    const bench = await createBench()
+    bench.registerView('editor')
+    const panel = bench.face('disposed-doc')
+    const unmount = panel.mountWorkbench()
+    let finish: ((result: RightSidebarRestoreResult) => void) | undefined
+    const restored = vi.fn()
+    bench.service().registerRestorer('editor', () => new Promise(resolve => { finish = resolve }))
+    await vi.waitFor(() => {
+      expect(group(panel, 'disposed-doc').instances[0]?.availability).toBe('restoring')
+    })
+    unmount()
+    await bench.dispose()
+    finish?.({ onRestored: restored })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(restored).not.toHaveBeenCalled()
   })
 
   it('rejects corrupt persisted duplicate ids and multiple previews as one damaged snapshot', async () => {

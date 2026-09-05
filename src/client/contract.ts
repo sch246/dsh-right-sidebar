@@ -106,6 +106,8 @@ export interface RightSidebarRestoreResult {
   readonly onClose?: () => boolean | Promise<boolean>
   /** Release restored feature state after authoritative removal. */
   readonly onClosed?: () => void
+  /** Observe that this exact restoration was authoritatively committed ready. */
+  readonly onRestored?: () => void
 }
 
 /** Reconstruct one feature-owned instance from its persisted descriptor. */

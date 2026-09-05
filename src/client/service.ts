@@ -696,6 +696,9 @@ export class RightSidebarRuntime implements RightSidebarService {
       this.#replaceInstance(session, currentGroup, restoring, Object.freeze({
         ...restoring, availability: 'ready', onClose: result?.onClose, onClosed: result?.onClosed,
       }))
+      try { result?.onRestored?.() } catch (error) {
+        console.error(`right-sidebar: onRestored notification failed for instance "${instance.id}":`, error)
+      }
     } catch {
       if (this.#disposed) return
       const currentGroup = groupContaining(session.snapshot.root, id)

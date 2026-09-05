@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.1",
+  "revision": "0.4.0-draft.2",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -34,7 +34,8 @@
     "../logs/2026-09-05-multi-instance-workbench.md",
     "../logs/2026-09-05-workbench-verification.md",
     "../logs/2026-09-05-live-workbench.md",
-    "../logs/2026-09-05-grouped-workbench.md"
+    "../logs/2026-09-05-grouped-workbench.md",
+    "../logs/2026-09-05-restoration-commit-ack.md"
   ],
   "protocol": {
     "id": "meta-intent",
