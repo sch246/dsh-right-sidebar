@@ -24,6 +24,7 @@ const silenceFixtureError = (event: ErrorEvent): void => { event.preventDefault(
 beforeEach(() => { localStorage.clear() })
 afterEach(() => {
   cleanup()
+  document.head.querySelectorAll('[data-test-rightbar-styles]').forEach(element => { element.remove() })
   window.removeEventListener('error', silenceFixtureError)
   vi.restoreAllMocks()
 })
@@ -173,6 +174,23 @@ function mountPanel(
 }
 
 describe('RightSidebarPanel', () => {
+  it('keeps content visible below group chrome when the Host base background is opaque', () => {
+    const styles = document.createElement('style')
+    styles.dataset.testRightbarStyles = ''
+    styles.textContent = PANEL_CSS
+    document.head.append(styles)
+    const view = mountPanel(group('group-1', [instance('a', 'A')]))
+    const root = view.container.querySelector('.dsh-rightbar-root') as HTMLElement
+    root.style.setProperty('--dsw-alias-bg-base', 'rgb(255, 0, 0)')
+    const chrome = view.container.querySelector('.dsh-rightbar-group') as HTMLElement
+    const chromeLayout = view.container.querySelector('.dsh-rightbar-group-layout') as HTMLElement
+    const surface = view.container.querySelector('.dsh-rightbar-surface') as HTMLElement
+    expect(getComputedStyle(chrome).zIndex).toBe('2')
+    expect(getComputedStyle(surface).zIndex).toBe('1')
+    expect(getComputedStyle(chromeLayout).backgroundColor).toBe('rgba(0, 0, 0, 0)')
+    expect(view.getByTestId('view-a').textContent).toBe('editor:a')
+  })
+
   it('keeps global controls separate and renders active group content', () => {
     const view = mountPanel(group('group-1', [
       instance('a', 'Draft A'), instance('b', 'Draft B', { viewId: 'preview' }),
@@ -291,7 +309,7 @@ describe('RightSidebarPanel', () => {
   })
 
   it('switches group and default orientation and exposes rail recovery', () => {
-    const view = mountPanel(group('group-1', [instance('a', 'A')], 'a', {
+    const view = mountPanel(group('group-1', [], undefined, {
       tabOrientation: 'vertical', verticalRailWidth: 20,
     }))
     fireEvent.click(view.getByRole('button', { name: 'Use horizontal tabs' }))

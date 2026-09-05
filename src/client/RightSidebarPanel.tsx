@@ -136,7 +136,6 @@ export function RightSidebarPanel({
             activeGroup={group.id === workbench.activeGroupId}
             touchesTop={rectTouchesTop(geometry.groups.get(group.id) as LayoutRect)}
             touchesRight={rectTouchesRight(geometry.groups.get(group.id) as LayoutRect)}
-            defaultOrientation={workbench.defaultTabOrientation}
             groups={groups}
             launchers={launchers}
             pending={pending}
@@ -160,7 +159,6 @@ export function RightSidebarPanel({
             onRetry={id => { void run(`restore:${id}`, () => retryRestore(id)) }}
             onLaunch={id => { void run(`launch:${id}`, () => launch(id)) }}
             onOrientation={orientation => { setGroupTabOrientation(group.id, orientation) }}
-            onDefaultOrientation={setDefaultTabOrientation}
             onRailResize={width => { setGroupVerticalRailWidth(group.id, width) }}
             onDragStart={id => { setDraggedId(id); setMenuId(undefined) }}
             onDragEnd={() => { setDraggedId(undefined); setDropTarget(undefined) }}
@@ -208,7 +206,9 @@ export function RightSidebarPanel({
               <LauncherHome
                 launchers={launchers}
                 pending={pending}
+                defaultOrientation={workbench.defaultTabOrientation}
                 onLaunch={id => { void run(`launch:${id}`, () => launch(id)) }}
+                onDefaultOrientation={setDefaultTabOrientation}
                 t={t}
               />
             </div>
@@ -240,7 +240,6 @@ interface GroupPaneProps {
   readonly activeGroup: boolean
   readonly touchesTop: boolean
   readonly touchesRight: boolean
-  readonly defaultOrientation: RightSidebarTabOrientation
   readonly groups: readonly RightSidebarGroup[]
   readonly launchers: readonly RightSidebarLauncherEntry[]
   readonly pending: ReadonlySet<string>
@@ -257,7 +256,6 @@ interface GroupPaneProps {
   readonly onRetry: (id: string) => void
   readonly onLaunch: (id: string) => void
   readonly onOrientation: (orientation: RightSidebarTabOrientation) => void
-  readonly onDefaultOrientation: (orientation: RightSidebarTabOrientation) => void
   readonly onRailResize: (width: number) => void
   readonly onDragStart: (id: string) => void
   readonly onDragEnd: () => void
@@ -268,8 +266,8 @@ interface GroupPaneProps {
 
 function GroupPane(props: GroupPaneProps) {
   const {
-    group, rect, activeGroup, touchesTop, touchesRight, defaultOrientation, draggedId, t,
-    onActivateGroup, onShowLauncher, onOrientation, onDefaultOrientation, onRailResize, onDropTarget,
+    group, rect, activeGroup, touchesTop, touchesRight, draggedId, t,
+    onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget,
   } = props
   const groupRef = useRef<HTMLDivElement | null>(null)
   const style = normalizedStyle(rect)
@@ -345,15 +343,6 @@ function GroupPane(props: GroupPaneProps) {
               onClick={() => { onOrientation(group.tabOrientation === 'horizontal' ? 'vertical' : 'horizontal') }}
             >
               <OrientationIcon orientation={group.tabOrientation} />
-            </button>
-            <button
-              type="button"
-              className="dsh-rightbar-default-orientation"
-              aria-label={t(defaultOrientation === 'horizontal' ? 'defaultVerticalTabs' : 'defaultHorizontalTabs')}
-              title={t(defaultOrientation === 'horizontal' ? 'defaultVerticalTabs' : 'defaultHorizontalTabs')}
-              onClick={() => { onDefaultOrientation(defaultOrientation === 'horizontal' ? 'vertical' : 'horizontal') }}
-            >
-              <span aria-hidden>D</span>
             </button>
           </div>
         </div>
@@ -501,11 +490,13 @@ function MenuButton({ label, onClick }: { readonly label: string; readonly onCli
 }
 
 function LauncherHome({
-  launchers, pending, onLaunch, t,
+  launchers, pending, defaultOrientation, onLaunch, onDefaultOrientation, t,
 }: {
   readonly launchers: readonly RightSidebarLauncherEntry[]
   readonly pending: ReadonlySet<string>
+  readonly defaultOrientation: RightSidebarTabOrientation
   readonly onLaunch: (id: string) => void
+  readonly onDefaultOrientation: (orientation: RightSidebarTabOrientation) => void
   readonly t: RightSidebarPanelProps['t']
 }) {
   return (
@@ -531,6 +522,13 @@ function LauncherHome({
           </SidebarContentBoundary>
         ))}
       </div>
+      <button
+        type="button"
+        className="dsh-rightbar-default-setting"
+        onClick={() => { onDefaultOrientation(defaultOrientation === 'horizontal' ? 'vertical' : 'horizontal') }}
+      >
+        {t(defaultOrientation === 'horizontal' ? 'defaultVerticalTabs' : 'defaultHorizontalTabs')}
+      </button>
     </div>
   )
 }

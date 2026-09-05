@@ -13,6 +13,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 - 相对打开由 runtime 集中解析。现有目标按几何距离选择，tree preorder 打破平局；没有目标时才在来源组旁创建 50/50 split。
 - 拖动到组四边 10% 区域时预览实际半区，drop 才创建 split；中心 drop 加入目标组，标签 drop 指定顺序。显式移动会固定 preview，空的非 root 组折叠。
 - 顶部横向标签与 Host controls 同行，右上组通过 `--dsh-shell-navbar-width` 预留空间。纵向右上组为 tab rail 和内容保留本地 clearance；可滚动标签和 action menu 不覆盖 Host controls。
+- group 顶栏只保留 launcher 与当前组横纵切换；新分组的默认方向在 launcher home 使用明确文字设置。
 - split 和纵向 rail 支持 pointer、方向键与 reset。比例和 rail 宽没有固定最大值；rail 收窄后保留恢复按钮。
 - 移动中的 active renderer 以稳定 `instanceId` key 留在同一 React surface；单纯移动或重排不重建 feature component。未激活的 renderer 不因恢复布局一次性加载。
 - 浏览器存储只保存 versioned JSON 布局、实例元数据和 opaque restore descriptor。缺失 renderer/restorer 保留 placeholder；恢复失败可重试，不删除标签。损坏快照被拒绝，并保留原始 JSON recovery copy。

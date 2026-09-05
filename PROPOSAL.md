@@ -50,7 +50,7 @@ panel binding 跟随已挂载 details occurrence。新 binding 立即使旧 bind
 
 ## panel 交互
 
-每个 group 的 labels 使用独立 scroll area，`+`、orientation 与 default preference controls 不参与滚动。横向和纵向模式都保留 launcher、tab action 与 Host controls 的可达性。
+每个 group 的 labels 使用独立 scroll area，`+` 和当前组 orientation control 不参与滚动。新分组的默认方向在 launcher home 以明确文字设置，不增加顶栏图标。横向和纵向模式都保留 launcher、tab action 与 Host controls 的可达性。
 
 tab 按方向支持 Arrow、Home 和 End；Alt+Shift+Arrow 提供 edge split keyboard path，action menu 提供 pin 和跨组移动。split 与 rail separator 支持 Arrow、reset、pointer capture 和 cancellation。
 
