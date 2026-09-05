@@ -4,11 +4,12 @@ import { Context } from '@deepseek-ai/cordis'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { apply, inject } from '../src/client/index'
+import type { PanelInjected } from '../src/client/contract'
 import {
-  history, outline, rightbarConsumer, type RightbarConsumerEvent,
+  editor, preview, rightbarConsumer, type RightbarConsumerEvent,
 } from './fixtures/rightbar-consumer'
 
-it('carries an external consumer through the stable registration lifecycle', async () => {
+it('carries an external consumer through the stable workbench lifecycle', async () => {
   const ctx = new Context()
   const slotsFiber = ctx.plugin(SlotRegistry)
   await slotsFiber.await()
@@ -22,37 +23,46 @@ it('carries an external consumer through the stable registration lifecycle', asy
   }, (() => null) as never)
   ctx.provide('locale', new LocaleRuntime(ctx))
   ctx.provide('layout', {
-    toggleSidebar: () => {}, openDetails: () => {}, closeDetails: () => {},
+    openDetails: () => {}, closeDetails: () => {}, toggleDetailsMaximized: () => {},
   } as never)
 
   const events: RightbarConsumerEvent[] = []
   const consumer = ctx.plugin(rightbarConsumer(events))
-  await consumer.await()
-  expect(slots.entries('rightbar.tab')).toEqual([])
-
   const shell = ctx.plugin({ inject: [...inject], apply })
-  await shell.await()
-  expect(slots.entries('rightbar.tab').map(entry => ({
+  await Promise.all([consumer.await(), shell.await()])
+
+  expect(slots.entries('rightbar.view').map(entry => ({
     id: entry.options.id,
-    label: entry.options.label,
     component: entry.component,
   }))).toEqual([
-    { id: 'outline', label: 'Outline', component: outline },
-    { id: 'history', label: 'History', component: history },
+    { id: 'editor', component: editor },
+    { id: 'preview', component: preview },
   ])
   expect(events).toEqual([{ kind: 'attach' }])
 
+  const details = slots.entries('details').find(entry => entry.options.priority === -1)
+  if (details === undefined) throw new Error('fixture: details entry is absent')
+  const panel = (details.inject as unknown as (sessionId: string) => PanelInjected)('session-1')
+  const unmount = panel.mountWorkbench()
+  await ctx.rightSidebar.launch('session-1', 'editor', 'draft')
+  expect(panel.hooks.workbench.getSnapshot()).toMatchObject({
+    activeInstanceId: 'editor:draft',
+    instances: [{ id: 'editor:draft', viewId: 'editor', title: 'Editor draft' }],
+  })
+  expect(events.at(-1)).toEqual({ kind: 'launch', selection: 'draft' })
+  unmount()
+
   await shell.dispose()
-  expect(slots.spec('rightbar.tab')).toBeUndefined()
-  expect(events).toEqual([{ kind: 'attach' }, { kind: 'detach' }])
+  expect(slots.spec('rightbar.view')).toBeUndefined()
+  expect(events.at(-1)).toEqual({ kind: 'detach' })
 
   const remounted = ctx.plugin({ inject: [...inject], apply })
   await remounted.await()
-  expect(slots.entries('rightbar.tab').map(entry => entry.options.id)).toEqual(['outline', 'history'])
-  expect(events).toEqual([{ kind: 'attach' }, { kind: 'detach' }, { kind: 'attach' }])
+  expect(slots.entries('rightbar.view').map(entry => entry.options.id)).toEqual(['editor', 'preview'])
+  expect(events.at(-1)).toEqual({ kind: 'attach' })
 
   await consumer.dispose()
-  expect(slots.entries('rightbar.tab')).toEqual([])
+  expect(slots.entries('rightbar.view')).toEqual([])
   expect(events.at(-1)).toEqual({ kind: 'detach' })
   await remounted.dispose()
   disposeRoot()

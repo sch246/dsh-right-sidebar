@@ -1,86 +1,100 @@
 # @dsh-external/dsh-right-sidebar
 
-DeepSeek Harness Web 的右栏平台底座：提供全高真列、可注册标签页、显隐与宽度管理，以及主界面和右栏共享 session 状态的接入方式。
+DeepSeek Harness Web 的右栏工作台底座：复用 Host 的全高 `details` 真列，并提供功能启动器、session 内多实例标签和静态视图注册位。
 
-本包不内置审阅、终端、浏览器、文件、Git、工具详情或其他业务标签。功能插件拥有自己的状态和动作，并可同时向主界面与 `rightbar.tab` 注册 UI，使两处通过同一个 session-scoped store 保持同步。
+本包不注册 Files、审阅、终端、浏览器、Git、工具详情或其他业务功能。功能插件拥有启动器、视图 renderer、实例标题、关闭决策及编辑器或选择器状态；右栏 runtime 只拥有每个 session 的有序实例 ledger 和 active instance。布局宽度、显隐与最大化仍由 Host `ctx.layout` 持有。
 
-当前意图、稳定 client API、Agent 驱动的安装维护流程与验收标准见 [.intent/state/STATE.md](.intent/state/STATE.md)，实现设计见 [PROPOSAL.md](PROPOSAL.md)。browser half 使用 Cordis `Context`、renderer-owned `SlotRegistry`、`dsh-client-store` 和 alpha.2 原生 `ctx.layout` 服务；Host frame 提供解析后的显隐状态，插件不镜像布局几何。实现与机械验证记录见 [HANDOFF.md](HANDOFF.md)。
+当前意图、稳定 client API 和 Agent 驱动的维护规则见 [.intent/state/STATE.md](.intent/state/STATE.md)，目标相关布局改动见 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)。没有 active 或 accepted realization；源码构建和测试不代表 profile 安装、live browser 验收或 realization activation。
 
-## 目标交互
+## 工作台行为
 
-- 右栏占据应用内容区全高，并作为第三列影响横向布局；
-- 应用 navbar 在右栏关闭时提供一个显示按钮，在打开时提供最大化/还原与关闭按钮；
-- 新会话界面在发送第一条消息前也可展开和收起右栏；
-- 官方分隔条调整普通模式宽度，不设固定最大值；最大化模式占据左栏以外的区域；
-- 普通宽度和最大化偏好跨收起、session 切换与刷新保留，右栏可见性仍在启动时重置；
-- 第三方插件可注册、排序和卸载标签页；
-- 第三方插件可通过稳定的 client service 选择并展开当前 session 的已注册标签页；
-- 主界面贡献和右栏标签可共享同一份 session 状态与动作。
+- 没有 active instance 时显示 launcher home；`+` 只选择 launcher home，不关闭已打开实例。
+- `rightbar.view` 是 session-scoped list slot。renderer 是静态注册，活动实例通过 owner props 接收 `{ instanceId }`。
+- `openInstance()` 按 session 内 `id` 去重。新 id 追加到 ledger；已有 id 保留原 renderer、标题和关闭回调，仅被激活。
+- 实例在 session 切换后保留。关闭 active instance 时优先激活其后一个实例，否则激活前一个；没有剩余实例时回到 launcher home。
+- `rightbar.view` 注册离开 live ledger 时，runtime 立即移除引用该 renderer 的所有 session 实例。该生命周期清理不调用 `onClose`，因为 feature renderer 已不可用。
+- tab label 在独立滚动区溢出；`+` 与 Host navbar controls 保持固定可达。右侧通过 `--dsh-shell-navbar-width` 预留 Host 控件宽度，fallback 为 80px。
+- launcher 或关闭操作 rejection 显示 locale-owned panel error；view loading 和 render failure 保留在工作台内容区。
 
 ## 稳定 client API
 
-`@dsh-external/dsh-right-sidebar/client` 声明两个跨插件入口：session-scoped additive `rightbar.tab` 注册位，以及 `ctx.rightSidebar.openTab(sessionId, tabId)`。调用方插件应注入 `rightSidebar` 服务，并使用当前 session 的 framework identity：
+`@dsh-external/dsh-right-sidebar/client` 合并 `ctx.rightSidebar`，并声明 `rightbar.view`：
 
 ```ts
 import type { Context } from '@deepseek-ai/cordis'
-import type { RightSidebarSessionId } from '@dsh-external/dsh-right-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {
+  RightbarViewOwnerProps,
+  RightSidebarSessionId,
+} from '@dsh-external/dsh-right-sidebar/client'
 
-export const inject = ['rightSidebar']
+export const inject = ['slots', 'rightSidebar']
 
-export function openFiles(ctx: Context, sessionId: RightSidebarSessionId): void {
-  ctx.rightSidebar.openTab(sessionId, 'files')
+function Editor({ instanceId }: RightbarViewOwnerProps) {
+  return instanceId
+}
+
+export function apply(ctx: Context): void {
+  ctx.slots.inject('rightbar.view', () => [
+    ctx.slots.register({ name: 'rightbar.view', id: 'editor' }, Editor),
+    ctx.rightSidebar.registerLauncher({
+      id: 'editor',
+      label: 'Editor',
+      open(sessionId: RightSidebarSessionId, selection?: unknown) {
+        const documentId = typeof selection === 'string' ? selection : 'untitled'
+        ctx.rightSidebar.openInstance(sessionId, {
+          id: `editor:${documentId}`,
+          viewId: 'editor',
+          title: documentId,
+        })
+      },
+    }),
+  ])
 }
 ```
 
-`openTab()` 返回 `void`。当前 details panel 已挂载、`sessionId` 与其绑定一致且 `tabId` 存在于 live `rightbar.tab` ledger 时，它先选择标签，再调用官方 layout service 展开右栏。验证失败抛出 `RightSidebarOpenTabError`；稳定 `code` 为 `not-mounted`、`session-mismatch` 或 `unknown-tab`，且选择和布局均不改变。平台不会向调用方暴露 store、actions 或 raw slot registry。
+Public service methods are:
 
-标签注册卸载会从 live ledger 移除 id；panel 卸载和插件销毁会撤销对应 binding。替换后的旧 binding 与已销毁 runtime 不能继续选择标签。注册示例见 [tests/fixtures/rightbar-consumer.ts](tests/fixtures/rightbar-consumer.ts)。
+- `registerLauncher({ id, label, open })` returns an idempotent disposer. Duplicate live ids throw `RightSidebarError` with `code: 'duplicate-launcher'`.
+- `launch(sessionId, launcherId, selection?)` requires the mounted session, invokes the live launcher and preserves its rejection.
+- `openInstance(sessionId, { id, viewId, title, onClose? })` validates the mounted session and live view before state or layout side effects, activates the instance, then calls Host `openDetails()`.
+- `activateInstance(sessionId, id)` selects an existing instance for the mounted session.
+- `updateInstance(sessionId, id, { title? })` changes presentation without reordering or selecting the instance.
+- `closeInstance(sessionId, id)` coalesces concurrent closes of the same instance. `onClose()` returning `false` vetoes removal; rejection leaves the instance open and reaches the caller. A completion cannot remove an updated, lifecycle-removed or reopened instance with the same id.
 
-## 安装与回撤
+Other stable error codes are `not-mounted`, `session-mismatch`, `unknown-launcher`, `unknown-view`, `unknown-instance` and `disposed`. Validation failures occur before workbench or layout writes. The service never exposes Host layout state, a raw slot registry or a second store.
 
-推荐使用带所有权收据的生命周期脚本：
+## 构建
 
-```bash
-DSH_CHECKOUT=/root/deepseek-harness bash scripts/setup.sh
-# 回撤同一版本 setup 实际拥有的宿主补丁与 bundle：
-DSH_CHECKOUT=/root/deepseek-harness bash scripts/uninstall.sh
-```
-
-setup 只接受“补丁尚未应用”或“完全一致地已应用”，核对就近的 `@meta-intent` source-region owner 标记，记录补丁 SHA-256、owner regions 与生成物映射。共享 slot/API catalog 不属于本包补丁；安装与卸载都从当前剩余的全部源贡献重生成，避免与其它插件争用同一生成文件。
-
-## 本地 link 装配
-
-先构建插件：
+在插件 checkout 中使用目标 Harness 的工具链和 Client packages：
 
 ```bash
-cd /root/dsh-right-sidebar
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
 ```
 
-然后使用与 `dsh-warm-minimal` 相同的 profile link 模型：
+该命令构建 Node no-op entry、browser declarations 和 browser bundle。它只重建本 checkout 的 `lib/` 并刷新本地 `node_modules` dependency links，不安装 profile、不应用 Host patch，也不重启服务。
+
+## 安装与回撤
+
+生命周期脚本会检查目标基线、Host patch 所有权和 setup receipt；运行前必须按当前 state 重新调查目标并获得外部写权限：
+
+```bash
+DSH_CHECKOUT=/root/deepseek-harness bash scripts/setup.sh
+DSH_CHECKOUT=/root/deepseek-harness bash scripts/uninstall.sh
+```
+
+本地开发也可在构建后使用 profile link：
 
 ```bash
 dsh plugin --profile web add /root/dsh-right-sidebar
 dsh --profile web --dump-config
-```
-
-profile 记录 `link:/root/dsh-right-sidebar`。修改或拉取插件后重新构建并执行 `systemctl restart dsh-web` 即可加载更新，不需要复制源码。卸载命令：
-
-```bash
 dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
 ```
 
-开发期可通过 super-injector 执行 build、inject、reload 和 uninject；该流程只用于迭代，不替代 profile bundle 安装。
+profile 记录 `link:` dependency。更新 checkout 后需重新构建并在获得相应权限后重启 `dsh-web`。
 
-## Harness 源码补丁
+## Host 源码补丁
 
-官方布局前置位于 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)，基于 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它保留原生三列 frame、拖拽求解器和 `ctx.layout` 服务，增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好持久化、无固定最大宽度的普通拖拽、保留左栏的最大化布局、header clearance 和无浮动 grip 的全高分隔条。补丁携带对应的 Host 行为测试；每个逻辑侵入区都带有就近 owner 标记，生成 catalog 由生命周期脚本从当前源贡献重建。
+[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条。
 
-在对应 Harness checkout 中应用：
-
-```bash
-git apply --check /root/dsh-right-sidebar/patches/deepseek-harness.patch
-git apply /root/dsh-right-sidebar/patches/deepseek-harness.patch
-```
-
-升级 Harness 时由 Agent 先重新调查目标，再根据 state 更新或重新生成具体 realization；不得为套用旧补丁而削弱意图。当前补丁仍可由 Agent 手动更新并处理冲突，本仓库不要求额外的标准运行时或固定兼容层。详见 [PROPOSAL.md](PROPOSAL.md#harness-源码改动)。
+升级 Harness 时，Agent 必须从 state 与新目标重新合成 realization。补丁可应用不等于目标仍满足当前意图；不得用 compatibility path 或静默降级维持旧 patch。

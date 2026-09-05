@@ -27,12 +27,16 @@ The platform itself supplies no review, terminal, browser, file, Git, tool-detai
 The DeepSeek Harness realization exposes the public client coordinate `@dsh-external/dsh-right-sidebar/client` and the additive session-scoped `rightbar.view` registration seat. An incompatible change to this API is a state revision, not routine lock regeneration.
 
 - Each `rightbar.view` registration supplies a stable renderer id. The active instance selects that renderer, and the platform passes its opaque `instanceId` as owner props.
-- Multiple plugins can register static renderers concurrently. Registration lifetime follows the contributing feature and removal updates the live ledger.
+- Multiple plugins can register static renderers concurrently. Registration lifetime follows the contributing feature; removal immediately deletes every session instance that selects the absent renderer without invoking its close veto.
 - The platform contributes no business launcher or view and does not own feature-specific editor, selector or document state.
 
 The same public client coordinate merges `ctx.rightSidebar` into Cordis `Context` with these methods: `registerLauncher({ id, label, open })`, `launch(sessionId, launcherId, selection?)`, `openInstance(sessionId, { id, viewId, title, onClose? })`, `activateInstance(sessionId, id)`, `updateInstance(sessionId, id, { title? })`, and `closeInstance(sessionId, id)`. Launcher registration returns its disposer, `launch` and `closeInstance` are asynchronous, and the remaining operations return `void`.
 
-The runtime is the sole authority for each session's ordered instance ledger and active instance. `openInstance` validates the live view ledger and mounted session before side effects, deduplicates an existing id, activates the instance and reveals the details column. `closeInstance` honors an asynchronous `false` veto and guards against stale completion. The launcher home is selected when no instance is active; opening it does not remove instances.
+The runtime is the sole authority for each session's ordered instance ledger and active instance. `openInstance` validates the live view ledger and mounted session before side effects, deduplicates an existing id without replacing its fields, activates the instance and reveals the details column. The launcher home is selected when no instance is active; opening it does not remove instances.
+
+`closeInstance` coalesces concurrent closes of the same instance, honors an asynchronous `false` veto and preserves callback rejection. Completion removes only the exact instance that began closing; update, registration cleanup or reopening the same id makes an older completion stale. Removing the active instance selects its next surviving neighbor, then its previous neighbor, then launcher home.
+
+Public validation uses `RightSidebarError` with stable codes `not-mounted`, `session-mismatch`, `unknown-launcher`, `duplicate-launcher`, `unknown-view`, `unknown-instance` and `disposed`. Validation failures occur before instance or layout writes.
 
 The service binding follows the mounted details occurrence. A replacement binding invalidates the prior one, panel unmount removes its binding, and plugin disposal removes both the binding and service. A retained stale service or injected callback cannot mutate a disposed runtime. Layout width, visibility and maximization remain Host-owned.
 
@@ -56,11 +60,9 @@ Exact commands, local paths, profile representation, target commits and patch pr
 
 ## Resources
 
-- The host repository is currently also the DSH/npm package consumed by the profile `link:` workflow. That is evidence about candidate C1, not a permanent requirement on future portable realizations.
 - The selected protocol defines how the embedded semantic package and its bootstrap are discovered; those concrete names are protocol realization, not sidebar intent.
-- Local plugin and Harness worktrees are bootstrap evidence only. Local paths and dirty states are not portable acceptance.
-- Earlier C2 through C6 experiments used local dsh-std commit `580b330323c13ec568adab2c35fabf8f8fa6b194` to test one portable mapping and lifecycle design. Those frozen locks remain historical evidence, not a current dependency or preferred architecture.
-- The current recomposition target is the official Harness `dsh-v0.1.2-alpha.2` release commit `0a53fb55bea101816fa226bb964ae2bed71c343b`. Source commit `513ff0f056fdcc8004e729904561cb1036adda40` records unsealed migration work only; neither resource is a selected realization.
+- Local plugin and Harness worktrees are bootstrap evidence only. Local paths, dirty states and profile links are not portable acceptance.
+- The current recomposition target is the official Harness `dsh-v0.1.2-alpha.2` release commit `0a53fb55bea101816fa226bb964ae2bed71c343b`. It is a target binding, not a selected realization.
 
 ## Current decisions
 
@@ -69,21 +71,8 @@ Exact commands, local paths, profile representation, target commits and patch pr
 - Portability is carried by this state and regenerated per target by an Agent. A shared standard or adapter may be selected inside a realization, but dsh-std is not a required dependency, authority or migration destination.
 - API stability is explicit for the launcher, instance and static view semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.
 - Navbar interaction follows the Codex references: closed has one sidebar icon; ordinary open has maximize plus the selected sidebar icon; maximized has restore plus the selected sidebar icon. Width and maximization are durable preferences, while visibility is transient.
-- C2 `a522fb187a8afef060216f919ec32448caf98129` contains loading and failure chrome, retry, focus repair, narrow-width treatment, keyboard focus styling, and a real source-level adapter/slot/shell lifecycle fixture. These are candidate facts, not live-browser or production-loader acceptance.
-- C3 records user-authorized installation of that same source plus adapter commit `580b330323c13ec568adab2c35fabf8f8fa6b194` into the live `web` profile. Both local links, boot-manifest entries and served bundles were observed, and `dsh-web` restarted successfully. Client execution and visible interaction remain unobserved.
-- Live inspection revised the chrome requirements: reserve room for the global toggle instead of overlapping session utilities, keep the full divider edge draggable without a visible pill, remove the panel-internal collapse/title, and render no empty-state notice or empty tab strip.
-- C4 `794ecd03fc9b80619b679b5d33f844f55b786eb9` implements that revision. Component and layout regression suites, client typechecking, patch applicability, public bundle inspection and service restart pass; rendered browser geometry and subjective visual acceptance remain open.
-- The user subsequently confirmed C4's visible chrome and requested one refinement: match the Session log control's 32-pixel height and 12-pixel top inset, while removing the sidebar toggle's resting edge and shadow.
-- C5 `aa4baa3660f0ab7a06793baf576166340343bd09` implements and publicly serves that alignment refinement. Automated geometry/style assertions and live bundle inspection pass; final rendered appearance awaits user confirmation.
-- The user subsequently tested the deployed sidebar, confirmed that it runs and that the current shell iteration can be closed, and authorized pushing this repository. This closes the live shell/visual milestone without treating unexecuted synchronization, lifecycle and adapter-migration acceptance as passed.
-- The user subsequently reported that the new-conversation interface could not visibly open the sidebar until after the first message. Investigation confirmed a target layout gate that forced blank-session details width to zero despite recording `detailsOpen: true`; current state requires the global control to work before that message.
-- The current source and regenerated Harness patch remove that gate while preserving session-change closure. Focused and complete ui-layout suites, Harness host typechecking, the plugin build/tests and patch applicability checks pass; this evidence is not a live deployment observation.
-- The user authorized installation and restart. The existing linked profile was retained, right-sidebar and ui-layout artifacts were rebuilt, and `dsh-web` restarted active. Local HTTP remained healthy. The public root initially returned HTTP 200, while later requests from this host failed during TLS negotiation; the intended browser path was subsequently verified by the user.
-- The user then tested the deployed browser interaction and reported success. This closes the new-conversation visibility mismatch and confirms the intended client path reached the restarted deployment; it does not close unrelated synchronization or lifecycle acceptance.
-- Realization locks cache concrete versions and evidence. Missing build outputs or an unusable historical environment require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
-- Candidate 9 preserves the source-locator, generated-catalog and patch-composition evidence gathered on official Harness commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`. That target and lock are historical implementation evidence, not current installation instructions.
-- The official alpha.2 target is `0a53fb55bea101816fa226bb964ae2bed71c343b`. Existing split-client migration commits adapt one implementation to moved Cordis, renderer, store and layout APIs; those exact Harness coordinates and commits are migration facts, not stable requirements. An Agent must inspect alpha.2 and seal a new realization without changing the sidebar semantics.
-- The multi-instance workbench replaces the `rightbar.tab` registration seat and `openTab` service. Static `rightbar.view` renderers receive an instance id, launchers create feature-owned instances, and one runtime owns all session instance ordering and selection.
+- The tab row reserves Host controls through `--dsh-shell-navbar-width`; instance labels scroll independently while the launcher remains fixed. The platform does not register a default launcher or instance.
+- Realization locks cache concrete implementations and evidence. Missing outputs, unavailable references or target drift require re-synthesis from state and current reality, not a weaker sidebar or byte-identical reconstruction.
 
 ## Constraints and permissions
 
@@ -95,7 +84,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 
 ## Non-goals
 
-- Implementing any business tab or defining feature-specific message-collapse, jump-target, or session-display semantics.
+- Implementing any business launcher or view, or defining feature-specific editor, selector, message-collapse, jump-target or session-display semantics.
 - Replacing DSH's package manifest, profile bundle format, or pnpm link mechanism with the intent package.
 - Requiring every referenced implementation byte to be copied into a lock bundle.
 - Defining the protocol-wide embedded-package discovery or immutable-reference model inside this sidebar package.
@@ -110,8 +99,6 @@ Exact commands, local paths, profile representation, target commits and patch pr
 ## Open tensions
 
 - Whether DSH or this realization should own cleanup of the orphan `link:` symlink left after `dsh plugin remove`; manifest, lockfile, bundle configuration, and runtime dump are already clean at that point.
-- User live observation now confirms the deployed shell runs and the reported chrome/layout defects are resolved. Automated browser evidence for contributed tabs and main-view/sidebar session synchronization remains incomplete; component tests cover empty, loading, failure/retry, focus repair and keyboard tab navigation.
-- Candidate 9 is a frozen historical bundle for the `b150a551` baseline. The current alpha.2 candidate binds the plugin-owned Host patch, source-region attribution, local installation receipt, focused tests, bundle builds, and browser interaction evidence; it remains unaccepted.
-- Global Cordis API catalog regeneration is blocked by the existing `chat/open-workspace-file` rendering-projection partition violation. The local receipt identifies that deferred generated artifact; candidate acceptance cannot describe the complete catalog workflow as passing until its owning feature resolves the violation.
+- Global Cordis API catalog regeneration is blocked by the existing `chat/open-workspace-file` rendering-projection partition violation. A future candidate cannot claim the complete catalog workflow until that feature resolves the violation.
 - Automated browser evidence for multi-instance launcher, editor and session-retention behavior remains incomplete.
-- Historical C3 install and restart succeeded, but target drift maintenance and owned uninstall have not been rerun for the current direct realization model.
+- Target-drift maintenance and owned uninstall have not been exercised for a multi-instance realization.

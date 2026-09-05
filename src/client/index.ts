@@ -1,85 +1,70 @@
-/**
- * @dsh-external/dsh-right-sidebar browser half.
- *
- * Takes over the official `details` column and turns it into a tab platform:
- *
- * - declares the public `rightbar.tab` registration seat (list, session
- *   scope) and renders one tab at a time through `only: <active id>`;
- * - registers the expand/collapse toggle into the global application navbar;
- * - deliberately ships no feature tab: other plugins own actual behavior.
- */
+/** Browser entry for the right-sidebar launcher and multi-instance workbench. */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { RightSidebarPanel } from './RightSidebarPanel'
 import { RightSidebarToggle } from './RightSidebarToggle'
-import { createRightSidebarStore } from './stores'
 import { RightSidebarRuntime } from './service'
 import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
 import type {
-  PanelInjected, RightbarTab, RightSidebarService, RightSidebarSessionId, ToggleInjected,
+  RightSidebarInstanceInput,
+  RightSidebarInstanceUpdate,
+  RightSidebarLauncher,
+  RightSidebarService,
+  RightSidebarSessionId,
+  ToggleInjected,
 } from './contract'
 
-// Public type entry: importing this package coordinate must activate the
-// rightbar.tab SlotMap contract without reaching into internal files.
 export {
-  RightSidebarOpenTabError,
-  type RightSidebarOpenTabErrorCode,
+  RightSidebarError,
+  type RightSidebarErrorCode,
+  type RightSidebarInstance,
+  type RightSidebarInstanceInput,
+  type RightSidebarInstanceUpdate,
+  type RightSidebarLauncher,
   type RightSidebarService,
   type RightSidebarSessionId,
-  type RightbarTab,
-  type RightbarTabOwnerProps,
+  type RightbarViewOwnerProps,
 } from './contract'
 
-/** Required services: renderer-owned slots, locale, and official panel actions. */
+/** Required services: renderer-owned slots, locale, and official layout actions. */
 export const inject = ['slots', 'locale', 'layout']
 
+/**
+ * Install the workbench, public service, navbar control and owned resources.
+ * @param ctx - Client Cordis context.
+ */
 export function apply(ctx: ClientContext): void {
-  const store = createRightSidebarStore()
-  const rightSidebar = new RightSidebarRuntime(ctx)
-  const rightSidebarService: RightSidebarService = Object.freeze({
-    openTab: (sessionId: RightSidebarSessionId, tabId: string): void => {
-      rightSidebar.openTab(sessionId, tabId)
+  const runtime = new RightSidebarRuntime(ctx)
+  const service: RightSidebarService = Object.freeze({
+    registerLauncher: (launcher: RightSidebarLauncher): (() => void) =>
+      runtime.registerLauncher(launcher),
+    launch: async (
+      sessionId: RightSidebarSessionId,
+      launcherId: string,
+      selection?: unknown,
+    ): Promise<void> => runtime.launch(sessionId, launcherId, selection),
+    openInstance: (sessionId: RightSidebarSessionId, instance: RightSidebarInstanceInput): void => {
+      runtime.openInstance(sessionId, instance)
     },
+    activateInstance: (sessionId: RightSidebarSessionId, id: string): void => {
+      runtime.activateInstance(sessionId, id)
+    },
+    updateInstance: (
+      sessionId: RightSidebarSessionId,
+      id: string,
+      update: RightSidebarInstanceUpdate,
+    ): void => {
+      runtime.updateInstance(sessionId, id, update)
+    },
+    closeInstance: (sessionId: RightSidebarSessionId, id: string): Promise<void> =>
+      runtime.closeInstance(sessionId, id),
   })
 
-  ctx.provide('rightSidebar', rightSidebarService)
-  ctx.effect(() => () => { rightSidebar.dispose() }, 'right-sidebar: invalidate client service')
-
-  // Tab-ledger projection: a cached array rebuilt on ledger/locale revision
-  // keeps framework selector snapshots referentially stable.
-  let cachedTabs: readonly RightbarTab[] = []
-  let cachedVersion = -1
-  let cachedLocaleRevision = -1
-  const tabs: HostObservable<readonly RightbarTab[]> = {
-    getSnapshot: () => {
-      const version = ctx.slots.getVersion('rightbar.tab')
-      const localeRevision = ctx.locale.getSnapshot().revision
-      if (version !== cachedVersion || localeRevision !== cachedLocaleRevision) {
-        cachedTabs = ctx.slots.entries('rightbar.tab')
-          .map(entry => ({
-            id: entry.options.id ?? '',
-            label: resolveSlotLabel(entry.options.label) ?? entry.options.id ?? '',
-            order: entry.options.order ?? 0,
-          }))
-          .filter(row => row.id !== '')
-          .sort((a, b) => a.order - b.order)
-          .map(({ id, label }) => ({ id, label }))
-        cachedVersion = version
-        cachedLocaleRevision = localeRevision
-      }
-      return cachedTabs
-    },
-    subscribe: (fn: () => void) => {
-      const offTabs = ctx.slots.subscribe('rightbar.tab', fn)
-      const offLocale = ctx.locale.subscribe(fn)
-      return () => { offTabs(); offLocale() }
-    },
-  }
+  ctx.provide('rightSidebar', service)
+  ctx.effect(() => () => { runtime.dispose() }, 'right-sidebar: dispose workbench runtime')
 
   ctx.effect(() => {
     const offLocale = ctx.locale.register(NS, { zh, en })
@@ -93,23 +78,17 @@ export function apply(ctx: ClientContext): void {
     }
   }, 'right-sidebar: locale + styles')
 
-  // The column takeover: our entry wins the single `details` cell (lowest
-  // priority renders) and declares the tab seat.
   ctx.slots.inject('details', () => ctx.slots.register({
     name: 'details',
     priority: -1,
     locale: NS,
     children: {
-      'rightbar.tab': { kind: 'list', scope: 'session' },
+      'rightbar.view': { kind: 'list', scope: 'session' },
     },
-    store,
-    inject: (sessionId, actions): PanelInjected => ({
-      hooks: { tabs },
-      mountOpenTabApi: () => rightSidebar.mount(sessionId, actions),
-    }),
+    inject: (sessionId): ReturnType<RightSidebarRuntime['createPanelFace']> =>
+      runtime.createPanelFace(sessionId),
   }, RightSidebarPanel))
 
-  // Root-scoped global navbar toggle; visibility comes from owner props.
   ctx.slots.inject('shell.navbar.action', () => ctx.slots.register({
     name: 'shell.navbar.action',
     id: 'right-sidebar-toggle',

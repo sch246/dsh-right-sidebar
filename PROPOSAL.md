@@ -1,120 +1,55 @@
-# dsh-right-sidebar 设计
+# dsh-right-sidebar 实现设计
 
-> 本文是实现设计资料，不是当前语义权威。意图、约束和验收条件以 [.intent/state/STATE.md](.intent/state/STATE.md) 为准。
+> 本文是实现资料，不是语义权威。意图、稳定 API 与验收条件以 [.intent/state/STATE.md](.intent/state/STATE.md) 为准。
 
-`dsh-right-sidebar` 是 DeepSeek Harness Web 的右栏平台底座。browser half 运行在 Cordis `Context` 中，使用 renderer-owned `SlotRegistry` 注册界面，并使用 `dsh-client-store` 保存 session-scoped 交互状态；`ui-slots` 继续拥有注册协议。它不提供审阅、终端、浏览器、文件、Git、工具详情或其他业务功能。
+`dsh-right-sidebar` 是 DeepSeek Harness Web 的右栏工作台底座。browser half 运行在 Cordis `Context` 中，使用 renderer-owned `SlotRegistry` 注册界面，使用单一 runtime 保留各 session 的实例 ledger。它不提供审阅、终端、浏览器、文件、Git、工具详情或其他业务功能。
 
-## 目标
+## 职责划分
 
-- 右栏占据应用内容区的完整高度，并作为第三列参与横向布局；它不是覆盖主界面的浮层。
-- 用户从应用 navbar 显示或隐藏右栏；右栏内部不重复这一全局控制。
-- 用户可拖动分隔条调整宽度；刷新后保留最后一次非零宽度，但右栏仍按默认隐藏策略启动。
-- 插件可像 VS Code 视图容器一样注册、排序和卸载右栏标签页；底座不内置业务标签页。
-- 一个功能插件可在主界面和右栏各注册一个交互入口，并让两处通过同一份 session-scoped 状态和动作保持同步。
-- 本地 checkout 通过 profile 的 `link:` 依赖装配；更新 checkout 并重新构建、执行 `systemctl restart dsh-web` 后即可加载新版本。
+Host `ui-layout` 拥有 details 列的宽度、显隐、最大化、拖拽计算与响应式降级。插件只通过 `ctx.layout` 动作更改布局，不镜像 Host 状态。
 
-## 非目标
+`RightSidebarRuntime` 是每个 session 的有序实例列表和 active instance 的唯一权威。panel 通过 runtime 提供的 `HostObservable` 读取投影；不创建 framework store、active-tab mirror 或第二份 ledger。
 
-- 不内置文件、Git、终端、浏览器、审阅、工具详情或会话分析功能。
-- 不复制官方 ChatView、trajectory 或左侧栏的业务实现。
-- 不通过 `position: fixed`、DOM 查询或私有 store 访问控制主界面。
-- 不持久化右栏是否打开、当前 session、窄屏派生状态或整个布局 store。
-- 不把某个功能插件的消息折叠、跳转目标或 session 展示模式固化为右栏平台字段。
+功能插件拥有 launcher callback、static view renderer、instance title、optional close veto 以及 editor/selector 内部状态。`instanceId` 是它从静态 renderer 返查业务状态的不透明标识；平台不解释其格式。
 
-## 布局与交互
+## 布局与全局控件
 
-右栏复用 Harness `ui-layout` 的 `details` 列几何：`sidebar | minmax(0, 1fr) | details`。右栏宽度直接参与主界面排版，内容区随右栏宽度缩放；右栏使用官方拖拽分隔条和窄视口降级规则。
+右栏接管 Harness `details` single slot，作为 `sidebar | minmax(0, 1fr) | details` 的第三列参与横向布局。它不使用 fixed overlay、DOM 查询或 Host 私有 store。
 
-平台接管 `details` single slot，并在其中渲染标签导航与活动标签内容。当前官方 GUI 没有生产交互会打开官方 DetailsPanel；工具行检查进入 trajectory，因此平台不重嵌 `conversation.details.tool`，也不把官方工具详情作为默认标签。
+应用级 navbar 控件注册到 Host 提供的 `shell.navbar.action`。关闭时只显示一个未选中 sidebar icon；打开时先显示 maximize/restore，再显示选中的 sidebar icon。panel 内部不重复可见性控件。
 
-显隐入口属于应用级 navbar，而不是某个 session 内容组件。随包维护的 Harness 补丁增加 additive `shell.navbar.action` slot，使空白会话和任意主视图都能显示右栏按钮。
+Host patch 使 blank/new-session 界面也能在首条消息前显示 details，并将普通宽度与最大化偏好独立持久化。可见性不持久化。最大化保留左侧 session sidebar，将 center track 设为零，并让 details 使用剩余宽度。
 
-navbar 按钮直接调用 layout 动作，且 `aria-pressed`、可见性和实际列宽保持一致。新会话界面无论在宿主内部表示为 blank session 还是没有 current session，都允许在第一条消息前展开右栏；不得只记录隐藏的 open 状态。右栏内部不提供第二个收起入口。
+## 注册与实例
 
-宽度偏好是独立的用户布局设置：只记录最后一次非零 details 宽度并限制在官方范围内；关闭、session 切换和窄视口派生为零宽时不得覆盖该偏好。刷新后平台从该偏好恢复拖拽宽度，但不自动打开右栏。
+panel 声明 session-scoped `rightbar.view` list slot。每个注册项只提供稳定 renderer id 和 component。渲染 active instance 时，panel 以 `{ instanceId }` 作为 owner props，并用 `only: viewId` 选择对应 renderer。
 
-Harness 补丁由 `ui-layout` 自己持久化最后一次非零宽度：通用 store persistence 支持选择顶层 durable keys，layout 仅选择 `detailsWidth`。`detailsOpen`、sidebar 和窄屏派生状态仍从 fresh `init()` 启动。
+launcher 是 service-owned lifecycle registration，包含 id、可延迟解析的 label 和 `open(sessionId, selection?)` callback。平台不自动注册 Files 或其他 launcher。
 
-## 标签页注册
+`openInstance()` 按固定顺序执行：检查 runtime 未销毁，检查已挂载 details 的 session，检查 `viewId` 存在于 live `rightbar.view` ledger，然后追加或激活实例，最后调用 `ctx.layout.openDetails()`。验证失败不写 instance state 或 layout。
 
-平台声明 session-scoped `rightbar.tab` list slot。每个贡献必须提供稳定 `id`、标签、排序值和组件；图标作为可选展示元数据。活动标签按 session 保存为交互状态，不作为长期用户设置。标签导航采用横向 tab strip，右栏较窄时可以水平滚动。
+重复 instance id 只激活已有实例，不替换它的 view、title 或 close callback。`updateInstance()` 只更改 title，不改变顺序或选择。
 
-标签页容器负责以下行为：
+view registration 离开 live ledger 时，runtime 同步删除所有 session 中引用该 renderer 的实例。这是 registration lifecycle cleanup，不执行 `onClose`。active instance 被移除时选择其后第一个存活实例，否则选择前一个；无存活实例则进入 launcher home。
 
-- 按 slot ledger 的胜出顺序显示标签；
-- 每次只渲染活动标签；
-- 活动标签卸载后选择下一个可用标签；
-- 没有标签时不显示 tab chrome、提示或占位内容，也不注册示例或默认业务标签；
-- HMR 或插件卸载时移除对应标签和资源，不留下样式、状态或注册项。
+## 关闭与竞态
 
-第三方标签组件通过标准四 shares 获取运行时 session hooks（`PropsRuntime`）、子 slot renderer（`PropsRenderSlots`）、entry store（`PropsStore`）和 injected callbacks；组件不接收 `ctx`，也不自行订阅外部对象。
+`closeInstance()` 将同一 instance object 的并发关闭收敛到一个 Promise。`onClose()` 返回 `false` 保留实例；rejection 不改 state 并保留给调用方。
 
-## 主界面与右栏状态同步
+关闭完成时以 session record 和 instance object identity 重新检查。关闭等待期间的 update、view lifecycle removal 或同 id reopen 会使旧完成失效，因此旧 callback 不能删除新实例。
 
-右栏平台提供接入规则，不解释功能状态。需要双向交互的功能插件在自己的 `apply()` 中创建一个 session-scoped store handle，并把同一个 handle 传给主界面贡献和 `rightbar.tab` 贡献。两处都通过 `useStore` 读取、通过声明的 actions 修改，因此任一侧点击产生的状态变化都会同步到另一侧。
+panel binding 跟随已挂载 details occurrence。新 binding 立即使旧 binding callback 失效；panel unmount 只在自己仍为 current binding 时清除它。runtime dispose 清除 binding、launcher、session snapshots 和订阅，保留的 service 或 panel face 不能再写入。
 
-跨宿主可移植性由意图包承担：Agent 在每个目标上实现或适配 state 所声明的注册与会话隔离语义。当前 Harness realization 通过 session-scoped `rightbar.tab` 提供会话身份和生命周期；其他宿主可以使用不同的原生 API 或生成 adapter。右栏 shell 不持有功能状态，也不解释折叠、跳转或选择语义。
+## panel 交互
 
-例如，功能插件可以在自己的 store 中定义消息折叠集合、跳转目标或活动 session 视图；这些字段及其语义由该功能插件拥有，不属于 `dsh-right-sidebar`。测试夹具可以使用简单的选择值证明双向同步，但生产包不附带示例功能标签。
+顶行将 instance labels 放在独立的横向 scroll area，`+` 是不参与滚动的 launcher 入口。tabbar 用 `--dsh-shell-navbar-width` 预留 Host navbar controls，fallback 为 80px。窄宽度优先保留 launcher 与 Host controls 的可达性。
 
-主界面贡献优先使用现有 additive slots，例如 `conversation.view` 或 `conversation.chat.node`。若功能必须控制官方 ChatView 本身的消息折叠、滚动定位或视图选择，Harness 必须先提供公开的 session-scoped action API；右栏插件不得操作 DOM、导入 `ui-conversation` 私有 store 或复制 ChatView。该 API 只暴露定位和展示动作，业务状态仍由调用方拥有。
+tab 支持 ArrowLeft、ArrowRight、Home 和 End，每个 close button 拥有包含 title 的 locale-owned accessible label。active instance 改变后，panel 将焦点移到新 active tab；进入 launcher home 时移到 `+`。
 
-状态作用域分为两类：
+launcher 和 close rejection 会显示通用 operation error。操作进行期间对应控件不可重复触发。active view 使用 `Suspense` loading state 和内容 error boundary，一个 feature 失败不卸载工作台 shell。
 
-- 应用级布局状态：右栏显隐、最后一次非零宽度；
-- session-scoped 功能状态：活动标签及第三方功能自己的选择、折叠、跳转或展示状态。
+## 包装与目标适配
 
-切换 session 时，活动标签和功能状态随 session 切换，宽度偏好不变；layout 保留官方的 session 切换关闭策略。右栏显隐不由某个功能标签修改。
+本包提供 Node no-op entry、browser half 和 `dsh.bundle.patch`。`cordis.patch.yml` 使用包名 `@dsh-external/dsh-right-sidebar` 注册 loader entry。
 
-## 编程式打开标签
-
-公开 client coordinate 还提供 `ctx.rightSidebar.openTab(sessionId, tabId)`。这是外部功能从主界面或其它入口选择并展示其右栏标签的唯一编程式写入口；调用方只获得方法，不获得 `activeTab` store、baked actions 或 registry。
-
-`details` registration 的 framework inject 接收 renderer 解析出的 session id 和该 session store 的 actions。panel 挂载期间将这一对设为 service 的当前 binding，session 切换、panel 卸载、重注入和插件销毁都会使旧 binding 失效。service 不自行解析 current session，也不创建第二份 session 状态。
-
-调用按固定顺序执行：要求 panel 已挂载，要求请求 session 等于当前 binding，要求 `tabId` 存在于 `ctx.slots.entries('rightbar.tab')` 的 live ledger；全部通过后写入 `activeTab` 并调用 `ctx.layout.openDetails()`。前三类验证错误分别使用 `not-mounted`、`session-mismatch`、`unknown-tab`，验证失败无选择或布局副作用。
-
-## 包装与装配
-
-本包同时提供 Node no-op half、browser half 和 bundle patch。`package.json` 必须声明 `dsh.bundle.patch` 与 `dsh.client`，`cordis.patch.yml` 使用实际包名 `@dsh-external/dsh-right-sidebar` 注册 loader entry。
-
-本地开发采用 profile link：
-
-```bash
-dsh plugin --profile web add /root/dsh-right-sidebar
-dsh --profile web --dump-config
-```
-
-profile 将依赖记录为 `link:/root/dsh-right-sidebar`。后续更新流程是拉取或修改 checkout、重新构建、执行 `systemctl restart dsh-web`；不需要再次复制插件源码。卸载使用：
-
-```bash
-dsh plugin --profile web remove @dsh-external/dsh-right-sidebar
-```
-
-开发期可使用 super-injector 的 build/inject/reload/uninject 工具缩短迭代，但它不是发布安装协议。GitHub 或 npm 安装必须能自行得到 `lib/index.js`、`lib/client.js` 和公开声明文件；发布包不得依赖开发机上未声明的 checkout symlink。
-
-## Harness 源码改动
-
-`dsh.bundle.patch` 只组合 Cordis 配置行，不修改 Harness TypeScript 源码。Harness 源码补丁由本仓库的 `patches/deepseek-harness.patch` 跟踪，基于 alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。补丁复用原生三列 frame、拖拽求解器和 `ctx.layout` 服务，只补 state 要求而 alpha.2 未提供的 Host 行为。升级 Harness 时由 agent 根据新的官方代码手动更新补丁并处理冲突，不增加兼容路径。
-
-## 验收
-
-平台底座满足以下行为后才可发布：
-
-1. 右栏全高占据第三列，打开后改变主界面可用宽度，关闭后不遮挡或截获主界面事件。
-2. 全局 navbar 按钮可在新会话首条消息前以及既有会话中显示和隐藏右栏，状态和无障碍属性与实际列宽一致；栏内不重复该入口。
-3. 官方分隔条可调整宽度，宽度限制遵循 `ui-layout`；刷新后恢复最后一次非零宽度但默认保持隐藏。
-4. 外部测试插件可注册至少两个标签、在可滚动的横向 tab strip 中切换标签并卸载；生产包本身没有业务标签。
-5. 测试插件在主界面和右栏使用同一个 session store；任一侧修改测试状态，另一侧立即反映，切换 session 后各 session 状态独立。
-6. 本地 `dsh plugin --profile web add <checkout>` 形成 `link:` 依赖；重新构建并执行 `systemctl restart dsh-web` 后加载 checkout 更新，remove 后配置和 UI 注册全部消失。
-7. 注入、HMR、session 切换、窄视口和卸载不会留下重复 slot、样式或订阅。
-8. 任何 Harness 源码补丁都由本插件仓库跟踪，并标明其官方 Harness 基线 commit。
-
-## 已落地的 Harness 前置
-
-随包补丁已补齐两个平台能力：
-
-1. 应用级 additive navbar action slot，用于在无 session 和任意主视图中放置右栏显隐按钮。
-2. 只持久化 details 最后一次非零宽度的 layout 偏好/API，保持显隐状态、sidebar 宽度和窄屏派生状态为瞬态。
-
-控制官方 ChatView 的折叠、跳转或 session 展示不是右栏基本渲染的前置；首个需要这些动作的功能插件必须同时补齐相应的公开 conversation action API 和覆盖。
+Harness 源码补丁由 [patches/deepseek-harness.patch](patches/deepseek-harness.patch) 跟踪，当前绑定 alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。升级 Harness 时，Agent 根据 state 和新目标重新合成 realization；不为延用旧 patch 增加兼容路径。

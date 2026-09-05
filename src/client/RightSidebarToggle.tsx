@@ -12,6 +12,11 @@ export type RightSidebarToggleProps =
   & InjectFace<ToggleInjected>
   & PropsLocale<'right-sidebar'>
 
+/**
+ * Render visibility and maximize controls from Host-resolved layout state.
+ * @param props - Navbar runtime shares and layout callbacks.
+ * @returns One closed-state button or the two open-state controls.
+ */
 export function RightSidebarToggle({
   detailsOpen,
   detailsMaximized,

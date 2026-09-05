@@ -1,7 +1,7 @@
 {
   "name": "@dsh-external/dsh-right-sidebar",
   "version": "0.0.1",
-  "description": "DSH Web 右侧边栏平台插件：接管官方 details 列（真列），tab 开放注册 + 会话联动层",
+  "description": "DSH Web 右侧边栏工作台：全高 details 列、功能启动器和会话内多实例视图",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
@@ -20,7 +20,6 @@
   "devDependencies": {
     "@deepseek-ai/cordis": ">=4.0.0-rc <5",
     "@deepseek-ai/dsh-client-locale": "0.1.2-alpha.2",
-    "@deepseek-ai/dsh-client-store": "0.1.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-layout": "0.1.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-renderer": "0.1.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-slots": "0.1.2-alpha.2",
