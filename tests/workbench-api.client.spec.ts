@@ -290,6 +290,29 @@ describe('ctx.rightSidebar grouped workbench', () => {
     await bench.dispose()
   })
 
+  it('preserves the active group when closing an inactive group\'s last tab', async () => {
+    const bench = await createBench()
+    const disposeView = bench.registerView('editor')
+    const panel = bench.face('session-1')
+    const unmount = panel.mountWorkbench()
+    await bench.service().openInstance('session-1', { id: 'a', viewId: 'editor', title: 'A' })
+    await bench.service().openInstance('session-1', { id: 'b', viewId: 'editor', title: 'B' }, {
+      target: { fromInstanceId: 'a', direction: 'right' },
+    })
+    await bench.service().openInstance('session-1', { id: 'c', viewId: 'editor', title: 'C' }, {
+      target: { fromInstanceId: 'b', direction: 'right' },
+    })
+    const middleGroup = bench.service().getInstanceGroup('session-1', 'b')
+    bench.service().activateInstance('session-1', 'b')
+    await bench.service().closeInstance('session-1', 'c')
+    expect(panel.hooks.workbench.getSnapshot().activeGroupId).toBe(middleGroup)
+    expect(groupsOf(panel.hooks.workbench.getSnapshot().root)).toHaveLength(2)
+
+    unmount()
+    disposeView()
+    await bench.dispose()
+  })
+
   it('persists layout and restores feature state without deleting unavailable tabs', async () => {
     const first = await createBench()
     const disposeView = first.registerView('editor')

@@ -516,7 +516,7 @@ export class RightSidebarRuntime implements RightSidebarService {
     let activeGroupId = session.snapshot.activeGroupId
     if (collapse && instances.length === 0 && groupsOf(root).length > 1) {
       root = collapseGroup(root, group.id)
-      activeGroupId = groupsOf(root)[0]?.id ?? activeGroupId
+      if (activeGroupId === group.id) activeGroupId = groupsOf(root)[0]?.id ?? activeGroupId
     }
     this.#write(session, { ...session.snapshot, root, activeGroupId })
     try { instance.onClosed?.() } catch (error) {
