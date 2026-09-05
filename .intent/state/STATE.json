@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.7",
+  "revision": "0.4.0-draft.8",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -43,7 +43,8 @@
     "../logs/2026-09-06-compact-ui-activation.md",
     "../logs/2026-09-06-remove-tab-menu.md",
     "../logs/2026-09-06-tab-menu-removal-activation.md",
-    "../logs/2026-09-06-chat-alignment-and-operation-map.md"
+    "../logs/2026-09-06-chat-alignment-and-operation-map.md",
+    "../logs/2026-09-06-per-session-layout-clarification.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -58,8 +59,8 @@
       "id": "host.dsh-right-sidebar",
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
-      "revision": "cab4f29ee4ff317cb835f3b48723a897e6f6bf63",
-      "scope": "grouped-workbench implementation without redundant tab menus",
+      "revision": "fde7ed0c9b2d981348da2bc8d9c029d1142fa9b0",
+      "scope": "grouped workbench and corrected per-session Host layout patch; pending managed activation",
       "worktree": "plugin-owned source and reversible Host patch; local deployment evidence is recorded in logs"
     },
     {

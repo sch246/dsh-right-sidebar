@@ -2,7 +2,7 @@
 
 DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `details` 真列，为每个 session 保存可分栏的标签组、预览生命周期、横向或纵向标签、尺寸偏好和浏览器恢复信息。
 
-本包不注册 Files、审阅、终端、浏览器、Git、工具详情或其他业务功能。功能插件拥有启动器、renderer、恢复描述符、关闭决策以及编辑器或选择器状态；右栏 runtime 只拥有布局树和实例归属。布局宽度、显隐与最大化仍由 Host `ctx.layout` 持有。
+本包不注册 Files、审阅、终端、浏览器、Git、工具详情或其他业务功能。功能插件拥有启动器、renderer、恢复描述符、关闭决策以及编辑器或选择器状态；右栏 runtime 只拥有布局树和实例归属。布局宽度、显隐与最大化由 Host `ctx.layout` 按 session 保存，切换与刷新恢复目标 session 自己的状态；没有保存记录的 session 默认收起。
 
 当前意图、realization 状态和稳定 client API 见 [.intent/state/STATE.md](.intent/state/STATE.md)，目标相关布局改动见 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)。源码构建和测试不代表 profile 安装、live browser 验收或 realization activation。
 
@@ -118,6 +118,6 @@ DSH_CHECKOUT=/root/deepseek-harness DSH_PROFILE=web bash scripts/uninstall.sh
 
 ## Host 源码补丁
 
-[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条；并在 Host store 及 slot store API 增加选定字段持久化，使宽度和最大化偏好持久保存、可见性保持临时状态。
+[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条；并在 Host store 及 slot store API 增加选定字段持久化，将每个 session 的宽度、显隐和最大化持久保存。旧版全局偏好无法归属具体 session，不会用于初始化所有 session。
 
 Grouped workbench 没有增加 `groupId` owner prop，也没有改变 Host slot catalog。升级 Harness 时，先按 STATE 检查目标差异与消费者，再决定保留、修复或重新生成适配；补丁可应用不等于目标仍满足当前意图。
