@@ -202,6 +202,22 @@ describe('RightSidebarPanel', () => {
     expect(PANEL_CSS).toContain("[data-top='true'][data-right='true'] .dsh-rightbar-tabs{padding-right:var(--dsh-shell-navbar-width,80px)")
   })
 
+  it('left-aligns vertical tab labels and fixed action icons', () => {
+    const styles = document.createElement('style')
+    styles.dataset.testRightbarStyles = ''
+    styles.textContent = PANEL_CSS
+    document.head.append(styles)
+    const view = mountPanel(group('group-1', [instance('a', 'A')], 'a', { tabOrientation: 'vertical' }))
+    const label = getComputedStyle(view.getByRole('tab', { name: 'A' }))
+    expect(label.textAlign).toBe('left')
+    expect(label.display).toBe('block')
+    const actions = view.container.querySelector('.dsh-rightbar-group-actions') as HTMLElement
+    expect(getComputedStyle(actions).alignItems).toBe('flex-start')
+    for (const button of actions.querySelectorAll('button')) {
+      expect(getComputedStyle(button).justifyContent).toBe('flex-start')
+    }
+  })
+
   it('marks preview labels italic and pins by double click or menu', () => {
     const view = mountPanel(group('group-1', [instance('preview', 'Preview', { preview: true })]))
     const tab = view.getByRole('tab', { name: 'Preview' })
@@ -236,6 +252,7 @@ describe('RightSidebarPanel', () => {
     vi.spyOn(workspace, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => {},
     })
+    setRect(editor.closest('.dsh-rightbar-surface') as HTMLElement, { left: 0, top: 20, width: 100, height: 80 })
     const internal = dataTransfer()
     fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: internal })
     expect(internal.types).toContain('application/x-dsh-right-sidebar-instance')
@@ -269,10 +286,183 @@ describe('RightSidebarPanel', () => {
     const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')]))
     const internal = dataTransfer()
     fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: internal })
-    fireEvent.drop(view.getByRole('tab', { name: 'B' }), { dataTransfer: internal })
+    setRect(view.getByRole('tab', { name: 'A' }).parentElement!, { left: 0, top: 0, width: 100, height: 30 })
+    setRect(view.getByRole('tab', { name: 'B' }).parentElement!, { left: 100, top: 0, width: 100, height: 30 })
+    dragAt('drop', view.getByRole('tab', { name: 'B' }), internal, 125, 15)
     expect(view.moveInstance).toHaveBeenCalledWith('a', {
       groupId: 'group-1', direction: 'center', index: 1,
     })
+  })
+
+  it.each(['horizontal', 'vertical'] as const)('previews exact %s insertion slots without a content overlay', orientation => {
+    const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')], 'a', {
+      tabOrientation: orientation,
+    }))
+    const tabs = [...view.container.querySelectorAll<HTMLElement>('.dsh-rightbar-tab')]
+    tabs.forEach((tab, index) => {
+      setRect(tab, orientation === 'horizontal'
+        ? { left: index * 100, top: 0, width: 100, height: 30 }
+        : { left: 0, top: index * 30, width: 100, height: 30 })
+    })
+    const transfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: transfer })
+    const point = orientation === 'horizontal' ? [175, 15] : [50, 55]
+    dragAt('dragOver', view.getByRole('tab', { name: 'B' }), transfer, point[0]!, point[1]!)
+    expect(view.container.querySelector('.dsh-rightbar-drop-preview')).toBeNull()
+    const line = view.container.querySelector('.dsh-rightbar-tab-insertion')
+    expect(line?.parentElement).toBe(tabs[1])
+    expect(line?.getAttribute('data-end')).toBe('true')
+    expect(view.moveInstance).not.toHaveBeenCalled()
+    dragAt('drop', view.getByRole('tab', { name: 'B' }), transfer, point[0]!, point[1]!)
+    expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'group-1', direction: 'center', index: 2 })
+    expect(view.container.querySelector('.dsh-rightbar-tab-insertion')).toBeNull()
+  })
+
+  it.each(['Open launcher', 'Use vertical tabs'])('treats the %s action as tab insertion space', name => {
+    const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')]))
+    const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    setRect(workspace, { left: 0, top: 0, width: 400, height: 400 })
+    const transfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: transfer })
+    dragAt('dragOver', view.getByRole('button', { name }), transfer, 395, 20)
+    expect(view.container.querySelector('.dsh-rightbar-drop-preview')).toBeNull()
+    dragAt('drop', view.getByRole('button', { name }), transfer, 395, 20)
+    expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'group-1', direction: 'center', index: 2 })
+  })
+
+  it('docks from the content left edge beside a vertical rail and confines its preview to content', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')], 'a', {
+      tabOrientation: 'vertical',
+    }))
+    const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    const surface = view.container.querySelector('.dsh-rightbar-surface') as HTMLElement
+    setRect(workspace, { left: 0, top: 0, width: 400, height: 400 })
+    setRect(surface, { left: 180, top: 56, width: 220, height: 344 })
+    const transfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'B' }), { dataTransfer: transfer })
+    dragAt('dragOver', view.getByTestId('view-a'), transfer, 185, 200)
+    const preview = view.container.querySelector('.dsh-rightbar-drop-preview') as HTMLElement
+    expect(preview.style.left).toBe('45%')
+    expect(Number.parseFloat(preview.style.width)).toBeCloseTo(27.5)
+    expect(Number.parseFloat(preview.style.top)).toBeCloseTo(14)
+    dragAt('drop', view.getByTestId('view-a'), transfer, 185, 200)
+    expect(view.moveInstance).toHaveBeenCalledWith('b', { groupId: 'group-1', direction: 'left' })
+  })
+
+  it.each([
+    ['left', 205, 300, 50, 25, 25, 75],
+    ['right', 395, 300, 75, 25, 25, 75],
+    ['up', 300, 105, 50, 25, 50, 37.5],
+    ['down', 300, 395, 50, 62.5, 50, 37.5],
+    ['center', 300, 300, 50, 25, 50, 75],
+  ] as const)('resolves %s from the destination content rectangle', (direction, x, y, left, top, width, height) => {
+    const view = mountPanel({
+      kind: 'split', id: 'split', axis: 'horizontal', ratio: 0.5,
+      first: group('left', [instance('a', 'A')]), second: group('right', [instance('b', 'B')]),
+    })
+    const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    setRect(workspace, { left: 0, top: 0, width: 400, height: 400 })
+    setRect(view.getByTestId('view-b').closest('.dsh-rightbar-surface') as HTMLElement, {
+      left: 200, top: 100, width: 200, height: 300,
+    })
+    const transfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: transfer })
+    dragAt('dragOver', view.getByTestId('view-b'), transfer, x, y)
+    const preview = view.container.querySelector('.dsh-rightbar-drop-preview') as HTMLElement
+    for (const [property, expected] of Object.entries({ left, top, width, height })) {
+      expect(Number.parseFloat(preview.style.getPropertyValue(property))).toBeCloseTo(expected)
+    }
+    expect(view.moveInstance).not.toHaveBeenCalled()
+    dragAt('drop', view.getByTestId('view-b'), transfer, x, y)
+    expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'right', direction })
+    expect(view.container.querySelector('.dsh-rightbar-drop-preview')).toBeNull()
+  })
+
+  it('replaces content preview with an insertion line over empty destination tab space', () => {
+    const view = mountPanel({
+      kind: 'split', id: 'split', axis: 'horizontal', ratio: 0.5,
+      first: group('left', [instance('a', 'A')]), second: group('empty', []),
+    })
+    const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    setRect(workspace, { left: 0, top: 0, width: 400, height: 400 })
+    setRect(view.getByTestId('view-a').closest('.dsh-rightbar-surface') as HTMLElement, {
+      left: 0, top: 56, width: 200, height: 344,
+    })
+    const transfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: transfer })
+    dragAt('dragOver', view.getByTestId('view-a'), transfer, 100, 100)
+    expect(view.container.querySelector('.dsh-rightbar-drop-preview')).not.toBeNull()
+    const emptyList = view.getAllByRole('tablist')[1]!
+    dragAt('dragOver', emptyList, transfer, 210, 20)
+    expect(view.container.querySelector('.dsh-rightbar-drop-preview')).toBeNull()
+    expect(emptyList.querySelector('.dsh-rightbar-tab-insertion')).not.toBeNull()
+    dragAt('drop', emptyList, transfer, 210, 20)
+    expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'empty', direction: 'center', index: 0 })
+  })
+
+  it.each([
+    { deltaY: 40 }, { deltaY: 40, shiftKey: true }, { deltaX: 40 },
+  ])('scrolls horizontal tabs for wheel input %j and cancels only consumed movement', input => {
+    const view = mountPanel(group('group-1', [instance('a', 'A')]))
+    const list = view.getByRole('tablist')
+    Object.defineProperties(list, { scrollWidth: { value: 500 }, clientWidth: { value: 100 } })
+    const wheel = createEvent.wheel(view.getByRole('tab', { name: 'A' }), { ...input, cancelable: true })
+    fireEvent(view.getByRole('tab', { name: 'A' }), wheel)
+    expect(list.scrollLeft).toBe(40)
+    expect(wheel.defaultPrevented).toBe(true)
+    list.scrollLeft = 400
+    const atEnd = createEvent.wheel(list, { ...input, cancelable: true })
+    fireEvent(list, atEnd)
+    expect(atEnd.defaultPrevented).toBe(false)
+    const zoom = createEvent.wheel(list, { deltaY: -40, ctrlKey: true, cancelable: true })
+    fireEvent(list, zoom)
+    expect(list.scrollLeft).toBe(400)
+    expect(zoom.defaultPrevented).toBe(false)
+  })
+
+  it('passes unconsumed wheel events through and disposes the horizontal listener on orientation change and unmount', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A')]))
+    const list = view.getByRole('tablist')
+    Object.defineProperties(list, {
+      scrollWidth: { configurable: true, value: 100 }, clientWidth: { value: 100 },
+    })
+    const parentWheel = vi.fn()
+    const root = view.container.querySelector('.dsh-rightbar-root') as HTMLElement
+    root.addEventListener('wheel', parentWheel)
+    try {
+      const noOverflow = createEvent.wheel(list, { deltaY: 40, cancelable: true })
+      fireEvent(list, noOverflow)
+      expect(noOverflow.defaultPrevented).toBe(false)
+      expect(parentWheel).toHaveBeenCalledOnce()
+      Object.defineProperty(list, 'scrollWidth', { value: 500 })
+      list.style.fontSize = '12px'
+      fireEvent.wheel(list, { deltaY: 2, deltaMode: WheelEvent.DOM_DELTA_LINE })
+      expect(list.scrollLeft).toBe(24)
+      fireEvent.wheel(list, { deltaY: 1, deltaMode: WheelEvent.DOM_DELTA_PAGE })
+      expect(list.scrollLeft).toBe(124)
+      fireEvent.wheel(list, { deltaY: -24 })
+      expect(list.scrollLeft).toBe(100)
+      expect(parentWheel).toHaveBeenCalledOnce()
+      act(() => {
+        view.workbench.set({
+          ...view.workbench.getSnapshot(),
+          root: group('group-1', [instance('a', 'A')], 'a', { tabOrientation: 'vertical' }),
+        })
+      })
+      const vertical = createEvent.wheel(list, { deltaY: 40, cancelable: true })
+      fireEvent(list, vertical)
+      expect(list.scrollLeft).toBe(100)
+      expect(vertical.defaultPrevented).toBe(false)
+      expect(parentWheel).toHaveBeenCalledTimes(2)
+      act(() => {
+        view.workbench.set({ ...view.workbench.getSnapshot(), root: group('group-1', [instance('a', 'A')]) })
+      })
+      view.unmount()
+      fireEvent.wheel(list, { deltaY: 40 })
+      expect(list.scrollLeft).toBe(100)
+    } finally {
+      root.removeEventListener('wheel', parentWheel)
+    }
   })
 
   it('auto-scrolls horizontal and vertical tab lists during drag', () => {
@@ -449,4 +639,17 @@ function dataTransfer(initial: Readonly<Record<string, string>> = {}): DataTrans
     }),
     getData: vi.fn((format: string) => values.get(format) ?? ''),
   } as unknown as DataTransfer
+}
+
+function setRect(element: HTMLElement, rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>): void {
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+    ...rect, x: rect.left, y: rect.top, right: rect.left + rect.width, bottom: rect.top + rect.height,
+    toJSON: () => {},
+  })
+}
+
+function dragAt(type: 'dragOver' | 'drop', target: HTMLElement, transfer: DataTransfer, x: number, y: number): void {
+  const event = createEvent[type](target, { dataTransfer: transfer })
+  Object.defineProperties(event, { clientX: { value: x }, clientY: { value: y } })
+  fireEvent(target, event)
 }

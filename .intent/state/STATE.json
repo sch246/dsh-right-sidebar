@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.4",
+  "revision": "0.4.0-draft.5",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -37,7 +37,8 @@
     "../logs/2026-09-05-grouped-workbench.md",
     "../logs/2026-09-05-restoration-commit-ack.md",
     "../logs/2026-09-05-internal-tab-drag-protocol.md",
-    "../logs/2026-09-05-grouped-workbench-deployment.md"
+    "../logs/2026-09-05-grouped-workbench-deployment.md",
+    "../logs/2026-09-06-tab-gesture-regions.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -82,7 +83,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-linux-web-0.4.0-candidate.1/LOCK.json"
-  ]
+  "candidateLocks": []
 }

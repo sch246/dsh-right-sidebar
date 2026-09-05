@@ -17,6 +17,10 @@ import { SidebarContentBoundary } from './SidebarContentBoundary'
 const NO_PENDING_OPERATIONS: ReadonlySet<string> = new Set()
 const SIDEBAR_TAB_MIME = 'application/x-dsh-right-sidebar-instance'
 
+type DropPreview =
+  | { readonly kind: 'content'; readonly target: RightSidebarMoveTarget; readonly rect: LayoutRect }
+  | { readonly kind: 'tabs'; readonly target: RightSidebarMoveTarget }
+
 /** Full composed props for the details-column workbench. */
 export type RightSidebarPanelProps =
   & PropsRuntime<'details'>
@@ -54,7 +58,7 @@ export function RightSidebarPanel({
   const [pending, setPending] = useState<ReadonlySet<string>>(NO_PENDING_OPERATIONS)
   const [operationFailed, setOperationFailed] = useState(false)
   const [draggedId, setDraggedId] = useState<string>()
-  const [dropTarget, setDropTarget] = useState<RightSidebarMoveTarget>()
+  const [dropPreview, setDropPreview] = useState<DropPreview>()
   const [menuId, setMenuId] = useState<string>()
   const [mountedIds, setMountedIds] = useState<ReadonlySet<string>>(() => new Set(
     groups.flatMap(group => group.activeInstanceId === undefined ? [] : [group.activeInstanceId]),
@@ -92,23 +96,26 @@ export function RightSidebarPanel({
     }
   }
 
-  const resolveWorkspaceDrop = (clientX: number, clientY: number): RightSidebarMoveTarget | undefined => {
+  const resolveContentDrop = (event: React.DragEvent<HTMLDivElement>): DropPreview | undefined => {
+    const surface = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('.dsh-rightbar-surface[data-active="true"]')
+      : null
+    if (surface === null || !event.currentTarget.contains(surface)) return undefined
+    const groupId = surface.dataset.groupId
+    if (groupId === undefined) return undefined
+    const content = surface.getBoundingClientRect()
     const workspace = workspaceRef.current?.getBoundingClientRect()
     if (workspace === undefined || workspace.width <= 0 || workspace.height <= 0) return undefined
-    const x = (clientX - workspace.left) / workspace.width
-    const y = (clientY - workspace.top) / workspace.height
-    const entry = [...geometry.groups].find(([, rect]) =>
-      x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
-    if (entry === undefined) return undefined
-    const [groupId, rect] = entry
+    if (content.width <= 0 || content.height <= 0) return undefined
     return {
-      groupId,
-      direction: dropDirection(clientX, clientY, {
-        left: workspace.left + rect.x * workspace.width,
-        top: workspace.top + rect.y * workspace.height,
-        width: rect.width * workspace.width,
-        height: rect.height * workspace.height,
-      }),
+      kind: 'content',
+      target: { groupId, direction: dropDirection(event.clientX, event.clientY, content) },
+      rect: {
+        x: (content.left - workspace.left) / workspace.width,
+        y: (content.top - workspace.top) / workspace.height,
+        width: content.width / workspace.width,
+        height: content.height / workspace.height,
+      },
     }
   }
 
@@ -122,24 +129,24 @@ export function RightSidebarPanel({
           if (!isSidebarTabDrag(event.dataTransfer) || isTabBarEventTarget(event.target)) return
           event.preventDefault()
           event.stopPropagation()
-          setDropTarget(resolveWorkspaceDrop(event.clientX, event.clientY))
+          setDropPreview(resolveContentDrop(event))
         }}
         onDragLeave={event => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(undefined)
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropPreview(undefined)
         }}
         onDropCapture={event => {
           if (!isSidebarTabDrag(event.dataTransfer) || isTabBarEventTarget(event.target)) return
           event.preventDefault()
           event.stopPropagation()
           const id = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || draggedId
-          const target = resolveWorkspaceDrop(event.clientX, event.clientY)
+          const target = resolveContentDrop(event)?.target
           if (id !== undefined
             && target !== undefined
             && groups.some(group => group.instances.some(instance => instance.id === id))) {
             moveInstance(id, target)
           }
           setDraggedId(undefined)
-          setDropTarget(undefined)
+          setDropPreview(undefined)
         }}
       >
         {groups.map(group => (
@@ -154,7 +161,8 @@ export function RightSidebarPanel({
             launchers={launchers}
             pending={pending}
             draggedId={draggedId}
-            dropTarget={dropTarget?.groupId === group.id ? dropTarget : undefined}
+            insertionIndex={dropPreview?.kind === 'tabs' && dropPreview.target.groupId === group.id
+              ? dropPreview.target.index : undefined}
             menuId={menuId}
             t={t}
             setTabRef={(id, element) => {
@@ -175,8 +183,8 @@ export function RightSidebarPanel({
             onOrientation={orientation => { setGroupTabOrientation(group.id, orientation) }}
             onRailResize={width => { setGroupVerticalRailWidth(group.id, width) }}
             onDragStart={id => { setDraggedId(id); setMenuId(undefined) }}
-            onDragEnd={() => { setDraggedId(undefined); setDropTarget(undefined) }}
-            onDropTarget={setDropTarget}
+            onDragEnd={() => { setDraggedId(undefined); setDropPreview(undefined) }}
+            onDropTarget={target => { setDropPreview(target === undefined ? undefined : { kind: 'tabs', target }) }}
             onMenu={id => { setMenuId(current => current === id ? undefined : id) }}
             onMove={(id, target) => { moveInstance(id, target); setMenuId(undefined) }}
           />
@@ -191,6 +199,7 @@ export function RightSidebarPanel({
             <div
               key={id}
               className="dsh-rightbar-surface"
+              data-group-id={owner.id}
               data-active={active ? 'true' : undefined}
               style={surfaceStyle(rect, owner, rectTouchesTop(rect), rectTouchesRight(rect))}
               onPointerDown={() => { activateGroup(owner.id) }}
@@ -213,6 +222,7 @@ export function RightSidebarPanel({
             <div
               key={`launcher:${group.id}`}
               className="dsh-rightbar-surface"
+              data-group-id={group.id}
               data-active="true"
               style={surfaceStyle(rect, group, rectTouchesTop(rect), rectTouchesRight(rect))}
               onPointerDown={() => { activateGroup(group.id) }}
@@ -228,10 +238,10 @@ export function RightSidebarPanel({
             </div>
           )
         })}
-        {dropTarget !== undefined && geometry.groups.get(dropTarget.groupId) !== undefined && (
+        {dropPreview?.kind === 'content' && (
           <div
             className="dsh-rightbar-drop-preview"
-            style={workspaceDropStyle(geometry.groups.get(dropTarget.groupId) as LayoutRect, dropTarget.direction)}
+            style={workspaceDropStyle(dropPreview.rect, dropPreview.target.direction)}
           />
         )}
         {geometry.splits.map(split => (
@@ -258,7 +268,7 @@ interface GroupPaneProps {
   readonly launchers: readonly RightSidebarLauncherEntry[]
   readonly pending: ReadonlySet<string>
   readonly draggedId?: string
-  readonly dropTarget?: RightSidebarMoveTarget
+  readonly insertionIndex?: number
   readonly menuId?: string
   readonly t: RightSidebarPanelProps['t']
   readonly setTabRef: (id: string, element: HTMLButtonElement | null) => void
@@ -284,11 +294,43 @@ function GroupPane(props: GroupPaneProps) {
     onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget,
   } = props
   const groupRef = useRef<HTMLDivElement | null>(null)
+  const tabScrollRef = useRef<HTMLDivElement | null>(null)
   const style = normalizedStyle(rect)
   const menuInstance = group.instances.find(instance => instance.id === props.menuId)
   const groupIndex = props.groups.findIndex(candidate => candidate.id === group.id)
   const previousGroup = props.groups[(groupIndex - 1 + props.groups.length) % props.groups.length]
   const nextGroup = props.groups[(groupIndex + 1) % props.groups.length]
+
+  useEffect(() => {
+    const list = tabScrollRef.current
+    if (list === null || group.tabOrientation !== 'horizontal') return
+    const scroll = (event: WheelEvent): void => {
+      if (event.ctrlKey) return
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? Number.parseFloat(getComputedStyle(list).fontSize)
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? list.clientWidth : 1
+      const before = list.scrollLeft
+      list.scrollLeft = Math.max(0, Math.min(list.scrollWidth - list.clientWidth, before + delta * unit))
+      if (list.scrollLeft === before) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    // Native non-passive delivery lets consumed wheel movement cancel page scrolling.
+    list.addEventListener('wheel', scroll, { passive: false })
+    return () => { list.removeEventListener('wheel', scroll) }
+  }, [group.tabOrientation])
+
+  const insertionTarget = (event: React.DragEvent<HTMLDivElement>): RightSidebarMoveTarget => {
+    const tabs = tabScrollRef.current?.querySelectorAll<HTMLElement>('.dsh-rightbar-tab') ?? []
+    const horizontal = group.tabOrientation === 'horizontal'
+    const point = horizontal ? event.clientX : event.clientY
+    const index = [...tabs].findIndex(tab => {
+      const bounds = tab.getBoundingClientRect()
+      return point < (horizontal ? bounds.left + bounds.width / 2 : bounds.top + bounds.height / 2)
+    })
+    return { groupId: group.id, direction: 'center', index: index < 0 ? group.instances.length : index }
+  }
 
   return (
     <section
@@ -307,31 +349,33 @@ function GroupPane(props: GroupPaneProps) {
           style={group.tabOrientation === 'vertical'
             ? { width: `min(${group.verticalRailWidth}px, calc(100% - 32px))` }
             : undefined}
+          onDragOver={event => {
+            if (!isSidebarTabDrag(event.dataTransfer)) return
+            event.preventDefault()
+            event.stopPropagation()
+            if (tabScrollRef.current !== null) autoScrollTabs(tabScrollRef.current, event, group.tabOrientation)
+            onDropTarget(insertionTarget(event))
+          }}
+          onDrop={event => {
+            if (!isSidebarTabDrag(event.dataTransfer)) return
+            event.preventDefault()
+            event.stopPropagation()
+            const dragged = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || draggedId
+            if (dragged !== undefined && props.groups.some(candidate => candidate.instances.some(instance => instance.id === dragged))) {
+              props.onMove(dragged, insertionTarget(event))
+            }
+            props.onDragEnd()
+          }}
         >
           <div
+            ref={tabScrollRef}
             className="dsh-rightbar-tabscroll"
             role="tablist"
             aria-orientation={group.tabOrientation}
-            onDragOver={event => {
-              if (!isSidebarTabDrag(event.dataTransfer)) return
-              event.preventDefault()
-              event.stopPropagation()
-              autoScrollTabs(event, group.tabOrientation)
-              onDropTarget({ groupId: group.id, direction: 'center', index: group.instances.length })
-            }}
-            onDrop={event => {
-              if (!isSidebarTabDrag(event.dataTransfer)) return
-              event.preventDefault()
-              event.stopPropagation()
-              const dragged = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || draggedId
-              if (dragged !== undefined) {
-                props.onMove(dragged, {
-                  groupId: group.id, direction: 'center', index: group.instances.length,
-                })
-              }
-              props.onDragEnd()
-            }}
           >
+            {group.instances.length === 0 && props.insertionIndex === 0 && (
+              <div className="dsh-rightbar-tab-insertion" aria-hidden />
+            )}
             {group.instances.map((instance, index) => (
               <InstanceTab
                 key={instance.id}
@@ -412,7 +456,7 @@ interface InstanceTabProps extends GroupPaneProps {
 }
 
 function InstanceTab(props: InstanceTabProps) {
-  const { group, groups, instance, index, active, tabId, panelId, pending, menuId, t } = props
+  const { group, instance, index, active, tabId, panelId, pending, menuId, t } = props
   const moveFocus = (key: string): void => {
     const forward = group.tabOrientation === 'horizontal' ? key === 'ArrowRight' : key === 'ArrowDown'
     const backward = group.tabOrientation === 'horizontal' ? key === 'ArrowLeft' : key === 'ArrowUp'
@@ -437,23 +481,10 @@ function InstanceTab(props: InstanceTabProps) {
         props.onDragStart(instance.id)
       }}
       onDragEnd={props.onDragEnd}
-      onDragOver={event => {
-        if (!isSidebarTabDrag(event.dataTransfer)) return
-        event.preventDefault()
-        event.stopPropagation()
-        props.onDropTarget({ groupId: group.id, direction: 'center', index })
-      }}
-      onDrop={event => {
-        if (!isSidebarTabDrag(event.dataTransfer)) return
-        event.preventDefault()
-        event.stopPropagation()
-        const dragged = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || props.draggedId
-        if (dragged !== undefined) {
-          props.onMove(dragged, { groupId: group.id, direction: 'center', index })
-        }
-        props.onDragEnd()
-      }}
     >
+      {(props.insertionIndex === index || (props.insertionIndex === group.instances.length && index === group.instances.length - 1)) && (
+        <div className="dsh-rightbar-tab-insertion" data-end={props.insertionIndex === group.instances.length ? 'true' : undefined} aria-hidden />
+      )}
       <button
         ref={element => { props.setTabRef(instance.id, element) }}
         id={tabId}
@@ -514,7 +545,7 @@ function isSidebarTabDrag(dataTransfer: DataTransfer): boolean {
 }
 
 function isTabBarEventTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('.dsh-rightbar-tabscroll') !== null
+  return target instanceof Element && target.closest('.dsh-rightbar-tabs') !== null
 }
 
 function MenuButton({ label, onClick }: { readonly label: string; readonly onClick: () => void }) {
@@ -813,14 +844,16 @@ function capitalize(value: string): string {
 }
 
 function autoScrollTabs(
+  list: HTMLDivElement,
   event: React.DragEvent<HTMLDivElement>,
   orientation: RightSidebarTabOrientation,
 ): void {
-  const rect = event.currentTarget.getBoundingClientRect()
+  const rect = list.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) return
   const point = orientation === 'horizontal' ? event.clientX : event.clientY
   const start = orientation === 'horizontal' ? rect.left : rect.top
   const end = orientation === 'horizontal' ? rect.right : rect.bottom
   const delta = point - start < 24 ? -24 : end - point < 24 ? 24 : 0
   if (delta === 0) return
-  event.currentTarget.scrollBy(orientation === 'horizontal' ? { left: delta } : { top: delta })
+  list.scrollBy(orientation === 'horizontal' ? { left: delta } : { top: delta })
 }
