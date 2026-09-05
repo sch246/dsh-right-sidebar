@@ -4,7 +4,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 
 本包不注册 Files、审阅、终端、浏览器、Git、工具详情或其他业务功能。功能插件拥有启动器、renderer、恢复描述符、关闭决策以及编辑器或选择器状态；右栏 runtime 只拥有布局树和实例归属。布局宽度、显隐与最大化仍由 Host `ctx.layout` 持有。
 
-当前意图和稳定 client API 见 [.intent/state/STATE.md](.intent/state/STATE.md)，目标相关布局改动见 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)。没有 active、accepted 或 selected candidate realization；源码构建和测试不代表 profile 安装、live browser 验收或 realization activation。
+当前意图、realization 状态和稳定 client API 见 [.intent/state/STATE.md](.intent/state/STATE.md)，目标相关布局改动见 [patches/deepseek-harness.patch](patches/deepseek-harness.patch)。源码构建和测试不代表 profile 安装、live browser 验收或 realization activation。
 
 ## 工作台行为
 

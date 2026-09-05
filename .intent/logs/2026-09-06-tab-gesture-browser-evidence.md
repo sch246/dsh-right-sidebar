@@ -1,0 +1,7 @@
+# Tab gesture candidate browser evidence
+
+The coordinating Agent reported private composed-browser verification of implementation `74aa95eb54d6585d28a8d8a5525432a0e744c3da`: vertical controls align left; rail insertion shows a dark line without a content docking overlay; a drop within the content's leftmost five percent splits left; ordinary and Shift wheel input move horizontal scrollLeft from 0 to 180 to 330; and cross-group insertion collapses the emptied source group. The browser probe reported `errors: []`. These are Agent-observed results, not user visual approval.
+
+The user requested fewer tests and prompt completion. This metadata-only follow-up reuses the implementation log's 44 passing tests, Node/Client typechecks and owned build, and adds no test run. Candidate `right-sidebar-linux-web-0.4.0-candidate.2` binds that implementation, the current state, prior implementation evidence and this attributed browser report. Candidate 1 and all other historical locks remain unchanged. This follow-up changes neither desired behavior nor public API.
+
+The implementation was built against the isolated Harness checkout at alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b` with its existing local Host changes. No Host patch, profile or service was changed by this follow-up. The selected candidate is prepared and browser-checked privately; current installation, activation and user acceptance are not claimed. The coordinating Agent separately owns installation preparation and any authorized activation.
