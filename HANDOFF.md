@@ -5,11 +5,13 @@
 ## 当前源码职责
 
 - Node half 为 no-op；browser half 接管 Host `details` 列，声明 session-scoped `rightbar.view` list slot，并注册 `shell.navbar.action` controls。
-- `ctx.rightSidebar` 对外提供 `registerLauncher` / `launch` / `openInstance` / `activateInstance` / `updateInstance` / `closeInstance`。它不暴露 Host layout state、slot registry 或 runtime snapshot writer。
-- `RightSidebarRuntime` 是每个 session 的实例顺序和 active instance 的唯一权威。工作台不依赖 `dsh-client-store`，不存在独立 active-tab handle 或并行注册路径。
-- view registration 离开 live ledger 时，runtime 清理所有 session 中依赖该 renderer 的实例并修复 active selection。
-- close veto、callback rejection、并发 close、update-during-close、view-remove/reopen 同 id 都由一个 object-identity commit check 保护。
-- panel 显示 launcher home、可滚动 instance tabs、固定 `+`、Host control clearance、keyboard navigation、loading/failure state 和 launcher/close operation error。生产包不注册默认 Files 或其他业务功能。
+- `ctx.rightSidebar` 对外提供 launcher、restorer、group target、preview/pin、same-id renderer switch、activate/update/close 操作。它不暴露 Host layout state、slot registry 或 runtime snapshot writer。
+- `RightSidebarRuntime` 是每个 session 布局树的唯一权威。split 拥有比例，leaf group 拥有标签、active instance、方向和 vertical rail width；没有平行 ledger 或 active-tab mirror。
+- versioned browser storage 只投影该树和 opaque restore descriptor。缺失 renderer/restorer 与恢复失败保留 placeholder，损坏输入保留 recovery copy。
+- preview replacement 和 close decision 使用 instance identity 与 open generation 防止旧完成删除或激活新内容。`onClose` 只决定，`onClosed` 仅在权威删除提交后清理 feature state。
+- `updateInstance` 可原位 checkpoint JSON-safe restore descriptor，不借用 renderer switch 或改变 close lifecycle。
+- panel 提供 10% 四边 docking、center ordering、half-area hover、横纵 tab、split/rail resize、reset/recovery 和非拖动操作入口。右上 leaf 根据几何为 Host controls 留出 clearance。
+- active renderer 使用跨组稳定 key；移动或重排不重建它。未激活的恢复标签不会一次性加载 renderer。
 - navbar controls 只通过 Host `ctx.layout` 操作显隐与最大化；插件不镜像几何或偏好。
 
 ## Host patch 边界
@@ -25,8 +27,10 @@ setup、uninstall、profile 修改、service restart、live deployment 和 reali
 ```bash
 DSH_CHECKOUT=/root/deepseek-harness node node_modules/vitest/vitest.mjs run
 /root/deepseek-harness/node_modules/.bin/tsc -p tsconfig.client.json --noEmit
+/root/deepseek-harness/node_modules/.bin/tsc -p tsconfig.json --noEmit
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
+node /root/meta-intent/locks/protocol-0.2/bin/validate.mjs .
 git diff --cached --check
 ```
 
-这些命令分别覆盖 plugin lifecycle、公开 consumer 注册、多 session runtime、view cleanup、close races、panel interaction、Client 类型、Node entry、browser declarations 与 bundle。具体结果以交接 commit 的实际命令输出为准。
+这些命令分别覆盖 plugin lifecycle、公开 consumer 注册、group routing、preview/close races、browser restoration、docking、panel interaction、Client 类型、Node entry、browser declarations 与 bundle。具体结果以交接 commit 的实际命令输出为准。

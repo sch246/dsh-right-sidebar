@@ -36,7 +36,9 @@ export function rightbarConsumer(events: RightbarConsumerEvent[]) {
             })
           },
         })
+        const disposeRestorer = ctx.rightSidebar.registerRestorer('editor', () => {})
         return () => {
+          disposeRestorer()
           disposeLauncher()
           for (const dispose of disposeViews.reverse()) dispose()
           events.push({ kind: 'detach' })

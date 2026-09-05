@@ -1,4 +1,4 @@
-/** Public and renderer-facing contracts of the right-sidebar workbench. */
+/** Public and renderer-facing contracts of the grouped right-sidebar workbench. */
 import type { HostObservable, SessionIdOf } from '@deepseek-ai/dsh-client-ui-slots'
 
 /** Session identity accepted by the right-sidebar client service. */
@@ -10,23 +10,39 @@ export type RightSidebarErrorCode =
   | 'session-mismatch'
   | 'unknown-launcher'
   | 'duplicate-launcher'
+  | 'duplicate-restorer'
   | 'unknown-view'
   | 'unknown-instance'
+  | 'unknown-group'
+  | 'preview-vetoed'
+  | 'superseded'
+  | 'invalid-restore-descriptor'
   | 'disposed'
 
 /** Validation failure from a right-sidebar workbench operation. */
 export class RightSidebarError extends Error {
-  /**
-   * @param code - Stable machine-readable failure category.
-   * @param message - Diagnostic text for operators and developers.
-   */
-  constructor(
-    readonly code: RightSidebarErrorCode,
-    message: string,
-  ) {
+  /** @param code - Stable category. @param message - Operator diagnostic. */
+  constructor(readonly code: RightSidebarErrorCode, message: string) {
     super(message)
     this.name = 'RightSidebarError'
   }
+}
+
+/** Horizontal or browser-style vertical tabs. */
+export type RightSidebarTabOrientation = 'horizontal' | 'vertical'
+/** Direction from a source instance to an existing or newly split group. */
+export type RightSidebarDirection = 'center' | 'left' | 'right' | 'up' | 'down'
+/** Explicit or relative destination understood by the layout owner. */
+export type RightSidebarTarget =
+  | { readonly groupId: string }
+  | { readonly fromInstanceId: string; readonly direction: RightSidebarDirection }
+
+/** Options controlling placement and preview lifecycle. */
+export interface RightSidebarOpenOptions {
+  /** Destination; omission uses the active group. */
+  target?: RightSidebarTarget
+  /** Replace the destination group's unpinned preview. Defaults to `false`. */
+  preview?: boolean
 }
 
 /** One feature-owned entry on the launcher home. */
@@ -35,12 +51,7 @@ export interface RightSidebarLauncher {
   id: string
   /** Display label or a callback that resolves it at render time. */
   label: string | (() => string)
-  /**
-   * Open or focus feature content for one session.
-   * @param sessionId - Session bound to the mounted workbench.
-   * @param selection - Optional feature-defined selection supplied by the caller.
-   * @returns Nothing after feature opening completes.
-   */
+  /** Open feature content for one session. */
   open: (sessionId: RightSidebarSessionId, selection?: unknown) => void | Promise<void>
 }
 
@@ -52,67 +63,87 @@ export interface RightSidebarInstanceInput {
   viewId: string
   /** User-facing tab title. */
   title: string
-  /** Return `false` to veto closure; rejection leaves the instance open. View disposal bypasses this callback. */
+  /** JSON-safe feature descriptor used after browser reload. */
+  restoreDescriptor?: unknown
+  /** Return `false` to veto closure; rejection leaves the instance open. */
   onClose?: () => boolean | Promise<boolean>
+  /** Release feature state after this exact instance is authoritatively removed. */
+  onClosed?: () => void
 }
 
 /** Mutable presentation fields of an existing instance. */
 export interface RightSidebarInstanceUpdate {
   /** Replacement tab title. */
   title?: string
+  /** JSON-safe restoration checkpoint; property presence replaces or clears it. */
+  restoreDescriptor?: unknown
 }
 
-/**
- * Public `ctx.rightSidebar` face for launchers and session workbench instances.
- * Removing a view registration forcibly removes its instances from every session without calling `onClose`.
- */
+/** Same-instance renderer replacement fields. */
+export interface RightSidebarInstanceViewUpdate {
+  /** Id of the replacement live renderer. */
+  viewId: string
+  /** Optional replacement title. */
+  title?: string
+  /** JSON-safe descriptor for restoration through the replacement renderer. */
+  restoreDescriptor?: unknown
+  /** Replacement close decision callback. */
+  onClose?: () => boolean | Promise<boolean>
+  /** Replacement notification after authoritative removal. */
+  onClosed?: () => void
+}
+
+/** Feature callback input for a persisted instance. */
+export interface RightSidebarRestoreContext {
+  readonly sessionId: RightSidebarSessionId
+  readonly instanceId: string
+  readonly descriptor: unknown
+}
+
+/** Runtime-only values installed after feature state is reconstructed. */
+export interface RightSidebarRestoreResult {
+  /** Decide whether a restored instance may close. */
+  readonly onClose?: () => boolean | Promise<boolean>
+  /** Release restored feature state after authoritative removal. */
+  readonly onClosed?: () => void
+}
+
+/** Reconstruct one feature-owned instance from its persisted descriptor. */
+export type RightSidebarRestorer = (
+  context: RightSidebarRestoreContext,
+) => void | RightSidebarRestoreResult | Promise<void | RightSidebarRestoreResult>
+
+/** Public `ctx.rightSidebar` face for launchers and grouped session instances. */
 export interface RightSidebarService {
-  /**
-   * Register one feature launcher.
-   * @param launcher - Stable launcher identity, label and open callback.
-   * @returns Idempotent disposer for exactly this registration.
-   * @throws {@link RightSidebarError} when the id is already registered or the runtime is disposed.
-   */
+  /** Register one feature launcher and return its idempotent disposer. */
   registerLauncher(launcher: RightSidebarLauncher): () => void
-  /**
-   * Invoke one live launcher for the mounted session.
-   * @param sessionId - Session that must own the mounted details occurrence.
-   * @param launcherId - Id of a live launcher registration.
-   * @param selection - Optional feature-defined selection.
-   * @returns Nothing after feature opening completes.
-   * @throws {@link RightSidebarError} when the session or launcher is unavailable.
-   */
+  /** Register one restoration callback for a renderer id. */
+  registerRestorer(viewId: string, restore: RightSidebarRestorer): () => void
+  /** Invoke one live launcher for the mounted session. */
   launch(sessionId: RightSidebarSessionId, launcherId: string, selection?: unknown): Promise<void>
-  /**
-   * Add or activate one instance and reveal the details column.
-   * @param sessionId - Session that must own the mounted details occurrence.
-   * @param instance - Stable instance, renderer and title fields.
-   * @throws {@link RightSidebarError} before side effects when the session or view is unavailable.
-   */
-  openInstance(sessionId: RightSidebarSessionId, instance: RightSidebarInstanceInput): void
-  /**
-   * Activate an existing instance in the mounted session.
-   * @param sessionId - Session that must own the mounted details occurrence.
-   * @param id - Existing instance id.
-   * @throws {@link RightSidebarError} when the session or instance is unavailable.
-   */
+  /** Add or activate one instance and return its actual destination group. */
+  openInstance(
+    sessionId: RightSidebarSessionId,
+    instance: RightSidebarInstanceInput,
+    options?: RightSidebarOpenOptions,
+  ): Promise<string>
+  /** Return the group that owns an existing instance. */
+  getInstanceGroup(sessionId: RightSidebarSessionId, id: string): string
+  /** Resolve an existing group without changing layout. */
+  resolveTarget(sessionId: RightSidebarSessionId, target: RightSidebarTarget): string | undefined
+  /** Activate an existing instance and reveal details. */
   activateInstance(sessionId: RightSidebarSessionId, id: string): void
-  /**
-   * Update presentation fields without changing instance order or selection.
-   * @param sessionId - Session that owns the instance.
-   * @param id - Existing instance id.
-   * @param update - Fields to replace.
-   * @throws {@link RightSidebarError} when the instance is unavailable.
-   */
+  /** Permanently exempt an instance from preview replacement. */
+  pinInstance(sessionId: RightSidebarSessionId, id: string): void
+  /** Update title or restoration checkpoint without changing group, order or selection. */
   updateInstance(sessionId: RightSidebarSessionId, id: string, update: RightSidebarInstanceUpdate): void
-  /**
-   * Ask an instance to close and remove it unless its callback vetoes. Concurrent calls for the same
-   * instance share one operation; its completion cannot remove an updated or reopened instance.
-   * @param sessionId - Session that owns the instance.
-   * @param id - Existing instance id.
-   * @returns Nothing after the close callback and guarded removal complete.
-   * @throws {@link RightSidebarError} when the instance is unavailable; callback rejection is preserved.
-   */
+  /** Replace a renderer without changing instance identity, group or order. */
+  switchInstanceView(
+    sessionId: RightSidebarSessionId,
+    id: string,
+    update: RightSidebarInstanceViewUpdate,
+  ): void
+  /** Ask an instance to close and remove it unless its callback vetoes. */
   closeInstance(sessionId: RightSidebarSessionId, id: string): Promise<void>
 }
 
@@ -122,23 +153,59 @@ export interface RightbarViewOwnerProps {
   instanceId: string
 }
 
+/** Current ability to render a restored instance. */
+export type RightSidebarInstanceAvailability = 'ready' | 'missing' | 'restoring' | 'failed'
+
 /** Immutable instance fields rendered by the workbench shell. */
 export interface RightSidebarInstance {
   readonly id: string
   readonly viewId: string
   readonly title: string
+  readonly preview: boolean
+  readonly availability: RightSidebarInstanceAvailability
 }
+
+/** One leaf in the sole session layout tree. */
+export interface RightSidebarGroup {
+  readonly kind: 'group'
+  readonly id: string
+  readonly tabOrientation: RightSidebarTabOrientation
+  readonly verticalRailWidth: number
+  readonly instances: readonly RightSidebarInstance[]
+  readonly activeInstanceId: string | undefined
+}
+
+/** One resizable branch in the sole session layout tree. */
+export interface RightSidebarSplit {
+  readonly kind: 'split'
+  readonly id: string
+  readonly axis: 'horizontal' | 'vertical'
+  readonly ratio: number
+  readonly first: RightSidebarLayoutNode
+  readonly second: RightSidebarLayoutNode
+}
+
+/** Recursive session layout node. */
+export type RightSidebarLayoutNode = RightSidebarGroup | RightSidebarSplit
 
 /** Current runtime-owned projection for one session. */
 export interface RightSidebarWorkbench {
-  readonly instances: readonly RightSidebarInstance[]
-  readonly activeInstanceId: string | undefined
+  readonly root: RightSidebarLayoutNode
+  readonly activeGroupId: string
+  readonly defaultTabOrientation: RightSidebarTabOrientation
 }
 
 /** Launcher row consumed by the launcher home. */
 export interface RightSidebarLauncherEntry {
   readonly id: string
   readonly label: string | (() => string)
+}
+
+/** Drop destination produced by panel hit testing. */
+export interface RightSidebarMoveTarget {
+  readonly groupId: string
+  readonly direction: RightSidebarDirection
+  readonly index?: number
 }
 
 /** Injected face of the details-column panel entry. */
@@ -151,21 +218,37 @@ export interface PanelInjected {
   }
   /** Activate this renderer binding while the panel is mounted. */
   mountWorkbench(): () => void
-  /** Select launcher home without removing open instances. */
+  /** Select launcher home in the active group. */
   showLauncher(): void
   /** Invoke a launcher for this renderer binding. */
   launch(launcherId: string): Promise<void>
   /** Activate one instance for this renderer binding. */
   activateInstance(id: string): void
+  /** Make one leaf the destination for launcher and default-open operations. */
+  activateGroup(groupId: string): void
+  /** Permanently pin an instance. */
+  pinInstance(id: string): void
   /** Close one instance for this renderer binding. */
   closeInstance(id: string): Promise<void>
+  /** Retry persisted feature-state reconstruction. */
+  retryRestore(id: string): Promise<void>
+  /** Move or split one instance, pinning it after placement. */
+  moveInstance(id: string, target: RightSidebarMoveTarget): void
+  /** Change one group's tab orientation. */
+  setGroupTabOrientation(groupId: string, orientation: RightSidebarTabOrientation): void
+  /** Retain one group's vertical rail width. */
+  setGroupVerticalRailWidth(groupId: string, width: number): void
+  /** Change the default used by subsequently created groups. */
+  setDefaultTabOrientation(orientation: RightSidebarTabOrientation): void
+  /** Resize one split branch. */
+  setSplitRatio(splitId: string, ratio: number): void
 }
 
 /** Injected face of the application navbar toggle. */
 export interface ToggleInjected {
-  /** Toggle the details column from its resolved visible state through ctx.layout. */
+  /** Toggle the details column through ctx.layout. */
   toggleDetails(detailsOpen: boolean): void
-  /** Toggle whether the open details column occupies all space after the left sidebar. */
+  /** Toggle whether details occupies all space after the left sidebar. */
   toggleDetailsMaximized(): void
 }
 
@@ -178,7 +261,7 @@ declare module '@deepseek-ai/cordis' {
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
-    /** Static feature renderer selected by each runtime-owned instance. */
+    /** Static renderer selected by each runtime-owned instance. */
     'rightbar.view': {
       kind: 'list'
       scope: 'session'

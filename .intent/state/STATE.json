@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.3.0-draft.19",
+  "revision": "0.4.0-draft.1",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -33,7 +33,8 @@
     "../logs/2026-09-05-sidebar-maximization-and-host-ownership.md",
     "../logs/2026-09-05-multi-instance-workbench.md",
     "../logs/2026-09-05-workbench-verification.md",
-    "../logs/2026-09-05-live-workbench.md"
+    "../logs/2026-09-05-live-workbench.md",
+    "../logs/2026-09-05-grouped-workbench.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -49,8 +50,8 @@
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
       "revision": "a6e9cdfb14b6a376f619e434745f78d038cf4595",
-      "scope": "multi-instance alpha.2 realization source",
-      "worktree": "plugin-owned source, reversible Host patch, and local deployment evidence"
+      "scope": "historical candidate 11 source and grouped-workbench synthesis baseline",
+      "worktree": "plugin-owned source, reversible Host patch, and historical deployment evidence"
     },
     {
       "id": "target.deepseek-harness",
@@ -78,7 +79,5 @@
     }
   ],
   "activeLocks": [],
-  "candidateLocks": [
-    "../locks/right-sidebar-linux-web-0.3.0-candidate.11/LOCK.json"
-  ]
+  "candidateLocks": []
 }

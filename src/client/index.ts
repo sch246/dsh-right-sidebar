@@ -11,9 +11,13 @@ import { PANEL_CSS } from './panel.css'
 import type {
   RightSidebarInstanceInput,
   RightSidebarInstanceUpdate,
+  RightSidebarInstanceViewUpdate,
   RightSidebarLauncher,
+  RightSidebarOpenOptions,
+  RightSidebarRestorer,
   RightSidebarService,
   RightSidebarSessionId,
+  RightSidebarTarget,
   ToggleInjected,
 } from './contract'
 
@@ -23,9 +27,21 @@ export {
   type RightSidebarInstance,
   type RightSidebarInstanceInput,
   type RightSidebarInstanceUpdate,
+  type RightSidebarInstanceViewUpdate,
+  type RightSidebarDirection,
+  type RightSidebarGroup,
+  type RightSidebarInstanceAvailability,
+  type RightSidebarLayoutNode,
   type RightSidebarLauncher,
+  type RightSidebarOpenOptions,
+  type RightSidebarRestoreContext,
+  type RightSidebarRestoreResult,
+  type RightSidebarRestorer,
   type RightSidebarService,
   type RightSidebarSessionId,
+  type RightSidebarSplit,
+  type RightSidebarTabOrientation,
+  type RightSidebarTarget,
   type RightbarViewOwnerProps,
 } from './contract'
 
@@ -41,16 +57,27 @@ export function apply(ctx: ClientContext): void {
   const service: RightSidebarService = Object.freeze({
     registerLauncher: (launcher: RightSidebarLauncher): (() => void) =>
       runtime.registerLauncher(launcher),
+    registerRestorer: (viewId: string, restore: RightSidebarRestorer): (() => void) =>
+      runtime.registerRestorer(viewId, restore),
     launch: async (
       sessionId: RightSidebarSessionId,
       launcherId: string,
       selection?: unknown,
     ): Promise<void> => runtime.launch(sessionId, launcherId, selection),
-    openInstance: (sessionId: RightSidebarSessionId, instance: RightSidebarInstanceInput): void => {
-      runtime.openInstance(sessionId, instance)
-    },
+    openInstance: (
+      sessionId: RightSidebarSessionId,
+      instance: RightSidebarInstanceInput,
+      options?: RightSidebarOpenOptions,
+    ): Promise<string> => runtime.openInstance(sessionId, instance, options),
+    getInstanceGroup: (sessionId: RightSidebarSessionId, id: string): string =>
+      runtime.getInstanceGroup(sessionId, id),
+    resolveTarget: (sessionId: RightSidebarSessionId, target: RightSidebarTarget): string | undefined =>
+      runtime.resolveTarget(sessionId, target),
     activateInstance: (sessionId: RightSidebarSessionId, id: string): void => {
       runtime.activateInstance(sessionId, id)
+    },
+    pinInstance: (sessionId: RightSidebarSessionId, id: string): void => {
+      runtime.pinInstance(sessionId, id)
     },
     updateInstance: (
       sessionId: RightSidebarSessionId,
@@ -58,6 +85,13 @@ export function apply(ctx: ClientContext): void {
       update: RightSidebarInstanceUpdate,
     ): void => {
       runtime.updateInstance(sessionId, id, update)
+    },
+    switchInstanceView: (
+      sessionId: RightSidebarSessionId,
+      id: string,
+      update: RightSidebarInstanceViewUpdate,
+    ): void => {
+      runtime.switchInstanceView(sessionId, id, update)
     },
     closeInstance: (sessionId: RightSidebarSessionId, id: string): Promise<void> =>
       runtime.closeInstance(sessionId, id),

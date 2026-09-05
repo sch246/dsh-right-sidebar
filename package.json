@@ -1,7 +1,7 @@
 {
   "name": "@dsh-external/dsh-right-sidebar",
   "version": "0.0.1",
-  "description": "DSH Web 右侧边栏工作台：全高 details 列、功能启动器和会话内多实例视图",
+  "description": "DSH Web 右侧边栏工作台：全高 details 列、分组标签、停靠预览与浏览器恢复",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",

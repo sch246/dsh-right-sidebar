@@ -5,11 +5,13 @@ import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { apply, inject } from '../src/client/index'
 import type { PanelInjected } from '../src/client/contract'
+import { groupsOf } from '../src/client/layout'
 import {
   editor, preview, rightbarConsumer, type RightbarConsumerEvent,
 } from './fixtures/rightbar-consumer'
 
 it('carries an external consumer through the stable workbench lifecycle', async () => {
+  localStorage.clear()
   const ctx = new Context()
   const slotsFiber = ctx.plugin(SlotRegistry)
   await slotsFiber.await()
@@ -45,7 +47,7 @@ it('carries an external consumer through the stable workbench lifecycle', async 
   const panel = (details.inject as unknown as (sessionId: string) => PanelInjected)('session-1')
   const unmount = panel.mountWorkbench()
   await ctx.rightSidebar.launch('session-1', 'editor', 'draft')
-  expect(panel.hooks.workbench.getSnapshot()).toMatchObject({
+  expect(groupsOf(panel.hooks.workbench.getSnapshot().root)[0]).toMatchObject({
     activeInstanceId: 'editor:draft',
     instances: [{ id: 'editor:draft', viewId: 'editor', title: 'Editor draft' }],
   })

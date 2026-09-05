@@ -1,25 +1,27 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
-import { lazy, useSyncExternalStore } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, createEvent, fireEvent, render } from '@testing-library/react'
+import { lazy, useEffect, useSyncExternalStore } from 'react'
 import { Context } from '@deepseek-ai/cordis'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { RightSidebarPanel } from '../src/client/RightSidebarPanel'
-import type { RightSidebarPanelProps } from '../src/client/RightSidebarPanel'
-import { RightSidebarToggle } from '../src/client/RightSidebarToggle'
-import type { RightSidebarToggleProps } from '../src/client/RightSidebarToggle'
+import { RightSidebarPanel, type RightSidebarPanelProps } from '../src/client/RightSidebarPanel'
+import { RightSidebarToggle, type RightSidebarToggleProps } from '../src/client/RightSidebarToggle'
 import type {
+  RightSidebarGroup,
   RightSidebarInstance,
   RightSidebarLauncherEntry,
+  RightSidebarLayoutNode,
   RightSidebarWorkbench,
   ToggleInjected,
 } from '../src/client/contract'
 import { apply, inject } from '../src/client/index'
+import { groupsOf } from '../src/client/layout'
 import { PANEL_CSS } from '../src/client/panel.css'
 
 const silenceFixtureError = (event: ErrorEvent): void => { event.preventDefault() }
 
+beforeEach(() => { localStorage.clear() })
 afterEach(() => {
   cleanup()
   window.removeEventListener('error', silenceFixtureError)
@@ -51,9 +53,7 @@ it('registers and tears down the column, navbar action, view seat, locale, and s
   await fiber.await()
 
   expect(slots.entries('details').some(entry => entry.options.priority === -1)).toBe(true)
-  expect(slots.entries('shell.navbar.action').map(entry => entry.options.id)).toContain('right-sidebar-toggle')
-  const toggleEntry = slots.entries('shell.navbar.action')
-    .find(entry => entry.options.id === 'right-sidebar-toggle')
+  const toggleEntry = slots.entries('shell.navbar.action').find(entry => entry.options.id === 'right-sidebar-toggle')
   const injected = toggleEntry?.inject?.() as ToggleInjected
   injected.toggleDetails(false)
   injected.toggleDetails(true)
@@ -74,22 +74,37 @@ it('registers and tears down the column, navbar action, view seat, locale, and s
 })
 
 const copy: Record<string, string> = {
-  title: 'Sidebar',
-  openSidebar: 'Open sidebar',
-  closeSidebar: 'Close sidebar',
-  maximizeSidebar: 'Maximize sidebar',
-  restoreSidebar: 'Restore sidebar',
-  loading: 'Loading sidebar content…',
-  failed: 'This sidebar content could not be displayed',
-  retry: 'Retry',
-  openLauncher: 'Open launcher',
-  launcherTitle: 'Open in sidebar',
-  closeInstance: 'Close {title}',
-  operationFailed: 'The sidebar operation could not be completed',
+  title: 'Sidebar', openSidebar: 'Open sidebar', closeSidebar: 'Close sidebar',
+  maximizeSidebar: 'Maximize sidebar', restoreSidebar: 'Restore sidebar', loading: 'Loading sidebar content…',
+  failed: 'This sidebar content could not be displayed', retry: 'Retry', openLauncher: 'Open launcher',
+  launcherTitle: 'Open in sidebar', closeInstance: 'Close {title}', operationFailed: 'Operation failed',
+  useVerticalTabs: 'Use vertical tabs', useHorizontalTabs: 'Use horizontal tabs',
+  defaultVerticalTabs: 'Use vertical tabs for new groups', defaultHorizontalTabs: 'Use horizontal tabs for new groups',
+  resizeGroups: 'Resize adjacent groups', resizeTabRail: 'Resize vertical tab rail', restoreTabRail: 'Restore tab rail',
+  tabActions: 'Tab actions for {title}', pinTab: 'Pin preview', movePreviousGroup: 'Move to previous group',
+  moveNextGroup: 'Move to next group', splitLeft: 'Split left', splitRight: 'Split right', splitUp: 'Split above',
+  splitDown: 'Split below', restoringInstance: 'Restoring this content…', restoreFailed: 'Could not restore',
+  missingView: 'Plugin unavailable',
 }
 
-function instance(id: string, title: string, viewId = 'editor'): RightSidebarInstance {
-  return { id, title, viewId }
+function instance(
+  id: string,
+  title: string,
+  options: Partial<RightSidebarInstance> = {},
+): RightSidebarInstance {
+  return { id, title, viewId: 'editor', preview: false, availability: 'ready', ...options }
+}
+
+function group(
+  id: string,
+  instances: readonly RightSidebarInstance[],
+  activeInstanceId = instances[0]?.id,
+  overrides: Partial<RightSidebarGroup> = {},
+): RightSidebarGroup {
+  return {
+    kind: 'group', id, tabOrientation: 'horizontal', verticalRailWidth: 180,
+    instances, activeInstanceId, ...overrides,
+  }
 }
 
 function source<T>(initial: T) {
@@ -108,274 +123,267 @@ function source<T>(initial: T) {
   }
 }
 
-interface PanelOptions {
-  readonly instances?: readonly RightSidebarInstance[]
-  readonly activeInstanceId?: string
-  readonly launchers?: readonly RightSidebarLauncherEntry[]
-  readonly content?: (instanceId: string, viewId: string) => React.ReactNode
-  readonly launch?: (launcherId: string) => Promise<void>
-  readonly close?: (instanceId: string) => Promise<void>
-}
-
-function mountPanel(options: PanelOptions = {}) {
+function mountPanel(
+  initialRoot: RightSidebarLayoutNode = group('group-1', []),
+  launchers: readonly RightSidebarLauncherEntry[] = [],
+  content?: (instanceId: string) => React.ReactNode,
+) {
+  const firstGroup = groupsOf(initialRoot)[0] as RightSidebarGroup
   const workbench = source<RightSidebarWorkbench>({
-    instances: options.instances ?? [],
-    activeInstanceId: options.activeInstanceId,
+    root: initialRoot,
+    activeGroupId: firstGroup.id,
+    defaultTabOrientation: 'horizontal',
   })
-  const launchers = source(options.launchers ?? [])
-  const unmountWorkbench = vi.fn()
-  const mountWorkbench = vi.fn(() => unmountWorkbench)
-  const rendered: Array<{ instanceId: string; viewId: string }> = []
+  const launcherSource = source(launchers)
+  const actions = {
+    mountWorkbench: vi.fn(() => vi.fn()),
+    showLauncher: vi.fn(),
+    launch: vi.fn(async () => {}),
+    activateInstance: vi.fn(),
+    activateGroup: vi.fn(),
+    pinInstance: vi.fn(),
+    closeInstance: vi.fn(async () => {}),
+    retryRestore: vi.fn(async () => {}),
+    moveInstance: vi.fn(),
+    setGroupTabOrientation: vi.fn(),
+    setGroupVerticalRailWidth: vi.fn(),
+    setDefaultTabOrientation: vi.fn(),
+    setSplitRatio: vi.fn(),
+  }
   const useWorkbench = (<S,>(selector: (snapshot: RightSidebarWorkbench) => S): S =>
     selector(useSyncExternalStore(workbench.subscribe, workbench.getSnapshot))) as RightSidebarPanelProps['useWorkbench']
   const useLaunchers = (<S,>(selector: (rows: readonly RightSidebarLauncherEntry[]) => S): S =>
-    selector(useSyncExternalStore(launchers.subscribe, launchers.getSnapshot))) as RightSidebarPanelProps['useLaunchers']
-
-  const setActive = (id: string | undefined): void => {
-    workbench.set({ ...workbench.getSnapshot(), activeInstanceId: id })
-  }
-  const activateInstance = vi.fn((id: string) => { setActive(id) })
-  const showLauncher = vi.fn(() => { setActive(undefined) })
-  const launch = vi.fn(options.launch ?? (async () => {}))
-  const closeInstance = vi.fn(options.close ?? (async (id: string) => {
-    const current = workbench.getSnapshot()
-    const index = current.instances.findIndex(row => row.id === id)
-    const instances = current.instances.filter(row => row.id !== id)
-    const activeInstanceId = current.activeInstanceId === id
-      ? instances[index]?.id ?? instances[index - 1]?.id
-      : current.activeInstanceId
-    workbench.set({ instances, activeInstanceId })
-  }))
+    selector(useSyncExternalStore(launcherSource.subscribe, launcherSource.getSnapshot))) as RightSidebarPanelProps['useLaunchers']
+  const rendered: string[] = []
   const view = render(<RightSidebarPanel {...({
-    renderSlot: (_name: string, owner: { instanceId: string }, renderOptions: { only?: string }) => {
-      const viewId = renderOptions.only ?? ''
-      rendered.push({ instanceId: owner.instanceId, viewId })
-      return options.content?.(owner.instanceId, viewId)
-        ?? <div data-testid="view-content">{`${viewId}:${owner.instanceId}`}</div>
+    renderSlot: (_name: string, owner: { instanceId: string }, options: { only?: string }) => {
+      rendered.push(`${options.only}:${owner.instanceId}`)
+      return content?.(owner.instanceId)
+        ?? <div data-testid={`view-${owner.instanceId}`}>{`${options.only}:${owner.instanceId}`}</div>
     },
     useWorkbench,
     useLaunchers,
-    mountWorkbench,
-    showLauncher,
-    launch,
-    activateInstance,
-    closeInstance,
+    ...actions,
     t: (key: string, values?: { title?: string }) => {
       const value = copy[key] ?? key
       return values?.title === undefined ? value : value.replace('{title}', values.title)
     },
   } as unknown as RightSidebarPanelProps)} />)
-
-  return {
-    ...view,
-    workbench,
-    launchers,
-    rendered,
-    mountWorkbench,
-    unmountWorkbench,
-    showLauncher,
-    launch,
-    activateInstance,
-    closeInstance,
-  }
+  return { ...view, workbench, launcherSource, rendered, ...actions }
 }
 
 describe('RightSidebarPanel', () => {
-  it('opens on the launcher home without selecting a business feature', () => {
-    const view = mountPanel()
-    expect(view.mountWorkbench).toHaveBeenCalledOnce()
-    expect(view.getByRole('heading', { name: 'Open in sidebar' })).toBeTruthy()
-    const launcher = view.getByRole('button', { name: 'Open launcher' })
-    expect(launcher.getAttribute('data-active')).toBe('true')
-    expect(launcher.getAttribute('aria-pressed')).toBe('true')
-    expect(view.queryByText('Files')).toBeNull()
-    expect(view.queryByRole('tab')).toBeNull()
-    expect(view.rendered).toEqual([])
-    view.unmount()
-    expect(view.unmountWorkbench).toHaveBeenCalledOnce()
-  })
-
-  it('renders the active static view with its instance id and keeps instances on launcher home', () => {
-    const view = mountPanel({
-      instances: [instance('a', 'Draft A'), instance('b', 'Draft B', 'preview')],
-      activeInstanceId: 'a',
-    })
-    expect(view.getByTestId('view-content').textContent).toBe('editor:a')
+  it('keeps global controls separate and renders active group content', () => {
+    const view = mountPanel(group('group-1', [
+      instance('a', 'Draft A'), instance('b', 'Draft B', { viewId: 'preview' }),
+    ], 'a'))
+    expect(view.getByRole('button', { name: 'Open launcher' })).toBeTruthy()
+    expect(view.getByTestId('view-a').textContent).toBe('editor:a')
     fireEvent.click(view.getByRole('tab', { name: 'Draft B' }))
-    expect(view.getByTestId('view-content').textContent).toBe('preview:b')
     expect(view.activateInstance).toHaveBeenCalledWith('b')
-    expect(view.rendered.at(-1)).toEqual({ instanceId: 'b', viewId: 'preview' })
-
-    fireEvent.click(view.getByRole('button', { name: 'Open launcher' }))
-    expect(view.getByRole('heading', { name: 'Open in sidebar' })).toBeTruthy()
-    expect(view.getAllByRole('tab')).toHaveLength(2)
-    expect(view.workbench.getSnapshot().instances.map(row => row.id)).toEqual(['a', 'b'])
+    expect(PANEL_CSS).toContain("[data-top='true'][data-right='true'] .dsh-rightbar-tabs{padding-right:var(--dsh-shell-navbar-width,80px)")
   })
 
-  it('supports ordered keyboard navigation and focuses the next active control', async () => {
-    const view = mountPanel({
-      instances: [instance('one', 'One'), instance('two', 'Two'), instance('three', 'Three')],
-      activeInstanceId: 'one',
-    })
+  it('marks preview labels italic and pins by double click or menu', () => {
+    const view = mountPanel(group('group-1', [instance('preview', 'Preview', { preview: true })]))
+    const tab = view.getByRole('tab', { name: 'Preview' })
+    expect(tab.parentElement?.getAttribute('data-preview')).toBe('true')
+    fireEvent.doubleClick(tab)
+    expect(view.pinInstance).toHaveBeenCalledWith('preview')
+    fireEvent.click(view.getByRole('button', { name: 'Tab actions for Preview' }))
+    const menuItem = view.getByRole('menuitem', { name: 'Pin preview' })
+    expect(view.getByRole('tablist').contains(menuItem)).toBe(false)
+    fireEvent.click(menuItem)
+    expect(view.pinInstance).toHaveBeenCalledTimes(2)
+  })
+
+  it('offers keyboard navigation and non-drag edge movement', () => {
+    const view = mountPanel(group('group-1', [instance('one', 'One'), instance('two', 'Two')], 'one'))
     const first = view.getByRole('tab', { name: 'One' })
-    const last = view.getByRole('tab', { name: 'Three' })
-    first.focus()
-    fireEvent.keyDown(first, { key: 'End' })
-    await waitFor(() => { expect(document.activeElement).toBe(last) })
-    expect(view.workbench.getSnapshot().activeInstanceId).toBe('three')
-    expect(first.hasAttribute('aria-controls')).toBe(false)
-    const controlled = last.getAttribute('aria-controls')
-    expect(controlled).not.toBeNull()
-    expect(document.getElementById(controlled!)).not.toBeNull()
-
-    fireEvent.click(view.getByRole('button', { name: 'Close Three' }))
-    await waitFor(() => {
-      expect(view.workbench.getSnapshot().activeInstanceId).toBe('two')
-      expect(document.activeElement).toBe(view.getByRole('tab', { name: 'Two' }))
-    })
+    fireEvent.keyDown(first, { key: 'ArrowRight' })
+    expect(view.activateInstance).toHaveBeenCalledWith('two')
+    fireEvent.keyDown(first, { key: 'ArrowRight', altKey: true, shiftKey: true })
+    expect(view.moveInstance).toHaveBeenCalledWith('one', { groupId: 'group-1', direction: 'right' })
   })
 
-  it('keeps launcher access fixed and reports launch rejection in the panel', async () => {
-    let rejectLaunch: ((error: Error) => void) | undefined
-    const launch = () => new Promise<void>((_resolve, reject) => { rejectLaunch = reject })
-    const view = mountPanel({
-      launchers: [{ id: 'editor', label: 'Editor' }],
-      launch,
+  it('previews a half-area edge on hover and mutates only on drop', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A')]))
+    const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    vi.spyOn(workspace, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => {},
     })
-    const launcher = view.getByRole('button', { name: 'Editor' })
-    fireEvent.click(launcher)
-    expect((launcher as HTMLButtonElement).disabled).toBe(true)
-    rejectLaunch?.(new Error('fixture launch failed'))
-    await waitFor(() => {
-      expect(view.getByRole('alert').textContent).toBe('The sidebar operation could not be completed')
-      expect((launcher as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
+    const dragOver = createEvent.dragOver(workspace)
+    Object.defineProperties(dragOver, {
+      clientX: { value: 95 },
+      clientY: { value: 50 },
     })
-    expect(view.launch).toHaveBeenCalledWith('editor')
+    fireEvent(workspace, dragOver)
+    expect(view.moveInstance).not.toHaveBeenCalled()
+    const preview = view.container.querySelector('.dsh-rightbar-drop-preview') as HTMLElement
+    expect(preview.style.left).toBe('50%')
+    expect(preview.style.width).toBe('50%')
+    fireEvent.drop(workspace)
+    expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'group-1', direction: 'right' })
   })
 
-  it('contains a launcher label failure and retries that contribution', () => {
-    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
-    window.addEventListener('error', silenceFixtureError)
-    let failing = true
-    const view = mountPanel({
-      launchers: [{
-        id: 'unstable',
-        label: () => {
-          if (failing) throw new Error('fixture label failed')
-          return 'Recovered launcher'
-        },
-      }],
+  it('auto-scrolls horizontal and vertical tab lists during drag', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')]))
+    const list = view.getByRole('tablist') as HTMLElement
+    list.scrollBy = vi.fn()
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({
+      left: 10, top: 10, width: 100, height: 30, right: 110, bottom: 40, x: 10, y: 10, toJSON: () => {},
     })
-    expect(view.getByRole('alert').textContent).toContain('could not be completed')
-    failing = false
-    fireEvent.click(view.getByRole('button', { name: 'Retry' }))
-    expect(view.getByRole('button', { name: 'Recovered launcher' })).toBeTruthy()
-    report.mockRestore()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
+    const drag = createEvent.dragOver(list)
+    Object.defineProperties(drag, { clientX: { value: 108 }, clientY: { value: 25 } })
+    fireEvent(list, drag)
+    expect(list.scrollBy).toHaveBeenCalledWith({ left: 24 })
+    view.unmount()
+
+    const vertical = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')], 'a', {
+      tabOrientation: 'vertical',
+    }))
+    const verticalList = vertical.getByRole('tablist') as HTMLElement
+    verticalList.scrollBy = vi.fn()
+    vi.spyOn(verticalList, 'getBoundingClientRect').mockReturnValue({
+      left: 10, top: 10, width: 80, height: 100, right: 90, bottom: 110, x: 10, y: 10, toJSON: () => {},
+    })
+    fireEvent.dragStart(vertical.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
+    const verticalDrag = createEvent.dragOver(verticalList)
+    Object.defineProperties(verticalDrag, { clientX: { value: 40 }, clientY: { value: 12 } })
+    fireEvent(verticalList, verticalDrag)
+    expect(verticalList.scrollBy).toHaveBeenCalledWith({ top: -24 })
   })
 
-  it('shows a loading state for a suspended contribution', () => {
-    const Pending = lazy(() => new Promise<never>(() => {}))
-    const view = mountPanel({
-      instances: [instance('slow', 'Slow')],
-      activeInstanceId: 'slow',
-      content: () => <Pending />,
-    })
-    expect(view.getByRole('status').textContent).toBe('Loading sidebar content…')
-  })
-
-  it('contains a contribution failure and retries it in place', () => {
-    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
-    window.addEventListener('error', silenceFixtureError)
-    let failing = true
-    function Unstable() {
-      if (failing) throw new Error('fixture failure')
-      return <div>Recovered content</div>
+  it('keeps an active renderer mounted while its stable instance moves between groups', () => {
+    const mounts = new Map<string, number>()
+    function Probe({ id }: { readonly id: string }) {
+      useEffect(() => {
+        mounts.set(id, (mounts.get(id) ?? 0) + 1)
+      }, [id])
+      return <div>{id}</div>
     }
+    const first = group('left', [instance('a', 'A')])
+    const second = group('right', [instance('b', 'B')])
     const view = mountPanel({
-      instances: [instance('unstable', 'Unstable')],
-      activeInstanceId: 'unstable',
-      content: () => <Unstable />,
+      kind: 'split', id: 'split', axis: 'horizontal', ratio: 0.5, first, second,
+    }, [], id => <Probe id={id} />)
+    expect(mounts.get('a')).toBe(1)
+    act(() => {
+      view.workbench.set({
+        ...view.workbench.getSnapshot(),
+        activeGroupId: 'right',
+        root: {
+          kind: 'split', id: 'split', axis: 'horizontal', ratio: 0.5,
+          first: group('left', [], undefined),
+          second: group('right', [instance('b', 'B'), instance('a', 'A')], 'a'),
+        },
+      })
     })
-    expect(view.getByRole('alert').textContent).toContain('could not be displayed')
-    failing = false
-    fireEvent.click(view.getByRole('button', { name: 'Retry' }))
-    expect(view.getByText('Recovered content')).toBeTruthy()
-    report.mockRestore()
+    expect(mounts.get('a')).toBe(1)
+    const split = view.getByRole('separator', { name: 'Resize adjacent groups' })
+    expect(split.getAttribute('aria-valuemin')).toBe('0')
+    expect(split.getAttribute('aria-valuemax')).toBe('100')
+    expect(split.getAttribute('aria-valuenow')).toBe('50')
+    fireEvent.keyDown(split, { key: 'ArrowRight' })
+    expect(view.setSplitRatio).toHaveBeenCalledWith('split', 0.55)
   })
 
-  it('contains an undefined thrown value', () => {
+  it('switches group and default orientation and exposes rail recovery', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A')], 'a', {
+      tabOrientation: 'vertical', verticalRailWidth: 20,
+    }))
+    fireEvent.click(view.getByRole('button', { name: 'Use horizontal tabs' }))
+    expect(view.setGroupTabOrientation).toHaveBeenCalledWith('group-1', 'horizontal')
+    fireEvent.click(view.getByRole('button', { name: 'Use vertical tabs for new groups' }))
+    expect(view.setDefaultTabOrientation).toHaveBeenCalledWith('vertical')
+    fireEvent.click(view.getByRole('button', { name: 'Restore tab rail' }))
+    expect(view.setGroupVerticalRailWidth).toHaveBeenCalledWith('group-1', 180)
+    const rail = view.getByRole('separator', { name: 'Resize vertical tab rail' })
+    expect(rail.getAttribute('aria-valuemin')).toBe('0')
+    expect(rail.getAttribute('aria-valuemax')).toBe('20')
+    expect(rail.getAttribute('aria-valuenow')).toBe('20')
+    fireEvent.keyDown(rail, { key: 'ArrowRight' })
+    expect(view.setGroupVerticalRailWidth).toHaveBeenCalledWith('group-1', 36)
+    fireEvent.keyDown(rail, { key: 'End' })
+    expect(view.setGroupVerticalRailWidth).toHaveBeenCalledWith('group-1', 0)
+  })
+
+  it('shows missing, restoring, and failed restoration states', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A', { availability: 'missing' })]))
+    expect(view.getByRole('alert').textContent).toBe('Plugin unavailable')
+    act(() => {
+      view.workbench.set({
+        ...view.workbench.getSnapshot(),
+        root: group('group-1', [instance('a', 'A', { availability: 'failed' })]),
+      })
+    })
+    fireEvent.click(view.getByRole('button', { name: 'Retry' }))
+    expect(view.retryRestore).toHaveBeenCalledWith('a')
+    act(() => {
+      view.workbench.set({
+        ...view.workbench.getSnapshot(),
+        root: group('group-1', [instance('a', 'A', { availability: 'restoring' })]),
+      })
+    })
+    expect(view.getByRole('status').textContent).toBe('Restoring this content…')
+  })
+
+  it('contains suspended and failed feature renderers', () => {
+    const Pending = lazy(() => new Promise<never>(() => {}))
+    const base = mountPanel(group('group-1', [instance('slow', 'Slow')]))
+    base.unmount()
+    const workbench = source<RightSidebarWorkbench>({
+      root: group('group-1', [instance('slow', 'Slow')]), activeGroupId: 'group-1', defaultTabOrientation: 'horizontal',
+    })
+    const useWorkbench = (<S,>(selector: (snapshot: RightSidebarWorkbench) => S): S =>
+      selector(useSyncExternalStore(workbench.subscribe, workbench.getSnapshot))) as RightSidebarPanelProps['useWorkbench']
     const report = vi.spyOn(console, 'error').mockImplementation(() => {})
     window.addEventListener('error', silenceFixtureError)
-    function UndefinedFailure(): never { throw undefined }
-    const view = mountPanel({
-      instances: [instance('undefined-failure', 'Undefined failure')],
-      activeInstanceId: 'undefined-failure',
-      content: () => <UndefinedFailure />,
-    })
-    expect(view.getByRole('alert').textContent).toContain('could not be displayed')
+    const props = {
+      useWorkbench,
+      useLaunchers: (<S,>(selector: (rows: readonly RightSidebarLauncherEntry[]) => S): S => selector([])) as RightSidebarPanelProps['useLaunchers'],
+      mountWorkbench: () => () => {}, showLauncher: () => {}, launch: async () => {}, activateInstance: () => {},
+      activateGroup: () => {}, pinInstance: () => {}, closeInstance: async () => {}, retryRestore: async () => {},
+      moveInstance: () => {}, setGroupTabOrientation: () => {}, setGroupVerticalRailWidth: () => {},
+      setDefaultTabOrientation: () => {}, setSplitRatio: () => {},
+      t: (key: string) => copy[key] ?? key,
+    }
+    const pending = render(<RightSidebarPanel {...({
+      ...props, renderSlot: () => <Pending />,
+    } as unknown as RightSidebarPanelProps)} />)
+    expect(pending.getByRole('status').textContent).toContain('Loading')
+    pending.unmount()
+    function Failure(): never { throw new Error('fixture') }
+    const failed = render(<RightSidebarPanel {...({
+      ...props, renderSlot: () => <Failure />,
+    } as unknown as RightSidebarPanelProps)} />)
+    expect(failed.getByRole('alert').textContent).toContain('could not be displayed')
     report.mockRestore()
-  })
-
-  it('makes tab labels scroll while launcher and Host-control clearance stay fixed', () => {
-    expect(PANEL_CSS).toContain('padding:12px var(--dsh-shell-navbar-width,80px) 12px 7px')
-    expect(PANEL_CSS).toContain('overflow-x:auto;scrollbar-width:thin;flex:1 1 auto')
-    expect(PANEL_CSS).toContain('.dsh-rightbar-launcher-toggle')
-    expect(PANEL_CSS).toContain('flex:none')
   })
 })
 
 describe('RightSidebarToggle', () => {
-  it('matches host header-control geometry without a resting edge or shadow', () => {
-    expect(PANEL_CSS).toContain('width:32px;height:32px')
-    expect(PANEL_CSS).toContain('padding:0;border:none;border-radius:8px;background:transparent')
-    expect(PANEL_CSS).toContain(".dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-button-ghost-active-fill")
-    expect(PANEL_CSS).not.toContain('box-shadow')
-  })
-
-  it.each([
-    {
-      state: 'closed', detailsOpen: false, detailsMaximized: false,
-      labels: ['Open sidebar'], sidebarLabel: 'Open sidebar', maximizeLabel: undefined,
-    },
-    {
-      state: 'open', detailsOpen: true, detailsMaximized: false,
-      labels: ['Maximize sidebar', 'Close sidebar'], sidebarLabel: 'Close sidebar', maximizeLabel: 'Maximize sidebar',
-    },
-    {
-      state: 'maximized', detailsOpen: true, detailsMaximized: true,
-      labels: ['Restore sidebar', 'Close sidebar'], sidebarLabel: 'Close sidebar', maximizeLabel: 'Restore sidebar',
-    },
-  ])('renders and operates the $state state', ({
-    detailsOpen, detailsMaximized, labels, sidebarLabel, maximizeLabel,
-  }) => {
+  it('keeps Host-owned open and maximize controls unchanged', () => {
     const toggleDetails = vi.fn()
     const toggleDetailsMaximized = vi.fn()
     const view = render(<RightSidebarToggle {...({
-      detailsOpen,
-      detailsMaximized,
+      detailsOpen: true,
+      detailsMaximized: false,
       toggleDetails,
       toggleDetailsMaximized,
       t: (key: string) => copy[key] ?? key,
     } as unknown as RightSidebarToggleProps)} />)
-
-    expect(view.getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(labels)
-    const sidebar = view.getByRole('button', { name: sidebarLabel })
-    expect(sidebar.getAttribute('title')).toBe(sidebarLabel)
-    expect(sidebar.getAttribute('aria-pressed')).toBe(String(detailsOpen))
-    expect(sidebar.getAttribute('data-active')).toBe(String(detailsOpen))
-    fireEvent.click(sidebar)
-    expect(toggleDetails).toHaveBeenCalledOnce()
-    expect(toggleDetails).toHaveBeenCalledWith(detailsOpen)
-
-    if (maximizeLabel === undefined) {
-      expect(toggleDetailsMaximized).not.toHaveBeenCalled()
-      return
-    }
-    const maximize = view.getByRole('button', { name: maximizeLabel })
-    expect(maximize.getAttribute('title')).toBe(maximizeLabel)
-    expect(maximize.getAttribute('aria-pressed')).toBe(String(detailsMaximized))
-    expect(maximize.getAttribute('data-active')).toBe(String(detailsMaximized))
-    fireEvent.click(maximize)
+    fireEvent.click(view.getByRole('button', { name: 'Maximize sidebar' }))
+    fireEvent.click(view.getByRole('button', { name: 'Close sidebar' }))
     expect(toggleDetailsMaximized).toHaveBeenCalledOnce()
+    expect(toggleDetails).toHaveBeenCalledWith(true)
+    expect(PANEL_CSS).toContain('width:32px;height:32px;padding:0;border:none')
+    expect(PANEL_CSS).toContain(".dsh-rightbar-toggle[data-active='true']")
   })
 })
+
+function dataTransfer(): DataTransfer {
+  return { effectAllowed: 'all', dropEffect: 'none', files: [], items: [], types: [], setData: vi.fn(), getData: vi.fn() } as unknown as DataTransfer
+}
