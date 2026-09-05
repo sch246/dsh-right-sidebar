@@ -1,0 +1,128 @@
+{
+  "observedOn": "2026-09-05",
+  "source": {
+    "sidebar": "24207ab593aa516678936666d403238db2bdce9a",
+    "viewer": "08f40e1c57ff171388e707a1eab8428631dcc89d",
+    "manager": "e7da9510f9e1c9ae8ce1f713e6dcfb7544142d95",
+    "harness": "0a53fb55bea101816fa226bb964ae2bed71c343b"
+  },
+  "tests": {
+    "sidebar": 28,
+    "viewerEditor": 75,
+    "manager": 36
+  },
+  "browser": {
+    "privateFullComposition": "passed",
+    "liveColdReadOnly": "passed",
+    "pageErrors": 0,
+    "failedRequests": 0,
+    "consoleErrors": 0
+  },
+  "installed": {
+    "dependencies": 17,
+    "bundles": 18,
+    "editorIsBundle": false,
+    "mainPID": 1913261,
+    "automaticRestarts": 0
+  },
+  "artifacts": [
+    {
+      "path": "/root/dsh-right-sidebar/lib/client.js",
+      "digest": "sha256:a2396b3973a0b09ac41b54c41ca62ec2a8e6204ed065ecc42ae6b501d6c92998"
+    },
+    {
+      "path": "/root/dsh-file-viewer/packages/dsh-file-viewer/lib/client.js",
+      "digest": "sha256:013c3bf4ae31ff759af8aff05db539f8d9489aa73b18d6f23fd8a09c5af478ba"
+    },
+    {
+      "path": "/root/dsh-file-viewer/packages/dsh-file-viewer-editor/lib/client.js",
+      "digest": "sha256:a9488382a8ff1ea4c3a2f64a73e9030c04ff39b794e89275dac3618b516c4729"
+    },
+    {
+      "path": "/root/dsh-file-manager/packages/dsh-file-manager/lib/client.js",
+      "digest": "sha256:628cdc395d6850b25f9d2835197bf036fba55af0f42d23f8f347c72e7a63d55d"
+    },
+    {
+      "path": "/root/dsh-file-manager/packages/dsh-file-manager/lib/index.js",
+      "digest": "sha256:0df2ab817374a5a78ba4e3d27857f51c3dbffca6afe24bf2f6c504b7a9063af8"
+    }
+  ],
+  "hostPatchDigest": "sha256:37e97d5df586ebaf326ec27b4d56215531bd4f0d7d425542eb03c68a0b4c0030",
+  "hostFiles": [
+    {
+      "path": "packages/client/store/src/contract.ts",
+      "digest": "sha256:9d6cb96522cfe46e515215ba1ccd28ce986e7772607bdf1f7b4c8aac415272a2"
+    },
+    {
+      "path": "packages/client/store/src/index.ts",
+      "digest": "sha256:8bc46c670d17b2319fa41c712e13820f8ddf2c19ce810a28e61321f332a7d56c"
+    },
+    {
+      "path": "packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css",
+      "digest": "sha256:bcc022c57d6819bcc40bc46c1f1d2c5fe63bb839c24814cd55f9f9544ff9618b"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/AppFrame.module.css",
+      "digest": "sha256:2c7910744bdd3c5ae0c7508936b72ce1dedf8d0523ee3d4a4e51a0da86cbb8ea"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/AppFrame.tsx",
+      "digest": "sha256:252c3b2a410b51a3d80909dc7cb70828628abf3480c3406f39392a9114f90b9e"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/columns.ts",
+      "digest": "sha256:68b0f17c6073b6caf8b7145daf5677c4cfd876af8c7f4eae561d05d029d59684"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/index.ts",
+      "digest": "sha256:077f65bf6a2eb871c008ecfc8565ef7959d20a445049097b8d68f2d66b9ebdac"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/service.ts",
+      "digest": "sha256:5c7344c6e7fd2207ca13c38a56d4f0601310455af3451daf85923fedc0c0a80a"
+    },
+    {
+      "path": "packages/client/ui-layout/src/client/stores.ts",
+      "digest": "sha256:a8e6b95b790006b16edbd5f3fb5da6cb6a666242901a5b482fabb1908e3798fe"
+    },
+    {
+      "path": "packages/client/ui-layout/tests/app-frame.client.spec.tsx",
+      "digest": "sha256:52e9d41c58bf5d7321b9424ba9e0c2bdab82d86b60d0a4033acfc8d39fd74093"
+    },
+    {
+      "path": "packages/client/ui-layout/tests/apply.client.spec.ts",
+      "digest": "sha256:ed3e9092c68ba3153c2bc04301ea0679a93f622dc6cc38f52726e7a7fd918a9c"
+    },
+    {
+      "path": "packages/client/ui-layout/tests/columns.client.spec.ts",
+      "digest": "sha256:1f28a2b0c44e731add47002138956d1bfe4298503e851e28782dc3386b837bef"
+    },
+    {
+      "path": "packages/client/ui-layout/tests/layout-store.client.spec.ts",
+      "digest": "sha256:962fe90fb620560de5f8b23956d992019252207366af0927652e0667a1a40886"
+    },
+    {
+      "path": "packages/client/ui-layout/tests/service.client.spec.ts",
+      "digest": "sha256:4d2a29354c88264b1511fa48a9da5469a6bb9e1468f1b8e3a1ce440626644783"
+    },
+    {
+      "path": "packages/client/ui-slots/src/store.ts",
+      "digest": "sha256:e25f7e15164060e53367c8f1aa856e9f6687a2002575c332168b6a039d190c85"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "/root/dsh-resource-workbench-candidate/final-workbench.png",
+      "digest": "sha256:b7680f4d04c8aef26a41850c25aa4ddbcd19b41d7a4fb6857f9374f15a1113a1"
+    },
+    {
+      "path": "/root/dsh-resource-workbench-candidate/live-workbench.png",
+      "digest": "sha256:fbd9c4e61fd26ebf274de8e5b04ae621fc53b2028df3a24b7526d0795f27bfd6"
+    }
+  ],
+  "limits": [
+    "No user visual acceptance",
+    "No grouped-workbench uninstall/drift rehearsal",
+    "Existing Cordis API event partition violation"
+  ]
+}

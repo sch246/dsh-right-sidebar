@@ -1,0 +1,216 @@
+{
+  "kind": "realization",
+  "id": "right-sidebar-linux-web",
+  "revision": "0.4.0-candidate.1",
+  "status": "candidate",
+  "protocol": {
+    "id": "meta-intent",
+    "revision": "0.2"
+  },
+  "package": {
+    "id": "dsh-right-sidebar",
+    "revision": "0.4.0-draft.4"
+  },
+  "state": {
+    "revision": "0.4.0-draft.4",
+    "entry": {
+      "path": "inputs/state/STATE.json",
+      "digest": "sha256:0120e0be6b1b73a62fc275919a5e380bf5d4d5d6f09602c0ef2c8bdde430d787"
+    },
+    "document": {
+      "path": "inputs/state/STATE.md",
+      "digest": "sha256:36d506ea43213952ab5c79b6bdf070443a0baf3b8853c50ac3991ef9065a1be4"
+    }
+  },
+  "logs": [
+    {
+      "path": "../../logs/2026-08-25-user-intent-and-embedding.md",
+      "digest": "sha256:954b877b7e6afa81b0cfacf44c7ffb97c8f7e1e36fc0618342c9c82f84c7699b"
+    },
+    {
+      "path": "../../logs/2026-08-25-bootstrap-reality.md",
+      "digest": "sha256:a9419aa8ade42f30274219460a6160db65034e05a30169710317f93feceb74dc"
+    },
+    {
+      "path": "../../logs/2026-08-25-git-reference-decision.md",
+      "digest": "sha256:925a57b46e998e0c488f9915b3718af4de9e888a5cdc8cbad19f7523a237ba26"
+    },
+    {
+      "path": "../../logs/2026-08-25-first-realization.md",
+      "digest": "sha256:7508798ca9d8f8c8519b3ceb986ab0a97b3253ede532ae10d4e9af59772344af"
+    },
+    {
+      "path": "../../logs/2026-08-25-lifecycle-experiment.md",
+      "digest": "sha256:eb5db0f5c9e876d9c989b2bc5bab5eb286c87408f31e448e9b01a0ed1e8f1890"
+    },
+    {
+      "path": "../../logs/2026-08-25-product-quality-and-adapter-direction.md",
+      "digest": "sha256:3f97461e10423039de61ce79cb7e55a93fbdf5758416bfff8cb9e2f5d9f76a20"
+    },
+    {
+      "path": "../../logs/2026-08-25-shell-quality-and-adapter-integration.md",
+      "digest": "sha256:1b33cebe1bb23d7799ab8ddd750aba6fb0be50b85350747f5abd962ead7fec47"
+    },
+    {
+      "path": "../../logs/2026-08-25-live-web-install.md",
+      "digest": "sha256:d72a59be471c3b6d3741a449a242ea3c4f46344d5183c00e1ab95598ea92d3d3"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-revision.md",
+      "digest": "sha256:ecf2a10118f7c6a89e7f3a57d4671b09c339040af6189a4680c73c173a5cd204"
+    },
+    {
+      "path": "../../logs/2026-08-26-visual-chrome-deployment.md",
+      "digest": "sha256:291d80ba9d341b7696b0f974612a99e2b98771e4259462d4abfaba5a44405920"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-alignment.md",
+      "digest": "sha256:675d1b94e327d99ea29ff21f2c0bda2dbde2fae2aca36e618d996d4cc99df243"
+    },
+    {
+      "path": "../../logs/2026-08-26-navbar-control-deployment.md",
+      "digest": "sha256:6bf19f19057d9ad85f784edd4c22c5969603a26ade27f2436daa5b2d231a902d"
+    },
+    {
+      "path": "../../logs/2026-08-26-live-shell-milestone-closure.md",
+      "digest": "sha256:4ee1cbd304bb73f7517e15d51eb6e41af9c163b6bc8e54b142d1c539b405e1d9"
+    },
+    {
+      "path": "../../logs/2026-08-26-agent-driven-portability-and-api-authority.md",
+      "digest": "sha256:0d9df4e439a5018521f634164d73a7c260e4eb6f24783b38c3d47de785271a62"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-tension.md",
+      "digest": "sha256:adb12e89bda3e0c43c1950306b31c3c1888018aaea2325e641c8006aba293f04"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-repair.md",
+      "digest": "sha256:e5a1d891d17b7ab5bba436943f1c237910a377676422768b088a1313f9b02a8d"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-deployment.md",
+      "digest": "sha256:371cfdde85478a15ac9ac2d2d0342c7b4ca6f3a34b2fb96914c796ce4ee9952e"
+    },
+    {
+      "path": "../../logs/2026-08-26-public-tls-followup.md",
+      "digest": "sha256:cd63712c11d605bd69cf9af5da5622c794a907602c71252648bf1a35cb835e44"
+    },
+    {
+      "path": "../../logs/2026-08-26-new-conversation-visibility-acceptance.md",
+      "digest": "sha256:defbe1daa9e077d2dfeb5edb16290e61466bb291a1fbc8cbc72cf4b2f01e7a17"
+    },
+    {
+      "path": "../../logs/2026-08-26-source-region-ownership-practice.md",
+      "digest": "sha256:bc297907f591bbc6d184aee063fc1ef07c7c61da40a1913fd91caa536bc31bb5"
+    },
+    {
+      "path": "../../logs/2026-08-26-marker-locator-simplification.md",
+      "digest": "sha256:03b178739c91d5f0fe2d6484cd68cd0e8c6c1ca7566b29764bb92e099db33d33"
+    },
+    {
+      "path": "../../logs/2026-08-26-purpose-comment-marker-correction.md",
+      "digest": "sha256:4bbeb1d29ed670618110af1109b24452addb20ff7d77c32512b2d8c4d580e248"
+    },
+    {
+      "path": "../../logs/2026-08-26-remote-baseline-correction.md",
+      "digest": "sha256:ce20105af370465d0edf6e201ee97b216cd222ec14c05a4dd4f6155ac50d3a69"
+    },
+    {
+      "path": "../../logs/2026-09-01-target-drift-and-recomposition.md",
+      "digest": "sha256:33bb26ee2f5b7f56937f997db15676b7df5606c19a1e88f3dba77466ea0728cc"
+    },
+    {
+      "path": "../../logs/2026-09-05-programmatic-tab-opening-api.md",
+      "digest": "sha256:7a1eb0e0dacd3eee883b34f1447badd31e87d209b58372a40de1ff0c38da1c8e"
+    },
+    {
+      "path": "../../logs/2026-09-05-sidebar-maximization-and-host-ownership.md",
+      "digest": "sha256:6c629047ea78a48aeb13f4c3e3f54ec536b2f6a32f318dda8efc6e011ce90735"
+    },
+    {
+      "path": "../../logs/2026-09-05-multi-instance-workbench.md",
+      "digest": "sha256:1d2a6781ca5a36a58bbdf312ef606ffa1049a64669e53f65a4c231ea758eb388"
+    },
+    {
+      "path": "../../logs/2026-09-05-workbench-verification.md",
+      "digest": "sha256:4e65c2373c22f3a11f8118d54cc1b9f68ae94bfc585287192ccf1e33a5b889a3"
+    },
+    {
+      "path": "../../logs/2026-09-05-live-workbench.md",
+      "digest": "sha256:e29a382aa975d3559f02bf8de712f15d5420a78872d0d57dde9fe15230b4564c"
+    },
+    {
+      "path": "../../logs/2026-09-05-grouped-workbench.md",
+      "digest": "sha256:3c60329e93229c8d41dd85ea3c5af41d98dadb86515e3298f1d7aff4c53bc56e"
+    },
+    {
+      "path": "../../logs/2026-09-05-restoration-commit-ack.md",
+      "digest": "sha256:438fafd9886ca28c9431107e83756a7a798ca8a2afc3f9ab36f3d4219a060710"
+    },
+    {
+      "path": "../../logs/2026-09-05-internal-tab-drag-protocol.md",
+      "digest": "sha256:2f7fb679237a2c3dcad9a6f933b898436b9815c40d7051f8104d254bf3c6f75c"
+    },
+    {
+      "path": "../../logs/2026-09-05-grouped-workbench-deployment.md",
+      "digest": "sha256:c64d205f7aecb00725a93617f9a343537abab9a83710d1da0006fc1a473e0977"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/acceptance.md",
+      "digest": "sha256:b134a76e33d6633aa9bd263870e0aed88ed93c6a3bc8cf0ce5a8c9fdc53fb0b3"
+    },
+    {
+      "path": "artifacts/install.md",
+      "digest": "sha256:aade19c42210a4d599bc5ae7ad3d214c373990541f081415aaf013485520f60e"
+    },
+    {
+      "path": "artifacts/evidence.json",
+      "digest": "sha256:efbc5a641bd91a54baaabf310e36f2bc5d585f7f2a964815a9a90fd5b2d88bb6"
+    }
+  ],
+  "target": {
+    "kind": "git",
+    "uri": "https://github.com/sch246/dsh-right-sidebar.git",
+    "commit": "24207ab593aa516678936666d403238db2bdce9a",
+    "paths": [
+      "README.md",
+      "package.json",
+      "cordis.patch.yml",
+      "patches/deepseek-harness.patch",
+      "scripts",
+      "src",
+      "tests",
+      "tsconfig.client.json",
+      "tsconfig.json",
+      "tsdown.config.ts",
+      "vitest.config.ts"
+    ]
+  },
+  "acceptance": {
+    "status": "incomplete",
+    "evidence": [
+      {
+        "id": "focused-and-browser-checks",
+        "observedOn": "2026-09-05",
+        "artifact": "artifacts/acceptance.md",
+        "result": "139 focused tests; private semantic flows and live read-only browser smoke passed"
+      },
+      {
+        "id": "local-installation",
+        "observedOn": "2026-09-05",
+        "artifact": "artifacts/evidence.json",
+        "result": "Coordinated source and artifact identities; profile resolution and authorized activation verified"
+      }
+    ]
+  },
+  "authority": {
+    "decision": "pending-user-review"
+  },
+  "unresolved": [
+    "User visual acceptance",
+    "Grouped-workbench owned uninstall and unrelated-drift preservation rehearsal",
+    "Existing global Cordis API generator chat/open-workspace-file partition violation"
+  ]
+}
