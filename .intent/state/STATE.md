@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with no selected candidate for the current documentation revision. [Deployment evidence](../logs/2026-09-06-tab-menu-removal-activation.md) records managed activation of the tab-menu removal source. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock. The per-session layout correction is specified here; the earlier activation record does not establish its deployment. Start with the [operation map](#installation-maintenance-and-removal); [chat provenance](../logs/2026-09-06-chat-alignment-and-operation-map.md) distinguishes user requests from pasted proposals.
+Status: draft embedded intent package with no selected candidate for the current documentation revision. [Deployment evidence](../logs/2026-09-06-tab-menu-removal-activation.md) records managed activation of the tab-menu removal source. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock. The [per-session layout activation](../logs/2026-09-06-per-session-layout-activation.md) records application, rebuild, restart and served-artifact checks for this correction; interactive acceptance remains pending. Start with the [operation map](#installation-maintenance-and-removal); [chat provenance](../logs/2026-09-06-chat-alignment-and-operation-map.md) distinguishes user requests from pasted proposals.
 
 ## Intent
 

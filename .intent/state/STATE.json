@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.8",
+  "revision": "0.4.0-draft.9",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -44,7 +44,8 @@
     "../logs/2026-09-06-remove-tab-menu.md",
     "../logs/2026-09-06-tab-menu-removal-activation.md",
     "../logs/2026-09-06-chat-alignment-and-operation-map.md",
-    "../logs/2026-09-06-per-session-layout-clarification.md"
+    "../logs/2026-09-06-per-session-layout-clarification.md",
+    "../logs/2026-09-06-per-session-layout-activation.md"
   ],
   "protocol": {
     "id": "meta-intent",
@@ -60,7 +61,7 @@
       "kind": "git-repository",
       "uri": "https://github.com/sch246/dsh-right-sidebar.git",
       "revision": "fde7ed0c9b2d981348da2bc8d9c029d1142fa9b0",
-      "scope": "grouped workbench and corrected per-session Host layout patch; pending managed activation",
+      "scope": "grouped workbench and per-session Host layout patch; managed activation recorded, manual acceptance pending",
       "worktree": "plugin-owned source and reversible Host patch; local deployment evidence is recorded in logs"
     },
     {
