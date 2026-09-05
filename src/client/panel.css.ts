@@ -51,8 +51,12 @@ export const PANEL_CSS = `
 .dsh-rightbar-launcher{min-height:34px;padding:7px 10px;border:1px solid var(--dsw-alias-border-l2,rgba(38,49,72,.12));border-radius:7px;background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-text-primary,inherit);font:inherit;font-size:12px;text-align:left;cursor:pointer;}
 .dsh-rightbar-launcher:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));}
 .dsh-rightbar-launcher:disabled{cursor:wait;opacity:.6;}
-.dsh-rightbar-default-setting{display:block;margin-top:18px;padding:5px 0;border:0;background:transparent;color:var(--dsw-alias-text-secondary,inherit);font:inherit;font-size:12px;text-align:left;text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
-.dsh-rightbar-default-setting:hover{color:var(--dsw-alias-text-primary,inherit);}
+.dsh-rightbar-default-setting{display:flex;flex-wrap:wrap;gap:10px 18px;min-width:0;margin:18px 0 0;padding:0;border:0;color:var(--dsw-alias-text-primary,inherit);font:inherit;font-size:12px;}
+.dsh-rightbar-default-setting legend{margin-bottom:10px;padding:0;font-weight:500;}
+.dsh-rightbar-default-setting label{display:inline-flex;align-items:center;gap:6px;min-height:28px;cursor:pointer;}
+.dsh-rightbar-default-setting input{margin:0;accent-color:var(--dsw-alias-brand-primary);cursor:pointer;}
+.dsh-rightbar-default-setting input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,currentColor);outline-offset:2px;}
+.dsh-rightbar-default-setting p{flex-basis:100%;margin:0;color:var(--dsw-alias-text-secondary,inherit);}
 .dsh-rightbar-launcher-error{display:flex;min-height:34px;align-items:center;justify-content:space-between;gap:8px;color:var(--dsw-alias-status-error,var(--dsw-alias-text-primary,inherit));font-size:12px;}
 .dsh-rightbar-state{display:flex;min-height:96px;height:100%;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;color:var(--dsw-alias-text-secondary,inherit);font-size:12px;}
 .dsh-rightbar-retry,.dsh-rightbar-rail-recover{min-height:28px;padding:4px 10px;border:1px solid var(--dsw-alias-border-l2,currentColor);border-radius:6px;background:var(--dsw-alias-bg-base,transparent);color:var(--dsw-alias-text-primary,inherit);cursor:pointer;}
@@ -68,5 +72,5 @@ export const PANEL_CSS = `
 .dsh-rightbar-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));color:var(--dsw-alias-text-primary,inherit);}
 .dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-button-ghost-active-fill,rgba(38,49,72,.1));color:var(--dsw-alias-text-primary,inherit);}
 @container (max-width:260px){.dsh-rightbar-tab{max-width:130px}}
-@media (prefers-reduced-motion:no-preference){.dsh-rightbar-tab,.dsh-rightbar-launcher-toggle,.dsh-rightbar-launcher,.dsh-rightbar-toggle,.dsh-rightbar-retry,.dsh-rightbar-default-setting{transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease;}}
+@media (prefers-reduced-motion:no-preference){.dsh-rightbar-tab,.dsh-rightbar-launcher-toggle,.dsh-rightbar-launcher,.dsh-rightbar-toggle,.dsh-rightbar-retry{transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease;}}
 `

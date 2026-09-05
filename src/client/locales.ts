@@ -18,8 +18,10 @@ export type RightSidebarKey =
   | 'operationFailed'
   | 'useVerticalTabs'
   | 'useHorizontalTabs'
-  | 'defaultVerticalTabs'
-  | 'defaultHorizontalTabs'
+  | 'defaultTabOrientation'
+  | 'horizontalTabs'
+  | 'verticalTabs'
+  | 'newGroupsOnly'
   | 'resizeGroups'
   | 'resizeTabRail'
   | 'restoreTabRail'
@@ -48,8 +50,10 @@ export const zh: Record<RightSidebarKey, string> = {
   operationFailed: '无法完成侧边栏操作',
   useVerticalTabs: '改用纵向标签',
   useHorizontalTabs: '改用横向标签',
-  defaultVerticalTabs: '新分组默认使用纵向标签',
-  defaultHorizontalTabs: '新分组默认使用横向标签',
+  defaultTabOrientation: '新分组标签方向',
+  horizontalTabs: '横向',
+  verticalTabs: '纵向',
+  newGroupsOnly: '仅影响之后新建的分组',
   resizeGroups: '调整相邻分组大小',
   resizeTabRail: '调整纵向标签栏宽度',
   restoreTabRail: '恢复标签栏',
@@ -73,8 +77,10 @@ export const en: Record<RightSidebarKey, string> = {
   operationFailed: 'The sidebar operation could not be completed',
   useVerticalTabs: 'Use vertical tabs',
   useHorizontalTabs: 'Use horizontal tabs',
-  defaultVerticalTabs: 'Use vertical tabs for new groups',
-  defaultHorizontalTabs: 'Use horizontal tabs for new groups',
+  defaultTabOrientation: 'Tab direction for new groups',
+  horizontalTabs: 'Horizontal',
+  verticalTabs: 'Vertical',
+  newGroupsOnly: 'Applies only to groups created afterwards',
   resizeGroups: 'Resize adjacent groups',
   resizeTabRail: 'Resize vertical tab rail',
   restoreTabRail: 'Restore tab rail',

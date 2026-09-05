@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.9",
+  "revision": "0.4.0-draft.10",
   "status": "draft",
   "document": "STATE.md",
   "logs": [

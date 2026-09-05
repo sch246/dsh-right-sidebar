@@ -1,5 +1,5 @@
 /** Grouped workbench chrome, drag docking, resize controls, and active renderers. */
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   PanelInjected,
@@ -528,6 +528,7 @@ function LauncherHome({
   readonly onDefaultOrientation: (orientation: RightSidebarTabOrientation) => void
   readonly t: RightSidebarPanelProps['t']
 }) {
+  const orientationName = useId()
   return (
     <div className="dsh-rightbar-launcher-home">
       <h2>{t('launcherTitle')}</h2>
@@ -551,13 +552,22 @@ function LauncherHome({
           </SidebarContentBoundary>
         ))}
       </div>
-      <button
-        type="button"
-        className="dsh-rightbar-default-setting"
-        onClick={() => { onDefaultOrientation(defaultOrientation === 'horizontal' ? 'vertical' : 'horizontal') }}
-      >
-        {t(defaultOrientation === 'horizontal' ? 'defaultVerticalTabs' : 'defaultHorizontalTabs')}
-      </button>
+      <fieldset className="dsh-rightbar-default-setting">
+        <legend>{t('defaultTabOrientation')}</legend>
+        {(['horizontal', 'vertical'] as const).map(orientation => (
+          <label key={orientation}>
+            <input
+              type="radio"
+              name={orientationName}
+              value={orientation}
+              checked={defaultOrientation === orientation}
+              onChange={() => { onDefaultOrientation(orientation) }}
+            />
+            {t(orientation === 'horizontal' ? 'horizontalTabs' : 'verticalTabs')}
+          </label>
+        ))}
+        <p>{t('newGroupsOnly')}</p>
+      </fieldset>
     </div>
   )
 }
