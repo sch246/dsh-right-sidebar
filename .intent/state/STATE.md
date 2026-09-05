@@ -1,6 +1,6 @@
 # DeepSeek Harness right-sidebar intent
 
-Status: draft embedded intent package with a privately browser-checked tab-gesture candidate selected in `STATE.json`. [Browser evidence](../logs/2026-09-06-tab-gesture-browser-evidence.md) records bounded Agent observations; [tab gesture clarification](../logs/2026-09-06-tab-gesture-regions.md) defines the current interaction requirements. [Deployment evidence](../logs/2026-09-06-compact-ui-activation.md) records installation and managed activation. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock.
+Status: draft embedded intent package with no selected candidate after the [tab-menu removal](../logs/2026-09-06-remove-tab-menu.md). [Deployment evidence](../logs/2026-09-06-compact-ui-activation.md) records the preceding tab-gesture installation. Historical locks remain immutable evidence. No realization is user-accepted or promoted to an active lock.
 
 ## Intent
 
@@ -71,6 +71,7 @@ Exact commands, local paths, profile representation, target commits and patch pr
 ## Current decisions
 
 - Within the sidebar platform scope, completeness and product-quality UX are required. Agent-owned interaction details may be chosen autonomously when they preserve these acceptance effects and introduce no undeclared user-visible trade-off.
+- Tabs expose their title and close action without a three-dot button or pin, move or split popup menu. Dragging supplies placement; double-click pins previews, and existing keyboard shortcuts remain available.
 - This repository has no authority to land changes in DeepSeek Harness upstream. A realization may carry an attributable, reversible Host patch and apply it to an explicitly authorized local deployment without presenting that patch as an upstream DSH contribution.
 - Portability is carried by this state and regenerated per target by an Agent. A shared standard or adapter may be selected inside a realization, but dsh-std is not a required dependency, authority or migration destination.
 - API stability is explicit for the launcher, instance and static view semantics in this state. Internal Harness coordinates and mechanisms may change between locks without weakening consumer-visible behavior.

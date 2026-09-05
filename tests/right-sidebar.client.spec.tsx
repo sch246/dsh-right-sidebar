@@ -82,9 +82,7 @@ const copy: Record<string, string> = {
   useVerticalTabs: 'Use vertical tabs', useHorizontalTabs: 'Use horizontal tabs',
   defaultVerticalTabs: 'Use vertical tabs for new groups', defaultHorizontalTabs: 'Use horizontal tabs for new groups',
   resizeGroups: 'Resize adjacent groups', resizeTabRail: 'Resize vertical tab rail', restoreTabRail: 'Restore tab rail',
-  tabActions: 'Tab actions for {title}', pinTab: 'Pin preview', movePreviousGroup: 'Move to previous group',
-  moveNextGroup: 'Move to next group', splitLeft: 'Split left', splitRight: 'Split right', splitUp: 'Split above',
-  splitDown: 'Split below', restoringInstance: 'Restoring this content…', restoreFailed: 'Could not restore',
+  restoringInstance: 'Restoring this content…', restoreFailed: 'Could not restore',
   missingView: 'Plugin unavailable',
 }
 
@@ -218,17 +216,20 @@ describe('RightSidebarPanel', () => {
     }
   })
 
-  it('marks preview labels italic and pins by double click or menu', () => {
+  it('keeps pinning, dragging and closing without a tab action menu', async () => {
     const view = mountPanel(group('group-1', [instance('preview', 'Preview', { preview: true })]))
     const tab = view.getByRole('tab', { name: 'Preview' })
     expect(tab.parentElement?.getAttribute('data-preview')).toBe('true')
     fireEvent.doubleClick(tab)
     expect(view.pinInstance).toHaveBeenCalledWith('preview')
-    fireEvent.click(view.getByRole('button', { name: 'Tab actions for Preview' }))
-    const menuItem = view.getByRole('menuitem', { name: 'Pin preview' })
-    expect(view.getByRole('tablist').contains(menuItem)).toBe(false)
-    fireEvent.click(menuItem)
-    expect(view.pinInstance).toHaveBeenCalledTimes(2)
+    expect(view.queryByRole('menu')).toBeNull()
+    expect(view.container.querySelector('.dsh-rightbar-tab-actions')).toBeNull()
+    const transfer = dataTransfer()
+    fireEvent.dragStart(tab, { dataTransfer: transfer })
+    fireEvent.drop(view.getByRole('tablist'), { dataTransfer: transfer })
+    expect(view.moveInstance).toHaveBeenCalledWith('preview', { groupId: 'group-1', direction: 'center', index: 1 })
+    await act(async () => { fireEvent.click(view.getByRole('button', { name: 'Close Preview' })) })
+    expect(view.closeInstance).toHaveBeenCalledWith('preview')
   })
 
   it('offers keyboard navigation and non-drag edge movement', () => {

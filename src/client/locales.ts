@@ -23,14 +23,6 @@ export type RightSidebarKey =
   | 'resizeGroups'
   | 'resizeTabRail'
   | 'restoreTabRail'
-  | 'tabActions'
-  | 'pinTab'
-  | 'movePreviousGroup'
-  | 'moveNextGroup'
-  | 'splitLeft'
-  | 'splitRight'
-  | 'splitUp'
-  | 'splitDown'
   | 'restoringInstance'
   | 'restoreFailed'
   | 'missingView'
@@ -61,14 +53,6 @@ export const zh: Record<RightSidebarKey, string> = {
   resizeGroups: '调整相邻分组大小',
   resizeTabRail: '调整纵向标签栏宽度',
   restoreTabRail: '恢复标签栏',
-  tabActions: '{title} 的标签操作',
-  pinTab: '固定预览',
-  movePreviousGroup: '移到上一个分组',
-  moveNextGroup: '移到下一个分组',
-  splitLeft: '向左分栏',
-  splitRight: '向右分栏',
-  splitUp: '向上分栏',
-  splitDown: '向下分栏',
   restoringInstance: '正在恢复此内容…',
   restoreFailed: '无法恢复此内容',
   missingView: '提供此内容的插件当前不可用',
@@ -94,14 +78,6 @@ export const en: Record<RightSidebarKey, string> = {
   resizeGroups: 'Resize adjacent groups',
   resizeTabRail: 'Resize vertical tab rail',
   restoreTabRail: 'Restore tab rail',
-  tabActions: 'Tab actions for {title}',
-  pinTab: 'Pin preview',
-  movePreviousGroup: 'Move to previous group',
-  moveNextGroup: 'Move to next group',
-  splitLeft: 'Split left',
-  splitRight: 'Split right',
-  splitUp: 'Split above',
-  splitDown: 'Split below',
   restoringInstance: 'Restoring this content…',
   restoreFailed: 'This content could not be restored',
   missingView: 'The plugin for this content is unavailable',

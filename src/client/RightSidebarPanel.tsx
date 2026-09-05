@@ -59,7 +59,6 @@ export function RightSidebarPanel({
   const [operationFailed, setOperationFailed] = useState(false)
   const [draggedId, setDraggedId] = useState<string>()
   const [dropPreview, setDropPreview] = useState<DropPreview>()
-  const [menuId, setMenuId] = useState<string>()
   const [mountedIds, setMountedIds] = useState<ReadonlySet<string>>(() => new Set(
     groups.flatMap(group => group.activeInstanceId === undefined ? [] : [group.activeInstanceId]),
   ))
@@ -163,7 +162,6 @@ export function RightSidebarPanel({
             draggedId={draggedId}
             insertionIndex={dropPreview?.kind === 'tabs' && dropPreview.target.groupId === group.id
               ? dropPreview.target.index : undefined}
-            menuId={menuId}
             t={t}
             setTabRef={(id, element) => {
               if (element === null) tabRefs.current.delete(id)
@@ -182,11 +180,10 @@ export function RightSidebarPanel({
             onLaunch={id => { void run(`launch:${id}`, () => launch(id)) }}
             onOrientation={orientation => { setGroupTabOrientation(group.id, orientation) }}
             onRailResize={width => { setGroupVerticalRailWidth(group.id, width) }}
-            onDragStart={id => { setDraggedId(id); setMenuId(undefined) }}
+            onDragStart={setDraggedId}
             onDragEnd={() => { setDraggedId(undefined); setDropPreview(undefined) }}
             onDropTarget={target => { setDropPreview(target === undefined ? undefined : { kind: 'tabs', target }) }}
-            onMenu={id => { setMenuId(current => current === id ? undefined : id) }}
-            onMove={(id, target) => { moveInstance(id, target); setMenuId(undefined) }}
+            onMove={moveInstance}
           />
         ))}
         {[...mountedIds].map(id => {
@@ -269,7 +266,6 @@ interface GroupPaneProps {
   readonly pending: ReadonlySet<string>
   readonly draggedId?: string
   readonly insertionIndex?: number
-  readonly menuId?: string
   readonly t: RightSidebarPanelProps['t']
   readonly setTabRef: (id: string, element: HTMLButtonElement | null) => void
   readonly onActivateGroup: () => void
@@ -284,7 +280,6 @@ interface GroupPaneProps {
   readonly onDragStart: (id: string) => void
   readonly onDragEnd: () => void
   readonly onDropTarget: (target: RightSidebarMoveTarget | undefined) => void
-  readonly onMenu: (id: string) => void
   readonly onMove: (id: string, target: RightSidebarMoveTarget) => void
 }
 
@@ -296,10 +291,6 @@ function GroupPane(props: GroupPaneProps) {
   const groupRef = useRef<HTMLDivElement | null>(null)
   const tabScrollRef = useRef<HTMLDivElement | null>(null)
   const style = normalizedStyle(rect)
-  const menuInstance = group.instances.find(instance => instance.id === props.menuId)
-  const groupIndex = props.groups.findIndex(candidate => candidate.id === group.id)
-  const previousGroup = props.groups[(groupIndex - 1 + props.groups.length) % props.groups.length]
-  const nextGroup = props.groups[(groupIndex + 1) % props.groups.length]
 
   useEffect(() => {
     const list = tabScrollRef.current
@@ -429,20 +420,6 @@ function GroupPane(props: GroupPaneProps) {
           )}
         </div>
       </div>
-      {menuInstance !== undefined && (
-        <div className="dsh-rightbar-tab-menu" role="menu">
-          {menuInstance.preview && <MenuButton label={t('pinTab')} onClick={() => { props.onPin(menuInstance.id); props.onMenu(menuInstance.id) }} />}
-          {props.groups.length > 1 && previousGroup !== undefined && previousGroup.id !== group.id && (
-            <MenuButton label={t('movePreviousGroup')} onClick={() => { props.onMove(menuInstance.id, { groupId: previousGroup.id, direction: 'center' }) }} />
-          )}
-          {props.groups.length > 1 && nextGroup !== undefined && nextGroup.id !== group.id && (
-            <MenuButton label={t('moveNextGroup')} onClick={() => { props.onMove(menuInstance.id, { groupId: nextGroup.id, direction: 'center' }) }} />
-          )}
-          {(['left', 'right', 'up', 'down'] as const).map(direction => (
-            <MenuButton key={direction} label={t(`split${capitalize(direction)}` as 'splitLeft')} onClick={() => { props.onMove(menuInstance.id, { groupId: group.id, direction }) }} />
-          ))}
-        </div>
-      )}
     </section>
   )
 }
@@ -456,7 +433,7 @@ interface InstanceTabProps extends GroupPaneProps {
 }
 
 function InstanceTab(props: InstanceTabProps) {
-  const { group, instance, index, active, tabId, panelId, pending, menuId, t } = props
+  const { group, instance, index, active, tabId, panelId, pending, t } = props
   const moveFocus = (key: string): void => {
     const forward = group.tabOrientation === 'horizontal' ? key === 'ArrowRight' : key === 'ArrowDown'
     const backward = group.tabOrientation === 'horizontal' ? key === 'ArrowLeft' : key === 'ArrowUp'
@@ -519,13 +496,6 @@ function InstanceTab(props: InstanceTabProps) {
       </button>
       <button
         type="button"
-        className="dsh-rightbar-tab-actions"
-        aria-label={t('tabActions', { title: instance.title })}
-        aria-expanded={menuId === instance.id}
-        onClick={() => { props.onMenu(instance.id) }}
-      >⋯</button>
-      <button
-        type="button"
         className="dsh-rightbar-tab-close"
         aria-label={t('closeInstance', { title: instance.title })}
         title={t('closeInstance', { title: instance.title })}
@@ -546,10 +516,6 @@ function isSidebarTabDrag(dataTransfer: DataTransfer): boolean {
 
 function isTabBarEventTarget(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.dsh-rightbar-tabs') !== null
-}
-
-function MenuButton({ label, onClick }: { readonly label: string; readonly onClick: () => void }) {
-  return <button type="button" role="menuitem" onClick={onClick}>{label}</button>
 }
 
 function LauncherHome({
@@ -837,10 +803,6 @@ function splitHandleStyle(split: SplitGeometry): React.CSSProperties {
   return split.axis === 'horizontal'
     ? { left: `${split.x * 100}%`, top: `${split.y * 100}%`, height: `${split.height * 100}%` }
     : { left: `${split.x * 100}%`, top: `${split.y * 100}%`, width: `${split.width * 100}%` }
-}
-
-function capitalize(value: string): string {
-  return `${value[0]?.toUpperCase() ?? ''}${value.slice(1)}`
 }
 
 function autoScrollTabs(

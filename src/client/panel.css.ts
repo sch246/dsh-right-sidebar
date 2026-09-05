@@ -38,14 +38,9 @@ export const PANEL_CSS = `
 .dsh-rightbar-group[data-orientation='vertical'] .dsh-rightbar-tab-insertion{left:0;top:-2px;width:100%;height:2px;}
 .dsh-rightbar-group[data-orientation='vertical'] .dsh-rightbar-tab-insertion[data-end='true']{top:auto;bottom:-2px;}
 .dsh-rightbar-group .dsh-rightbar-tabscroll>.dsh-rightbar-tab-insertion{left:2px;top:2px;}
-.dsh-rightbar-tab-close,.dsh-rightbar-tab-actions{display:inline-flex;align-items:center;justify-content:center;width:22px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer;flex:none;}
-.dsh-rightbar-tab-actions{width:18px;font-size:13px;}
-.dsh-rightbar-tab-close:hover,.dsh-rightbar-tab-actions:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.1));}
+.dsh-rightbar-tab-close{display:inline-flex;align-items:center;justify-content:center;width:22px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer;flex:none;}
+.dsh-rightbar-tab-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.1));}
 .dsh-rightbar-tab-close:disabled{cursor:wait;opacity:.5;}
-.dsh-rightbar-tab-menu{position:absolute;z-index:18;top:34px;right:6px;display:grid;width:150px;padding:4px;border:1px solid var(--dsw-alias-border-l2,rgba(38,49,72,.16));border-radius:6px;background:var(--dsw-alias-bg-base,#fff);box-shadow:0 4px 16px rgba(0,0,0,.14);pointer-events:auto;}
-.dsh-rightbar-group[data-top='true'] .dsh-rightbar-tab-menu{top:56px;}
-.dsh-rightbar-tab-menu button{min-height:28px;padding:4px 7px;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-text-primary,inherit);font:inherit;font-size:12px;text-align:left;cursor:pointer;}
-.dsh-rightbar-tab-menu button:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.08));}
 .dsh-rightbar-group-body{position:relative;min-width:0;min-height:0;overflow:hidden;flex:1;}
 .dsh-rightbar-surface{position:absolute;z-index:1;min-width:0;min-height:0;padding:3px;box-sizing:border-box;overflow:auto;pointer-events:auto;}
 .dsh-rightbar-surface:not([data-active='true']){display:none;}
