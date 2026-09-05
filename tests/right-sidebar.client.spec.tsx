@@ -186,7 +186,7 @@ describe('RightSidebarToggle', () => {
   it('matches host header-control geometry without a resting edge or shadow', () => {
     expect(PANEL_CSS).toContain('width:32px;height:32px')
     expect(PANEL_CSS).toContain('padding:0;border:none;border-radius:8px;background:transparent')
-    expect(PANEL_CSS).toContain(".dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-bg-layer-1,transparent)")
+    expect(PANEL_CSS).toContain(".dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-button-ghost-active-fill")
     expect(PANEL_CSS).not.toContain('box-shadow')
   })
 

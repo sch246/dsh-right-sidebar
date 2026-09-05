@@ -15,8 +15,8 @@ export const PANEL_CSS = `
 .dsh-rightbar-retry{min-height:28px;padding:4px 10px;border:1px solid var(--dsw-alias-border-l2,currentColor);border-radius:6px;background:transparent;color:var(--dsw-alias-text-primary,inherit);cursor:pointer;}
 .dsh-rightbar-retry:hover{background:var(--dsw-alias-bg-layer-1,transparent);}
 .dsh-rightbar-toggle{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:none;border-radius:8px;background:transparent;color:var(--dsw-alias-text-secondary,inherit);cursor:pointer;}
-.dsh-rightbar-toggle:hover{background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-text-primary,inherit);}
-.dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-text-primary,inherit);}
+.dsh-rightbar-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));color:var(--dsw-alias-text-primary,inherit);}
+.dsh-rightbar-toggle[data-active='true']{background:var(--dsw-alias-button-ghost-active-fill,rgba(38,49,72,.1));color:var(--dsw-alias-text-primary,inherit);}
 @container (max-width:260px){.dsh-rightbar-tab{padding-inline:8px}.dsh-rightbar-body{padding-inline:8px}}
 @media (prefers-reduced-motion:no-preference){.dsh-rightbar-tab,.dsh-rightbar-toggle,.dsh-rightbar-retry{transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease;}}
 `
