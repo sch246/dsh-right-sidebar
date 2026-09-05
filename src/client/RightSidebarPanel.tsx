@@ -15,6 +15,7 @@ import type { LayoutRect, SplitGeometry } from './layout'
 import { SidebarContentBoundary } from './SidebarContentBoundary'
 
 const NO_PENDING_OPERATIONS: ReadonlySet<string> = new Set()
+const SIDEBAR_TAB_MIME = 'application/x-dsh-right-sidebar-instance'
 
 /** Full composed props for the details-column workbench. */
 export type RightSidebarPanelProps =
@@ -91,11 +92,24 @@ export function RightSidebarPanel({
     }
   }
 
-  const commitDrop = (): void => {
-    if (draggedId === undefined || dropTarget === undefined) return
-    moveInstance(draggedId, dropTarget)
-    setDraggedId(undefined)
-    setDropTarget(undefined)
+  const resolveWorkspaceDrop = (clientX: number, clientY: number): RightSidebarMoveTarget | undefined => {
+    const workspace = workspaceRef.current?.getBoundingClientRect()
+    if (workspace === undefined || workspace.width <= 0 || workspace.height <= 0) return undefined
+    const x = (clientX - workspace.left) / workspace.width
+    const y = (clientY - workspace.top) / workspace.height
+    const entry = [...geometry.groups].find(([, rect]) =>
+      x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
+    if (entry === undefined) return undefined
+    const [groupId, rect] = entry
+    return {
+      groupId,
+      direction: dropDirection(clientX, clientY, {
+        left: workspace.left + rect.x * workspace.width,
+        top: workspace.top + rect.y * workspace.height,
+        width: rect.width * workspace.width,
+        height: rect.height * workspace.height,
+      }),
+    }
   }
 
   return (
@@ -104,29 +118,29 @@ export function RightSidebarPanel({
       <div
         ref={workspaceRef}
         className="dsh-rightbar-workspace"
-        onDragOver={event => {
-          if (draggedId === undefined || workspaceRef.current === null) return
+        onDragOverCapture={event => {
+          if (!isSidebarTabDrag(event.dataTransfer) || isTabBarEventTarget(event.target)) return
           event.preventDefault()
-          const workspace = workspaceRef.current.getBoundingClientRect()
-          if (workspace.width <= 0 || workspace.height <= 0) return
-          const x = (event.clientX - workspace.left) / workspace.width
-          const y = (event.clientY - workspace.top) / workspace.height
-          const entry = [...geometry.groups].find(([, rect]) =>
-            x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
-          if (entry === undefined) return
-          const [groupId, rect] = entry
-          const direction = dropDirection(event.clientX, event.clientY, {
-            left: workspace.left + rect.x * workspace.width,
-            top: workspace.top + rect.y * workspace.height,
-            width: rect.width * workspace.width,
-            height: rect.height * workspace.height,
-          })
-          setDropTarget({ groupId, direction })
+          event.stopPropagation()
+          setDropTarget(resolveWorkspaceDrop(event.clientX, event.clientY))
         }}
         onDragLeave={event => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(undefined)
         }}
-        onDrop={event => { event.preventDefault(); commitDrop() }}
+        onDropCapture={event => {
+          if (!isSidebarTabDrag(event.dataTransfer) || isTabBarEventTarget(event.target)) return
+          event.preventDefault()
+          event.stopPropagation()
+          const id = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || draggedId
+          const target = resolveWorkspaceDrop(event.clientX, event.clientY)
+          if (id !== undefined
+            && target !== undefined
+            && groups.some(group => group.instances.some(instance => instance.id === id))) {
+            moveInstance(id, target)
+          }
+          setDraggedId(undefined)
+          setDropTarget(undefined)
+        }}
       >
         {groups.map(group => (
           <GroupPane
@@ -299,17 +313,22 @@ function GroupPane(props: GroupPaneProps) {
             role="tablist"
             aria-orientation={group.tabOrientation}
             onDragOver={event => {
-              if (draggedId === undefined) return
+              if (!isSidebarTabDrag(event.dataTransfer)) return
               event.preventDefault()
               event.stopPropagation()
               autoScrollTabs(event, group.tabOrientation)
               onDropTarget({ groupId: group.id, direction: 'center', index: group.instances.length })
             }}
             onDrop={event => {
-              if (draggedId === undefined) return
+              if (!isSidebarTabDrag(event.dataTransfer)) return
               event.preventDefault()
               event.stopPropagation()
-              props.onMove(draggedId, { groupId: group.id, direction: 'center', index: group.instances.length })
+              const dragged = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || draggedId
+              if (dragged !== undefined) {
+                props.onMove(dragged, {
+                  groupId: group.id, direction: 'center', index: group.instances.length,
+                })
+              }
               props.onDragEnd()
             }}
           >
@@ -414,19 +433,24 @@ function InstanceTab(props: InstanceTabProps) {
       draggable
       onDragStart={event => {
         event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('text/plain', instance.id)
+        event.dataTransfer.setData(SIDEBAR_TAB_MIME, instance.id)
         props.onDragStart(instance.id)
       }}
       onDragEnd={props.onDragEnd}
       onDragOver={event => {
+        if (!isSidebarTabDrag(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
         props.onDropTarget({ groupId: group.id, direction: 'center', index })
       }}
       onDrop={event => {
+        if (!isSidebarTabDrag(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
-        props.onMove(props.draggedId ?? instance.id, { groupId: group.id, direction: 'center', index })
+        const dragged = event.dataTransfer.getData(SIDEBAR_TAB_MIME) || props.draggedId
+        if (dragged !== undefined) {
+          props.onMove(dragged, { groupId: group.id, direction: 'center', index })
+        }
         props.onDragEnd()
       }}
     >
@@ -483,6 +507,14 @@ function InstanceTab(props: InstanceTabProps) {
       </button>
     </div>
   )
+}
+
+function isSidebarTabDrag(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).includes(SIDEBAR_TAB_MIME)
+}
+
+function isTabBarEventTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.dsh-rightbar-tabscroll') !== null
 }
 
 function MenuButton({ label, onClick }: { readonly label: string; readonly onClick: () => void }) {

@@ -224,25 +224,55 @@ describe('RightSidebarPanel', () => {
     expect(view.moveInstance).toHaveBeenCalledWith('one', { groupId: 'group-1', direction: 'right' })
   })
 
-  it('previews a half-area edge on hover and mutates only on drop', () => {
-    const view = mountPanel(group('group-1', [instance('a', 'A')]))
+  it('captures internal content drops without intercepting external editor drops', () => {
+    const editorDrop = vi.fn()
+    const view = mountPanel(
+      group('group-1', [instance('a', 'A')]),
+      [],
+      () => <div data-testid="editor-drop-target" onDrop={editorDrop}>Editor</div>,
+    )
     const workspace = view.container.querySelector('.dsh-rightbar-workspace') as HTMLElement
+    const editor = view.getByTestId('editor-drop-target')
     vi.spyOn(workspace, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => {},
     })
-    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
-    const dragOver = createEvent.dragOver(workspace)
+    const internal = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: internal })
+    expect(internal.types).toContain('application/x-dsh-right-sidebar-instance')
+    expect(internal.types).not.toContain('text/plain')
+    const dragOver = createEvent.dragOver(editor, { dataTransfer: internal })
     Object.defineProperties(dragOver, {
       clientX: { value: 95 },
       clientY: { value: 50 },
     })
-    fireEvent(workspace, dragOver)
+    fireEvent(editor, dragOver)
     expect(view.moveInstance).not.toHaveBeenCalled()
     const preview = view.container.querySelector('.dsh-rightbar-drop-preview') as HTMLElement
     expect(preview.style.left).toBe('50%')
     expect(preview.style.width).toBe('50%')
-    fireEvent.drop(workspace)
+    const internalDrop = createEvent.drop(editor, { dataTransfer: internal })
+    Object.defineProperties(internalDrop, {
+      clientX: { value: 95 },
+      clientY: { value: 50 },
+    })
+    fireEvent(editor, internalDrop)
+    expect(editorDrop).not.toHaveBeenCalled()
     expect(view.moveInstance).toHaveBeenCalledWith('a', { groupId: 'group-1', direction: 'right' })
+
+    const external = dataTransfer({ 'text/plain': 'external text' })
+    fireEvent.drop(editor, { dataTransfer: external, clientX: 50, clientY: 50 })
+    expect(editorDrop).toHaveBeenCalledOnce()
+    expect(view.moveInstance).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps internal tab-bar reordering on the tab drop target', () => {
+    const view = mountPanel(group('group-1', [instance('a', 'A'), instance('b', 'B')]))
+    const internal = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: internal })
+    fireEvent.drop(view.getByRole('tab', { name: 'B' }), { dataTransfer: internal })
+    expect(view.moveInstance).toHaveBeenCalledWith('a', {
+      groupId: 'group-1', direction: 'center', index: 1,
+    })
   })
 
   it('auto-scrolls horizontal and vertical tab lists during drag', () => {
@@ -252,8 +282,9 @@ describe('RightSidebarPanel', () => {
     vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({
       left: 10, top: 10, width: 100, height: 30, right: 110, bottom: 40, x: 10, y: 10, toJSON: () => {},
     })
-    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
-    const drag = createEvent.dragOver(list)
+    const horizontalTransfer = dataTransfer()
+    fireEvent.dragStart(view.getByRole('tab', { name: 'A' }), { dataTransfer: horizontalTransfer })
+    const drag = createEvent.dragOver(list, { dataTransfer: horizontalTransfer })
     Object.defineProperties(drag, { clientX: { value: 108 }, clientY: { value: 25 } })
     fireEvent(list, drag)
     expect(list.scrollBy).toHaveBeenCalledWith({ left: 24 })
@@ -267,8 +298,9 @@ describe('RightSidebarPanel', () => {
     vi.spyOn(verticalList, 'getBoundingClientRect').mockReturnValue({
       left: 10, top: 10, width: 80, height: 100, right: 90, bottom: 110, x: 10, y: 10, toJSON: () => {},
     })
-    fireEvent.dragStart(vertical.getByRole('tab', { name: 'A' }), { dataTransfer: dataTransfer() })
-    const verticalDrag = createEvent.dragOver(verticalList)
+    const verticalTransfer = dataTransfer()
+    fireEvent.dragStart(vertical.getByRole('tab', { name: 'A' }), { dataTransfer: verticalTransfer })
+    const verticalDrag = createEvent.dragOver(verticalList, { dataTransfer: verticalTransfer })
     Object.defineProperties(verticalDrag, { clientX: { value: 40 }, clientY: { value: 12 } })
     fireEvent(verticalList, verticalDrag)
     expect(verticalList.scrollBy).toHaveBeenCalledWith({ top: -24 })
@@ -402,6 +434,19 @@ describe('RightSidebarToggle', () => {
   })
 })
 
-function dataTransfer(): DataTransfer {
-  return { effectAllowed: 'all', dropEffect: 'none', files: [], items: [], types: [], setData: vi.fn(), getData: vi.fn() } as unknown as DataTransfer
+function dataTransfer(initial: Readonly<Record<string, string>> = {}): DataTransfer {
+  const values = new Map(Object.entries(initial))
+  const types = [...values.keys()]
+  return {
+    effectAllowed: 'all',
+    dropEffect: 'none',
+    files: [],
+    items: [],
+    types,
+    setData: vi.fn((format: string, value: string) => {
+      values.set(format, value)
+      if (!types.includes(format)) types.push(format)
+    }),
+    getData: vi.fn((format: string) => values.get(format) ?? ''),
+  } as unknown as DataTransfer
 }

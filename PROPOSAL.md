@@ -34,7 +34,7 @@ launcher 是 service-owned lifecycle registration，包含 id、可延迟解析�
 
 ## Docking 与 renderer 保留
 
-panel 从唯一布局树推导 leaf geometry。四边 10% hover 只显示 drop 后的 half-area；edge drop 建立 split，center 或 tab drop 加入目标组并决定顺序。empty non-root group 折叠，显式移动固定 preview。
+panel 从唯一布局树推导 leaf geometry。四边 10% hover 只显示 drop 后的 half-area；edge drop 建立 split，center 或 tab drop 加入目标组并决定顺序。tab drag 只携带 sidebar 自有 MIME；workspace 在 capture phase 处理落入 content 的已识别内部 drop，避免 child editor 消费 instance id。tab-bar target 继续在自身 bubble handler 排序，外部文本与文件 drop 不受影响。empty non-root group 折叠，显式移动固定 preview。
 
 所有曾 active 的 renderer surface 是 workspace 的 stable-key sibling。active tab 跨组移动仍复用同一 React element；inactive surface 隐藏但不复制 feature state。浏览器恢复只加载每组 active instance，其余标签首次激活时再挂载。
 

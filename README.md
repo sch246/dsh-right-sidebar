@@ -12,6 +12,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 - 每组最多一个斜体 preview。打开下一个 preview 会先等待旧 preview 的关闭决策；veto 取消新打开。双击标签或功能首次编辑时调用 `pinInstance()` 固定 preview。
 - 相对打开由 runtime 集中解析。现有目标按几何距离选择，tree preorder 打破平局；没有目标时才在来源组旁创建 50/50 split。
 - 拖动到组四边 10% 区域时预览实际半区，drop 才创建 split；中心 drop 加入目标组，标签 drop 指定顺序。显式移动会固定 preview，空的非 root 组折叠。
+- tab 拖动只写 sidebar 自有 MIME，并在 content capture phase 完成内部 drop，避免 CodeMirror 等 feature editor 把 instance id 当文本插入；普通外部文本与文件 drop 不被拦截。
 - 顶部横向标签与 Host controls 同行，右上组通过 `--dsh-shell-navbar-width` 预留空间。纵向右上组为 tab rail 和内容保留本地 clearance；可滚动标签和 action menu 不覆盖 Host controls。
 - group 顶栏只保留 launcher 与当前组横纵切换；新分组的默认方向在 launcher home 使用明确文字设置。
 - split 和纵向 rail 支持 pointer、方向键与 reset。比例和 rail 宽没有固定最大值；rail 收窄后保留恢复按钮。

@@ -12,6 +12,7 @@
 - preview replacement 和 close decision 使用 instance identity 与 open generation 防止旧完成删除或激活新内容。`onClose` 只决定，`onClosed` 仅在权威删除提交后清理 feature state。
 - `updateInstance` 可原位 checkpoint JSON-safe restore descriptor，不借用 renderer switch 或改变 close lifecycle。
 - panel 提供 10% 四边 docking、center ordering、half-area hover、横纵 tab、split/rail resize、reset/recovery 和非拖动操作入口。右上 leaf 根据几何为 Host controls 留出 clearance。
+- tab drag 使用 sidebar 自有 MIME；content capture handler 只截获已识别内部 drop，tab-bar reorder 与外部 editor drop 保留各自处理路径。
 - active renderer 使用跨组稳定 key；移动或重排不重建它。未激活的恢复标签不会一次性加载 renderer。
 - navbar controls 只通过 Host `ctx.layout` 操作显隐与最大化；插件不镜像几何或偏好。
 
