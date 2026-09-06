@@ -3,6 +3,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PACKAGE_DIR="$REPO_DIR/packages/dsh-right-sidebar"
 PROFILE="${DSH_PROFILE:-web}"
 CHECKOUT="${DSH_CHECKOUT:-}"
 for CANDIDATE in "$CHECKOUT" /root/deepseek-harness "$HOME/deepseek-harness"; do
@@ -16,7 +17,7 @@ if [ -z "${CHECKOUT:-}" ] || [ ! -d "$CHECKOUT/packages" ]; then
   exit 1
 fi
 
-PATCH="$REPO_DIR/patches/deepseek-harness.patch"
+PATCH="$PACKAGE_DIR/patches/deepseek-harness.patch"
 if [ ! -f "$PATCH" ]; then
   echo "uninstall: tracked harness patch is missing: $PATCH" >&2
   exit 1
@@ -72,13 +73,13 @@ fi
 
 CHECKOUT_CLI="$CHECKOUT/apps/cli/lib/bin.js"
 if command -v dsh >/dev/null 2>&1; then
-  (cd "$REPO_DIR" && dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
+  (cd "$PACKAGE_DIR" && dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
     || echo "uninstall: dsh plugin remove failed; remove @dsh-external/dsh-right-sidebar manually"
 elif command -v node >/dev/null 2>&1 && [ -f "$CHECKOUT_CLI" ]; then
-  (cd "$REPO_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
+  (cd "$PACKAGE_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
     || echo "uninstall: checkout CLI remove failed; remove @dsh-external/dsh-right-sidebar manually"
 elif command -v pnpm >/dev/null 2>&1; then
-  (cd "$REPO_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
+  (cd "$PACKAGE_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
     || echo "uninstall: checkout CLI remove failed; remove @dsh-external/dsh-right-sidebar manually"
 else
   echo "neither dsh nor pnpm is available; remove @dsh-external/dsh-right-sidebar manually"

@@ -5,6 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PACKAGE_DIR="$ROOT/packages/dsh-right-sidebar"
 cd "$ROOT"
 
 # DSH_CHECKOUT 探测：环境变量 → 常见路径（home 下 dsh-harness）
@@ -50,6 +51,8 @@ link_pkg() {
 echo "=== Linking build dependencies (checkout: $CHECKOUT) ==="
 mkdir -p node_modules/@deepseek-ai
 node -e "const fs=require('fs');fs.rmSync('node_modules/@standard-schema',{recursive:true,force:true})"
+link_pkg typescript node_modules/typescript
+link_pkg tsdown node_modules/tsdown
 link_pkg @deepseek-ai/cordis vendor/cordis
 link_pkg @deepseek-ai/dsh-client-ui-slots packages/client/ui-slots
 link_pkg @deepseek-ai/dsh-client-ui-renderer packages/client/ui-renderer
@@ -74,6 +77,7 @@ if [ -n "$STD_SCHEMA" ]; then
   " "$STD_SCHEMA/node_modules/@standard-schema/spec"
 fi
 
+cd "$PACKAGE_DIR"
 echo "=== Compiling src → lib ==="
 node -e "require('fs').rmSync('lib', { recursive: true, force: true })"
 "$TSC" -p tsconfig.json

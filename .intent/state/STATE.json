@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.11",
+  "revision": "0.4.0-draft.12",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -45,7 +45,8 @@
     "../logs/2026-09-06-tab-menu-removal-activation.md",
     "../logs/2026-09-06-chat-alignment-and-operation-map.md",
     "../logs/2026-09-06-per-session-layout-clarification.md",
-    "../logs/2026-09-06-per-session-layout-activation.md"
+    "../logs/2026-09-06-per-session-layout-activation.md",
+    "../logs/2026-09-06-workspace-package-layout.md"
   ],
   "protocol": {
     "id": "meta-intent",

@@ -60,4 +60,4 @@ launcher 和 close rejection 会显示通用 operation error。操作进行期�
 
 本包提供 Node no-op entry、browser half 和 `dsh.bundle.patch`。`cordis.patch.yml` 使用包名 `@dsh-external/dsh-right-sidebar` 注册 loader entry。
 
-Harness 源码补丁由 [patches/deepseek-harness.patch](patches/deepseek-harness.patch) 跟踪，当前绑定 alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。升级 Harness 时，Agent 根据 state 和新目标重新合成 realization；不为延用旧 patch 增加兼容路径。
+Harness 源码补丁由 [patches/deepseek-harness.patch](packages/dsh-right-sidebar/patches/deepseek-harness.patch) 跟踪，当前绑定 alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。升级 Harness 时，Agent 根据 state 和新目标重新合成 realization；不为延用旧 patch 增加兼容路径。

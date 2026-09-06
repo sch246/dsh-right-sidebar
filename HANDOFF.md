@@ -18,7 +18,7 @@
 
 ## Host patch 边界
 
-[patches/deepseek-harness.patch](patches/deepseek-harness.patch) 归 Host realization 所有，基线为 `0a53fb55bea101816fa226bb964ae2bed71c343b`。它提供 navbar action seat、blank-session details 几何、宽度/最大化偏好、最大化布局和全高 divider。插件 runtime 不接管这些 Host 职责。
+[patches/deepseek-harness.patch](packages/dsh-right-sidebar/patches/deepseek-harness.patch) 归 Host realization 所有，基线为 `0a53fb55bea101816fa226bb964ae2bed71c343b`。它提供 navbar action seat、blank-session details 几何、宽度/最大化偏好、最大化布局和全高 divider。插件 runtime 不接管这些 Host 职责。
 
 setup、uninstall、profile 修改、service restart、live deployment 和 realization lock sealing 需要各自的目标调查与权限，不由源码构建结果推断。
 
@@ -27,9 +27,8 @@ setup、uninstall、profile 修改、service restart、live deployment 和 reali
 完成交接前运行并记录的命令：
 
 ```bash
-DSH_CHECKOUT=/root/deepseek-harness node node_modules/vitest/vitest.mjs run
-/root/deepseek-harness/node_modules/.bin/tsc -p tsconfig.client.json --noEmit
-/root/deepseek-harness/node_modules/.bin/tsc -p tsconfig.json --noEmit
+DSH_CHECKOUT=/root/deepseek-harness pnpm test
+pnpm typecheck
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
 node /root/meta-intent/locks/protocol-0.2/bin/validate.mjs .
 git diff --cached --check

@@ -1,21 +1,16 @@
 {
-  "name": "@dsh-external/dsh-right-sidebar",
-  "version": "0.0.1",
-  "description": "DSH Web 右侧边栏工作台：全高 details 列、分组标签、停靠预览与浏览器恢复",
+  "name": "dsh-right-sidebar-development",
   "private": true,
+  "version": "0.0.1",
   "type": "module",
-  "main": "./lib/index.js",
-  "types": "./lib/types/index.d.ts",
-  "files": [
-    "lib",
-    "cordis.patch.yml",
-    "patches",
-    "README.md",
-    "LICENSE"
-  ],
-  "license": "BSD-3-Clause",
-  "peerDependencies": {
-    "@deepseek-ai/cordis": ">=4.0.0-rc <5"
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "setup": "bash scripts/setup.sh",
+    "uninstall": "bash scripts/uninstall.sh",
+    "typecheck": "pnpm --filter @dsh-external/dsh-right-sidebar typecheck",
+    "build:client": "pnpm --filter @dsh-external/dsh-right-sidebar build:client",
+    "test": "pnpm --filter @dsh-external/dsh-right-sidebar test"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": ">=4.0.0-rc <5",
@@ -32,37 +27,5 @@
     "typescript": "^5.9.0",
     "tsdown": "^0.22.14",
     "vitest": "^4.1.8"
-  },
-  "scripts": {
-    "build": "bash scripts/build.sh",
-    "setup": "bash scripts/setup.sh",
-    "uninstall": "bash scripts/uninstall.sh",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:client": "tsdown",
-    "test": "node node_modules/vitest/vitest.mjs run"
-  },
-  "exports": {
-    ".": {
-      "types": "./lib/types/index.d.ts",
-      "default": "./lib/index.js"
-    },
-    "./client": {
-      "types": "./lib/types/client/index.d.ts",
-      "default": "./lib/client.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-renderer",
-        "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-locale"
-      ],
-      "platform": "web"
-    }
   }
 }

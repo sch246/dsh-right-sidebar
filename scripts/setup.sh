@@ -3,6 +3,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PACKAGE_DIR="$REPO_DIR/packages/dsh-right-sidebar"
 PROFILE="${DSH_PROFILE:-web}"
 CHECKOUT="${DSH_CHECKOUT:-}"
 for CANDIDATE in "$CHECKOUT" /root/deepseek-harness "$HOME/deepseek-harness"; do
@@ -20,7 +21,7 @@ if ! git -C "$CHECKOUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
-PATCH="$REPO_DIR/patches/deepseek-harness.patch"
+PATCH="$PACKAGE_DIR/patches/deepseek-harness.patch"
 if [ ! -f "$PATCH" ]; then
   echo "setup: tracked harness patch is missing: $PATCH" >&2
   exit 1
@@ -120,16 +121,16 @@ DSH_CHECKOUT="$CHECKOUT" bash "$REPO_DIR/scripts/build.sh"
 CHECKOUT_CLI="$CHECKOUT/apps/cli/lib/bin.js"
 if command -v dsh >/dev/null 2>&1; then
   echo "registering bundle into profile '$PROFILE'..."
-  (cd "$REPO_DIR" && dsh plugin --profile "$PROFILE" add .)
+  (cd "$PACKAGE_DIR" && dsh plugin --profile "$PROFILE" add "$PACKAGE_DIR")
 elif command -v node >/dev/null 2>&1 && [ -f "$CHECKOUT_CLI" ]; then
   echo "registering bundle through the checkout CLI into profile '$PROFILE'..."
-  (cd "$REPO_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" add .)
+  (cd "$PACKAGE_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" add "$PACKAGE_DIR")
 elif command -v pnpm >/dev/null 2>&1; then
   echo "registering bundle through pnpm into profile '$PROFILE'..."
-  (cd "$REPO_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" add .)
+  (cd "$PACKAGE_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" add "$PACKAGE_DIR")
 else
   echo "neither dsh nor pnpm is available; register the bundle manually:" >&2
-  echo "  cd $CHECKOUT && pnpm dsh plugin --profile $PROFILE add $REPO_DIR" >&2
+  echo "  cd $CHECKOUT && pnpm dsh plugin --profile $PROFILE add $PACKAGE_DIR" >&2
 fi
 
 echo
