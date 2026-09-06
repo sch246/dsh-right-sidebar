@@ -86,7 +86,7 @@ declare function restoreEditorState(
 
 ## 构建
 
-从仓库根目录使用目标 Harness 的工具链和 Client packages；插件包位于 `packages/dsh-right-sidebar/`：
+从仓库根目录使用本地固定版本工具和目标 Harness 的 Client 声明；插件包位于 `packages/dsh-right-sidebar/`：
 
 ```bash
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
@@ -96,25 +96,20 @@ DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
 
 ## 安装、维护与移除
 
-从 [STATE 操作地图](../../.intent/state/STATE.md#installation-maintenance-and-removal) 选择入口并确认目标、消费者和权限。当前脚本默认 profile 为 `web`，可用 `DSH_PROFILE` 指定；`DSH_CHECKOUT` 指向已准备好依赖和工具链的 Harness Git checkout。私有 `DSH_HOME` 只隔离 CLI profile 数据，Host 补丁和构建仍写入指定 checkout。
+从 [STATE 操作地图](../../.intent/state/STATE.md#installation-maintenance-and-removal) 选择入口，显式设置目标 Harness、Home 和 profile。私有 `DSH_HOME` 隔离 profile，Host 修改仍落在 `DSH_CHECKOUT`；安装探针同时需要独立 checkout。
 
 ```bash
-DSH_CHECKOUT=/root/deepseek-harness DSH_PROFILE=web bash scripts/setup.sh
+DSH_CHECKOUT=/absolute/harness DSH_HOME=/absolute/home DSH_PROFILE=web pnpm run setup --check
+DSH_CHECKOUT=/absolute/harness DSH_HOME=/absolute/home DSH_PROFILE=web pnpm run setup --install
+DSH_CHECKOUT=/absolute/harness DSH_HOME=/absolute/home DSH_PROFILE=web pnpm run uninstall --check
+DSH_CHECKOUT=/absolute/harness DSH_HOME=/absolute/home DSH_PROFILE=web pnpm run uninstall --remove
 ```
 
-[setup.sh](../../scripts/setup.sh) 按顺序检查补丁正向或反向可应用性、应用缺失补丁、检查源码标记、执行 `gen-client-catalog` 与 `gen-cordis-api`、写入 Git 私有目录中的 `dsh-right-sidebar.patch-state` receipt、重建 Host libraries 和 Web、构建插件，最后调用 `dsh plugin --profile "$PROFILE" add "$PACKAGE_DIR"`。它优先使用 PATH 上的 `dsh`，再回退到 checkout 的构建 CLI 或 pnpm source launcher；必须确认命令对应目标安装。脚本不执行服务重启。
+[setup.sh](../../scripts/setup.sh) 默认只检查 Host 补丁及标记；安装模式应用所需补丁、更新归属记录和共享 catalogs、构建 Host/插件，再使用所选 checkout 的 `dsh plugin add` 登记实际子包路径。命令失败直接返回，不能把退出或补丁可应用性当成浏览器验收。已准备好 Host 的插件更新可单独运行 build，再通过 `dsh plugin add` 更新 profile。
 
-安装不是原子事务：目录生成失败时 Host 补丁可能已应用而 receipt 尚未写入；Host 构建失败时 receipt 可能已存在。遇到失败先核对源码、receipt、构建产物和 profile，不应重复运行来推断首次写入的所有权。脚本检查适用性而不强制 Host HEAD 等于补丁基线。CLI 不存在时脚本只打印手动注册命令，因此退出成功也不是安装完成证据。
+[uninstall.sh](../../scripts/uninstall.sh) 默认检查；移除模式先拒绝仍被 profile 包的 dependencies、peerDependencies 或 Client inject 使用的 sidebar，然后依据确切 receipt 检查 Host 回撤。还应检查依赖共享 Host 源码但不直接声明 sidebar 的其他消费者；这种部分所有权转移不能由整份补丁回撤替代。profile 移除失败会直接报错，不吞掉失败或提示手工清理为成功。
 
-Host 支持已就绪且仅更新插件时，运行 [build.sh](../../scripts/build.sh)；需要登记 profile 时使用 `dsh plugin --profile web add /absolute/plugin-checkout/packages/dsh-right-sidebar`。该命令不补齐 Host 源码能力。Host 漂移维护应检查被修改的源文件、共享消费者和生成目录，再选择重建或适配补丁，不能强套历史补丁。
-
-```bash
-DSH_CHECKOUT=/root/deepseek-harness DSH_PROFILE=web bash scripts/uninstall.sh
-```
-
-[uninstall.sh](../../scripts/uninstall.sh) 仅在 receipt digest 匹配、`patch_applied_by_setup=true` 且反向检查通过时反转整份 Host 补丁，随后重新生成目录并重建 Host；它最后才移除 profile 包。receipt 缺失或不匹配、外部所有权、重叠修改都会保留 Host 文件。脚本不会检测其它插件对共享源码的依赖，也不能做部分所有权转移；执行前必须完成 [消费者检查](../../.intent/state/STATE.md#host-prerequisites-and-shared-ownership)。`dsh plugin remove` 失败会被捕获并打印说明，末尾的完成提示不能证明移除成功；生成或构建失败也可能在 profile 移除前中止。
-
-每次安装或移除后，都按 [完成条件](../../.intent/state/STATE.md#observable-completion-and-limits) 核对依赖、lockfile、实际解析路径、Bundle、组合配置和 Host 源码。生成目录从剩余源贡献重新生成；忽略目录中的旧 bundle 不会因为 Git 源码回退而消失。浏览器布局与草稿不由卸载脚本清除。历史部署记录存在，但 grouped revision 的目标漂移维护与拥有权回撤尚无演练证据。
+所有操作都不重启服务。profile 的依赖、lockfile、实际链接、Bundle、生成输出和 Host 归属需分别核对；中断后根据实际结果恢复，不假定前序操作回滚。浏览器存储和用户文件不由包卸载删除。
 
 ## Host 源码补丁
 

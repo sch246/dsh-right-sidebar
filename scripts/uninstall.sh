@@ -4,18 +4,21 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$REPO_DIR/packages/dsh-right-sidebar"
-PROFILE="${DSH_PROFILE:-web}"
-CHECKOUT="${DSH_CHECKOUT:-}"
-for CANDIDATE in "$CHECKOUT" /root/deepseek-harness "$HOME/deepseek-harness"; do
-  if [ -n "$CANDIDATE" ] && [ -d "$CANDIDATE/packages" ]; then
-    CHECKOUT="$CANDIDATE"
-    break
-  fi
-done
-if [ -z "${CHECKOUT:-}" ] || [ ! -d "$CHECKOUT/packages" ]; then
-  echo "uninstall: cannot locate the dsh checkout (set DSH_CHECKOUT)" >&2
+PROFILE="${DSH_PROFILE:?set DSH_PROFILE to the selected profile}"
+PROFILE_HOME="${DSH_HOME:?set DSH_HOME to the selected Home}"
+CHECKOUT="${DSH_CHECKOUT:?set DSH_CHECKOUT to the selected Harness checkout}"
+MODE="${1:---check}"
+if [ "$MODE" != "--check" ] && [ "$MODE" != "--remove" ]; then
+  echo "usage: bash scripts/uninstall.sh [--check|--remove]" >&2
+  exit 2
+fi
+if [ ! -f "$CHECKOUT/package.json" ] || ! git -C "$CHECKOUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "invalid DSH_CHECKOUT: $CHECKOUT" >&2
   exit 1
 fi
+run_plugin() {
+  pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" "$@"
+}
 
 PATCH="$PACKAGE_DIR/patches/deepseek-harness.patch"
 if [ ! -f "$PATCH" ]; then
@@ -54,6 +57,15 @@ rebuild_modified_host() {
   (cd "$CHECKOUT" && pnpm run build:web)
 }
 
+if [ "$MODE" = "--check" ]; then
+  echo "uninstall: selected profile is $PROFILE_HOME/profiles/$PROFILE"
+  echo "uninstall: recorded Host ownership=$RECORDED_OWNED digest=$RECORDED_SHA"
+  run_plugin why @dsh-external/dsh-right-sidebar
+  exit 0
+fi
+
+node "$REPO_DIR/scripts/check-consumers.mjs" "$PROFILE_HOME/profiles/$PROFILE"
+
 if [ "$RECORDED_SHA" != "$PATCH_SHA" ]; then
   echo "uninstall: no matching setup provenance; preserving Host files" >&2
   echo "uninstall: run setup from this exact plugin revision before uninstalling its patch" >&2
@@ -71,18 +83,6 @@ else
   echo "uninstall: resolve overlapping edits before retrying" >&2
 fi
 
-CHECKOUT_CLI="$CHECKOUT/apps/cli/lib/bin.js"
-if command -v dsh >/dev/null 2>&1; then
-  (cd "$PACKAGE_DIR" && dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
-    || echo "uninstall: dsh plugin remove failed; remove @dsh-external/dsh-right-sidebar manually"
-elif command -v node >/dev/null 2>&1 && [ -f "$CHECKOUT_CLI" ]; then
-  (cd "$PACKAGE_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
-    || echo "uninstall: checkout CLI remove failed; remove @dsh-external/dsh-right-sidebar manually"
-elif command -v pnpm >/dev/null 2>&1; then
-  (cd "$PACKAGE_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" remove @dsh-external/dsh-right-sidebar) \
-    || echo "uninstall: checkout CLI remove failed; remove @dsh-external/dsh-right-sidebar manually"
-else
-  echo "neither dsh nor pnpm is available; remove @dsh-external/dsh-right-sidebar manually"
-fi
+run_plugin remove @dsh-external/dsh-right-sidebar
 
-echo "uninstall complete. Restart dsh web."
+echo "uninstall: sidebar package removed; verify the selected profile before separate activation"

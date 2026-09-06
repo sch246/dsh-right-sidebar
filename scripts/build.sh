@@ -1,33 +1,23 @@
 #!/bin/bash
 # Build the Node no-op entry, browser declarations, and browser bundle against
 # the linked DeepSeek Harness checkout.
-# Requires DSH_CHECKOUT pointing at a dsh source checkout (auto-probe below).
+# DSH_CHECKOUT selects Host declarations; compiler and bundler are workspace-local.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PACKAGE_DIR="$ROOT/packages/dsh-right-sidebar"
 cd "$ROOT"
 
-# DSH_CHECKOUT 探测：环境变量 → 常见路径（home 下 dsh-harness）
-CHECKOUT="${DSH_CHECKOUT:-}"
-if [ -z "$CHECKOUT" ]; then
-  for candidate in "$HOME/dsh-harness" "$HOME/dsh" "$HOME/.dsh/dsh-harness"; do
-    if [ -d "$candidate/packages" ]; then CHECKOUT="$candidate"; break; fi
-  done
-fi
-if [ -z "$CHECKOUT" ] || [ ! -d "$CHECKOUT/packages" ]; then
-  echo "build: cannot locate the dsh checkout (set DSH_CHECKOUT)" >&2
+CHECKOUT="${DSH_CHECKOUT:?set DSH_CHECKOUT to the selected Harness checkout}"
+if [ ! -d "$CHECKOUT/packages" ]; then
+  echo "build: invalid Harness checkout: $CHECKOUT" >&2
   exit 1
 fi
 
-TSC="$CHECKOUT/node_modules/.bin/tsc"
-if [ ! -x "$TSC" ] && [ ! -f "$TSC.cmd" ]; then
-  echo "build: tsc not found at $TSC" >&2
-  exit 1
-fi
-TSDOWN="$CHECKOUT/node_modules/.bin/tsdown"
-if [ ! -x "$TSDOWN" ] && [ ! -f "$TSDOWN.cmd" ]; then
-  echo "build: tsdown not found at $TSDOWN" >&2
+TSC="$ROOT/node_modules/typescript/bin/tsc"
+TSDOWN="$ROOT/node_modules/tsdown/dist/run.mjs"
+if [ ! -f "$TSC" ] || [ ! -f "$TSDOWN" ]; then
+  echo "build: install this workspace's development dependencies first" >&2
   exit 1
 fi
 
@@ -56,13 +46,6 @@ link_pkg @deepseek-ai/dsh-client-ui-slots packages/client/ui-slots
 link_pkg @deepseek-ai/dsh-client-ui-renderer packages/client/ui-renderer
 link_pkg @deepseek-ai/dsh-client-ui-layout packages/client/ui-layout
 link_pkg @deepseek-ai/dsh-client-locale packages/client/locale
-link_pkg react packages/client/ui-layout/node_modules/react
-link_pkg react-dom packages/test-support/client-runtime/node_modules/react-dom
-link_pkg @testing-library/react packages/test-support/client-runtime/node_modules/@testing-library/react
-link_pkg vitest packages/test-support/client-runtime/node_modules/vitest
-# @types/node（编译类型；checkout 自带）
-link_pkg @types/node node_modules/@types/node
-link_pkg @types/react packages/client/ui-layout/node_modules/@types/react
 
 STD_SCHEMA=$(find "$CHECKOUT/node_modules/.pnpm" -maxdepth 1 -type d -iname '@standard-schema+spec@*' 2>/dev/null | head -1)
 if [ -n "$STD_SCHEMA" ]; then
@@ -78,7 +61,7 @@ fi
 cd "$PACKAGE_DIR"
 echo "=== Compiling src → lib ==="
 node -e "require('fs').rmSync('lib', { recursive: true, force: true })"
-"$TSC" -p tsconfig.json
-"$TSC" -p tsconfig.client.json --emitDeclarationOnly
-"$TSDOWN" --config tsdown.config.ts
+node "$TSC" -p tsconfig.json
+node "$TSC" -p tsconfig.client.json --emitDeclarationOnly
+node "$TSDOWN" --config tsdown.config.ts
 echo "=== Build complete ==="

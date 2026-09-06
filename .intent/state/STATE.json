@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.13",
+  "revision": "0.4.0-draft.14",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -47,7 +47,8 @@
     "../logs/2026-09-06-per-session-layout-clarification.md",
     "../logs/2026-09-06-per-session-layout-activation.md",
     "../logs/2026-09-06-workspace-package-layout.md",
-    "../logs/2026-09-06-dependency-intent.md"
+    "../logs/2026-09-06-dependency-intent.md",
+    "../logs/2026-09-06-local-toolchain.md"
   ],
   "protocol": {
     "id": "meta-intent",

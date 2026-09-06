@@ -4,22 +4,21 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$REPO_DIR/packages/dsh-right-sidebar"
-PROFILE="${DSH_PROFILE:-web}"
-CHECKOUT="${DSH_CHECKOUT:-}"
-for CANDIDATE in "$CHECKOUT" /root/deepseek-harness "$HOME/deepseek-harness"; do
-  if [ -n "$CANDIDATE" ] && [ -d "$CANDIDATE/packages" ]; then
-    CHECKOUT="$CANDIDATE"
-    break
-  fi
-done
-if [ -z "${CHECKOUT:-}" ] || [ ! -d "$CHECKOUT/packages" ]; then
-  echo "setup: cannot locate the dsh checkout (set DSH_CHECKOUT)" >&2
+PROFILE="${DSH_PROFILE:?set DSH_PROFILE to the selected profile}"
+PROFILE_HOME="${DSH_HOME:?set DSH_HOME to the selected Home}"
+CHECKOUT="${DSH_CHECKOUT:?set DSH_CHECKOUT to the selected Harness checkout}"
+MODE="${1:---check}"
+if [ "$MODE" != "--check" ] && [ "$MODE" != "--install" ]; then
+  echo "usage: bash scripts/setup.sh [--check|--install]" >&2
+  exit 2
+fi
+if [ ! -f "$CHECKOUT/package.json" ] || ! git -C "$CHECKOUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "invalid DSH_CHECKOUT: $CHECKOUT" >&2
   exit 1
 fi
-if ! git -C "$CHECKOUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "setup: $CHECKOUT is not a git checkout" >&2
-  exit 1
-fi
+run_plugin() {
+  pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" "$@"
+}
 
 PATCH="$PACKAGE_DIR/patches/deepseek-harness.patch"
 if [ ! -f "$PATCH" ]; then
@@ -82,6 +81,18 @@ rebuild_modified_host() {
   (cd "$CHECKOUT" && pnpm run build:web)
 }
 
+if [ "$MODE" = "--check" ]; then
+  if git -C "$CHECKOUT" apply --unidiff-zero --check --reverse "$PATCH" 2>/dev/null; then
+    verify_source_markers
+    echo "setup: sidebar Host support is present; inspect its receipt before an update"
+  else
+    git -C "$CHECKOUT" apply --unidiff-zero --check "$PATCH"
+    echo "setup: sidebar Host patch applies to this checkout"
+  fi
+  echo "setup: inspection only; selected profile is $PROFILE_HOME/profiles/$PROFILE"
+  exit 0
+fi
+
 echo "checking tracked harness patch against $CHECKOUT..."
 if git -C "$CHECKOUT" apply --unidiff-zero --check --reverse "$PATCH" 2>/dev/null; then
   if [ "$RECORDED_SHA" = "$PATCH_SHA" ] && [ "$RECORDED_OWNED" = "true" ]; then
@@ -118,20 +129,7 @@ rebuild_modified_host
 echo "building dsh-right-sidebar..."
 DSH_CHECKOUT="$CHECKOUT" bash "$REPO_DIR/scripts/build.sh"
 
-CHECKOUT_CLI="$CHECKOUT/apps/cli/lib/bin.js"
-if command -v dsh >/dev/null 2>&1; then
-  echo "registering bundle into profile '$PROFILE'..."
-  (cd "$PACKAGE_DIR" && dsh plugin --profile "$PROFILE" add "$PACKAGE_DIR")
-elif command -v node >/dev/null 2>&1 && [ -f "$CHECKOUT_CLI" ]; then
-  echo "registering bundle through the checkout CLI into profile '$PROFILE'..."
-  (cd "$PACKAGE_DIR" && node "$CHECKOUT_CLI" plugin --profile "$PROFILE" add "$PACKAGE_DIR")
-elif command -v pnpm >/dev/null 2>&1; then
-  echo "registering bundle through pnpm into profile '$PROFILE'..."
-  (cd "$PACKAGE_DIR" && pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" add "$PACKAGE_DIR")
-else
-  echo "neither dsh nor pnpm is available; register the bundle manually:" >&2
-  echo "  cd $CHECKOUT && pnpm dsh plugin --profile $PROFILE add $PACKAGE_DIR" >&2
-fi
+run_plugin add "$PACKAGE_DIR"
+run_plugin why @dsh-external/dsh-right-sidebar
 
-echo
-echo "Restart dsh web to load the rebuilt Host bundles."
+echo "setup: sidebar registered; service activation is separate"

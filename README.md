@@ -11,7 +11,7 @@ pnpm typecheck
 pnpm build:client
 ```
 
-构建使用目标 Harness 的既有 tsc、tsdown 和依赖，在本仓库根目录刷新 dependency links，并只重建子包 `lib/`。`pnpm typecheck` 和 `pnpm build:client` 使用根 devDependencies 提供的本地 TypeScript 和 tsdown，运行前需要准备这些本地依赖；完整构建不覆盖它们。根 devDependencies 保留原有版本范围；本次目录调整不升级工具链。安装和移除仍通过根 `pnpm run setup` / `pnpm run uninstall` 或 `scripts/setup.sh` / `scripts/uninstall.sh`，其 Host 写入与权限要求见 [操作地图](.intent/state/STATE.md#installation-maintenance-and-removal)。
+构建、类型检查和测试使用本仓库安装的 TypeScript 5.9.3、tsdown 0.22.14、Vitest 4.1.8。先运行 `pnpm install --ignore-scripts`；`DSH_CHECKOUT` 只选择目标 Host 源码和声明，构建仅刷新必要的 Host package links，不覆盖本地编译器、测试库或 React。安装和移除默认检查，显式 `--install` / `--remove` 才执行；统一要求 `DSH_CHECKOUT`、`DSH_HOME`、`DSH_PROFILE`。操作范围见 [安装地图](.intent/state/STATE.md#installation-maintenance-and-removal)。
 
 根目录不是可安装的 DSH 插件。已经准备好的实现注册目标为：
 
