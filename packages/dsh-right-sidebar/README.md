@@ -14,6 +14,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 - 拖动到内容四边 10% 区域时在内容矩形内预览半区，drop 才创建 split；内容中心 drop 加入目标组。纵向轨道右边的内容左缘仍可向左分栏。整个标签栏（含空白与固定按钮）仅用于组内排序或跨组插入，深色插入线随指针标出前后位置；纵向标签用横线，横向标签用竖线。显式移动会固定 preview，空的非 root 组折叠。
 - tab 拖动只写 sidebar 自有 MIME，并在 content capture phase 完成内部 drop，避免 CodeMirror 等 feature editor 把 instance id 当文本插入；普通外部文本与文件 drop 不被拦截。
 - 顶部横向标签与 Host controls 同行，右上组通过 `--dsh-shell-navbar-width` 预留空间。纵向右上组为 tab rail 和内容保留本地 clearance；可滚动标签不覆盖 Host controls。
+- 功能可用 `resourceMissing` 标记实例：其对应对象（例如被删除的文件）不存在时标签标题显示删除线，恢复存在后由功能自行取消标记。sidebar 只呈现该标记，不判断对象是否存在。
 - 标签仅保留标题与关闭按钮，不提供三点按钮或移动/分栏菜单。拖拽负责排序和分栏，双击固定 preview，现有键盘快捷键保留。
 - 纵向标签标题、图标、新增与方向切换按钮左对齐。横向标签栏将普通滚轮、Shift 滚轮和触控板横向输入用于水平滚动；Ctrl 缩放保留，仅实际滚动时拦截事件，到达边缘或无溢出时继续传递。
 - group 顶栏只保留 launcher 与当前组横纵切换；新分组的默认方向在 launcher home 用“横向／纵向”单选项设置，标题与选项保持单行，选中项表示当前默认值；“仅影响之后新建的分组”通过鼠标悬浮提示提供。

@@ -249,6 +249,7 @@ export class RightSidebarRuntime implements RightSidebarService {
       viewId: input.viewId,
       title: input.title,
       preview: options.preview === true,
+      resourceMissing: input.resourceMissing === true,
       availability: 'ready',
       restoreDescriptor,
       onClose: input.onClose,
@@ -316,8 +317,9 @@ export class RightSidebarRuntime implements RightSidebarService {
       ? cloneDescriptor(update.restoreDescriptor)
       : current.restoreDescriptor
     const title = update.title ?? current.title
-    if (title === current.title && !replacesDescriptor) return
-    this.#replaceInstance(session, group, current, Object.freeze({ ...current, title, restoreDescriptor }))
+    const resourceMissing = update.resourceMissing ?? current.resourceMissing
+    if (title === current.title && resourceMissing === current.resourceMissing && !replacesDescriptor) return
+    this.#replaceInstance(session, group, current, Object.freeze({ ...current, title, resourceMissing, restoreDescriptor }))
   }
 
   /** @inheritdoc */
@@ -906,7 +908,8 @@ function hydrateWorkbench(value: PersistedWorkbench): RightSidebarWorkbench {
       ...node,
       activeInstanceId: node.activeInstanceId,
       instances: Object.freeze(node.instances.map(instance => Object.freeze({
-        ...instance, availability: 'missing' as const,
+        // A restored tab has no feature state yet, so it never carries a stale subject-missing marking.
+        ...instance, resourceMissing: false, availability: 'missing' as const,
       }))),
     })
   }

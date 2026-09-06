@@ -63,6 +63,8 @@ export interface RightSidebarInstanceInput {
   viewId: string
   /** User-facing tab title. */
   title: string
+  /** True while the feature's own subject no longer exists; the tab marks the title accordingly. */
+  resourceMissing?: boolean
   /** JSON-safe feature descriptor used after browser reload. */
   restoreDescriptor?: unknown
   /** Return `false` to veto closure; rejection leaves the instance open. */
@@ -75,6 +77,8 @@ export interface RightSidebarInstanceInput {
 export interface RightSidebarInstanceUpdate {
   /** Replacement tab title. */
   title?: string
+  /** Replacement subject-missing marking; omission retains the current marking. */
+  resourceMissing?: boolean
   /** JSON-safe restoration checkpoint; property presence replaces or clears it. */
   restoreDescriptor?: unknown
 }
@@ -164,6 +168,8 @@ export interface RightSidebarInstance {
   readonly viewId: string
   readonly title: string
   readonly preview: boolean
+  /** True while the feature reports that its own subject no longer exists. */
+  readonly resourceMissing: boolean
   readonly availability: RightSidebarInstanceAvailability
 }
 

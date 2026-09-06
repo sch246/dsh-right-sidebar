@@ -48,7 +48,8 @@
     "../logs/2026-09-06-per-session-layout-activation.md",
     "../logs/2026-09-06-workspace-package-layout.md",
     "../logs/2026-09-06-dependency-intent.md",
-    "../logs/2026-09-06-local-toolchain.md"
+    "../logs/2026-09-06-local-toolchain.md",
+    "../logs/2026-09-07-missing-resource-marking.md"
   ],
   "protocol": {
     "id": "meta-intent",

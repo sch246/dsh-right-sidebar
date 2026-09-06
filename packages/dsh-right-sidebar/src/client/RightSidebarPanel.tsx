@@ -467,6 +467,7 @@ function InstanceTab(props: InstanceTabProps) {
         id={tabId}
         type="button"
         role="tab"
+        data-missing={instance.resourceMissing ? 'true' : undefined}
         aria-selected={active}
         aria-controls={active ? panelId : undefined}
         tabIndex={active ? 0 : -1}

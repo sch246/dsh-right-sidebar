@@ -31,6 +31,7 @@ export const PANEL_CSS = `
 .dsh-rightbar-tab[data-active='true']{border-color:var(--dsw-alias-border-l2,rgba(38,49,72,.12));background:var(--dsw-alias-bg-base,rgba(38,49,72,.07));color:var(--dsw-alias-text-primary,inherit);}
 .dsh-rightbar-tab-label{min-width:0;height:100%;padding:0 3px 0 7px;border:0;background:transparent;color:inherit;font:inherit;font-size:12px;line-height:1;overflow:hidden;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;flex:1;}
 .dsh-rightbar-tab[data-preview='true'] .dsh-rightbar-tab-label{font-style:italic;}
+.dsh-rightbar-tab-label[data-missing='true']{text-decoration:line-through;}
 .dsh-rightbar-group[data-orientation='vertical'] .dsh-rightbar-tab-label{display:block;justify-content:flex-start;text-align:left;}
 .dsh-rightbar-tab-insertion{position:absolute;z-index:1;pointer-events:none;background:var(--dsw-alias-text-primary,#263148);border-radius:1px;}
 .dsh-rightbar-group[data-orientation='horizontal'] .dsh-rightbar-tab-insertion{left:-2px;top:0;width:2px;height:100%;}

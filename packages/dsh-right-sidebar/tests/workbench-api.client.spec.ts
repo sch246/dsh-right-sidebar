@@ -127,6 +127,14 @@ describe('ctx.rightSidebar grouped workbench', () => {
 
     bench.service().pinInstance('session-1', 'file:a')
     bench.service().updateInstance('session-1', 'file:a', { title: 'A renamed' })
+    expect(group(panel, 'file:a').instances[0]).toMatchObject({ title: 'A renamed', resourceMissing: false })
+    bench.service().updateInstance('session-1', 'file:a', { resourceMissing: true })
+    expect(group(panel, 'file:a').instances[0]).toMatchObject({ title: 'A renamed', resourceMissing: true })
+    // An update that names neither field retains the marking instead of clearing it.
+    bench.service().updateInstance('session-1', 'file:a', { restoreDescriptor: { file: 'a' } })
+    expect(group(panel, 'file:a').instances[0]).toMatchObject({ resourceMissing: true })
+    bench.service().updateInstance('session-1', 'file:a', { resourceMissing: false })
+    expect(group(panel, 'file:a').instances[0]).toMatchObject({ resourceMissing: false })
     bench.service().switchInstanceView('session-1', 'file:a', {
       viewId: 'preview', title: 'A image', restoreDescriptor: { file: 'a', handler: 'image' },
     })
@@ -346,7 +354,7 @@ describe('ctx.rightSidebar grouped workbench', () => {
       id: 'tree', viewId: 'editor', title: 'Tree', restoreDescriptor: { kind: 'tree' },
     })
     await first.service().openInstance('session-persisted', {
-      id: 'doc', viewId: 'editor', title: 'Doc', restoreDescriptor: { kind: 'doc' },
+      id: 'doc', viewId: 'editor', title: 'Doc', resourceMissing: true, restoreDescriptor: { kind: 'doc' },
     }, { target: { fromInstanceId: 'tree', direction: 'right' }, preview: true })
     first.service().updateInstance('session-persisted', 'doc', {
       restoreDescriptor: { kind: 'doc', expanded: ['src'] },
@@ -365,7 +373,7 @@ describe('ctx.rightSidebar grouped workbench', () => {
     const restoredPanel = second.face('session-persisted')
     const unmountRestored = restoredPanel.mountWorkbench()
     expect(group(restoredPanel, 'doc')).toMatchObject({ tabOrientation: 'vertical', verticalRailWidth: 347 })
-    expect(group(restoredPanel, 'doc').instances[0]).toMatchObject({ availability: 'missing', preview: true })
+    expect(group(restoredPanel, 'doc').instances[0]).toMatchObject({ availability: 'missing', preview: true, resourceMissing: false })
     expect((restoredPanel.hooks.workbench.getSnapshot().root as RightSidebarSplit).ratio).toBe(0.72)
 
     const disposeRestoredView = second.registerView('editor')

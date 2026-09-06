@@ -92,7 +92,7 @@ function instance(
   title: string,
   options: Partial<RightSidebarInstance> = {},
 ): RightSidebarInstance {
-  return { id, title, viewId: 'editor', preview: false, availability: 'ready', ...options }
+  return { id, title, viewId: 'editor', preview: false, resourceMissing: false, availability: 'ready', ...options }
 }
 
 function group(
@@ -215,6 +215,27 @@ describe('RightSidebarPanel', () => {
     for (const button of actions.querySelectorAll('button')) {
       expect(getComputedStyle(button).justifyContent).toBe('flex-start')
     }
+  })
+
+  it('marks a tab whose feature subject no longer exists', () => {
+    const styles = document.createElement('style')
+    styles.dataset.testRightbarStyles = ''
+    styles.textContent = PANEL_CSS
+    document.head.append(styles)
+    const view = mountPanel(group('group-1', [
+      instance('gone', 'app.log', { resourceMissing: true }),
+      instance('present', 'note.txt'),
+    ]))
+    const missing = view.getByRole('tab', { name: 'app.log' })
+    const present = view.getByRole('tab', { name: 'note.txt' })
+    expect(missing.getAttribute('data-missing')).toBe('true')
+    expect(present.getAttribute('data-missing')).toBeNull()
+    expect(getComputedStyle(missing).textDecoration).toBe('line-through')
+    expect(getComputedStyle(present).textDecoration).not.toBe('line-through')
+    act(() => {
+      view.workbench.set({ ...view.workbench.getSnapshot(), root: group('group-1', [instance('gone', 'app.log')]) })
+    })
+    expect(view.getByRole('tab', { name: 'app.log' }).hasAttribute('data-missing')).toBe(false)
   })
 
   it('keeps pinning, dragging and closing without a tab action menu', async () => {
