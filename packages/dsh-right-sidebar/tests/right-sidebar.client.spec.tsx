@@ -80,7 +80,8 @@ const copy: Record<string, string> = {
   failed: 'This sidebar content could not be displayed', retry: 'Retry', openLauncher: 'Open launcher',
   launcherTitle: 'Open in sidebar', closeInstance: 'Close {title}', operationFailed: 'Operation failed',
   useVerticalTabs: 'Use vertical tabs', useHorizontalTabs: 'Use horizontal tabs',
-  defaultVerticalTabs: 'Use vertical tabs for new groups', defaultHorizontalTabs: 'Use horizontal tabs for new groups',
+  defaultTabOrientation: 'Tab direction for new groups', horizontalTabs: 'Horizontal', verticalTabs: 'Vertical',
+  newGroupsOnly: 'Applies only to groups created afterwards',
   resizeGroups: 'Resize adjacent groups', resizeTabRail: 'Resize vertical tab rail', restoreTabRail: 'Restore tab rail',
   restoringInstance: 'Restoring this content…', restoreFailed: 'Could not restore',
   missingView: 'Plugin unavailable',
@@ -537,7 +538,8 @@ describe('RightSidebarPanel', () => {
     }))
     fireEvent.click(view.getByRole('button', { name: 'Use horizontal tabs' }))
     expect(view.setGroupTabOrientation).toHaveBeenCalledWith('group-1', 'horizontal')
-    fireEvent.click(view.getByRole('button', { name: 'Use vertical tabs for new groups' }))
+    expect((view.getByRole('radio', { name: 'Horizontal' }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(view.getByRole('radio', { name: 'Vertical' }))
     expect(view.setDefaultTabOrientation).toHaveBeenCalledWith('vertical')
     fireEvent.click(view.getByRole('button', { name: 'Restore tab rail' }))
     expect(view.setGroupVerticalRailWidth).toHaveBeenCalledWith('group-1', 180)
