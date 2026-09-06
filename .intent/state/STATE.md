@@ -51,6 +51,14 @@ The service binding follows the mounted details occurrence. A replacement bindin
 
 ## Installation, maintenance and removal
 
+### Required services and optional consumers
+
+Sidebar requires the Host layout, slots and locale services; it does not require a file provider, viewer, manager or Links. Viewer and manager independently use sidebar placement and shared authenticated file access. Their ability to cooperate does not require either feature to install the other. Links is intended as an optional feature of the shared file provider and requires no sidebar. The currently installed Links Client still injects sidebar/workbench/manager; remove that coupling before treating the installation as independent.
+
+Each package keeps its own version. Consumers require compatible public APIs and declared version ranges, not matching package version numbers. Moving sidebar into `packages/dsh-right-sidebar/` preserves its package name, storage keys, view identities and public API; changing install coordinates does not add a feature dependency. [Dependency intent](../logs/2026-09-06-dependency-intent.md) records this clarification; runtime decoupling and live path migration are pending.
+
+### Operation entries
+
 This operation map applies to the current DSH implementation. [README operations](../../packages/dsh-right-sidebar/README.md#安装维护与移除) describe script effects and incomplete-run recovery; [the manifest](../../packages/dsh-right-sidebar/package.json) and [Bundle layer](../../packages/dsh-right-sidebar/cordis.patch.yml) own package resolution and composition. Read the current state first, then retrieve the logs or immutable locks relevant to a disputed behavior, ownership record or target revision. Reading every historical log and producing a new lock are not prerequisites for routine authorized documentation or maintenance work. Protocol 0.2 remains selected by [STATE.json](STATE.json); historical locks remain immutable evidence, and absence of a current lock does not prevent investigation or implementation from state.
 
 | Operation | Current entry, run from the plugin checkout | Required target facts and result |
