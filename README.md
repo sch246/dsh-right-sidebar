@@ -19,6 +19,6 @@ pnpm build:client
 dsh plugin --profile web add /absolute/plugin-checkout/packages/dsh-right-sidebar
 ```
 
-所有旧根路径消费者需改为子包路径：profile 的 `link:` / `file:` 依赖通过 `dsh plugin add` 事务更新；相邻 file-viewer、file-manager 和 resource-links 仓库的 sidebar 依赖、构建链接和测试 alias 需各自在其所有权内跟进；直接读取旧根 `src/`、`lib/`、`cordis.patch.yml` 或 `patches/` 的调用方需在路径中加入 `packages/dsh-right-sidebar/`。包名、版本 `0.0.1`、公开 `/client` 导出与 renderer id 保持不变；根目录不提供转发 exports 或旧路径副本。
+所有旧根路径消费者需改为子包路径：profile 的 `link:` / `file:` 依赖通过 `dsh plugin add` 事务更新；相邻 file-viewer、file-manager 和 resource-links 仓库的 sidebar 依赖、构建链接和测试 alias 需各自在其所有权内跟进；直接读取旧根 `src/`、`lib/`、`cordis.patch.yml` 或 `patches/` 的调用方需在路径中加入 `packages/dsh-right-sidebar/`。包名、公开 `/client` 导出与 renderer id 保持不变；根目录不提供转发 exports 或旧路径副本。原生文件接收 API 从插件版本 `0.0.2` 提供；使用该 API 的消费者应声明 `>=0.0.2 <1`，各插件独立版本。
 
 浏览器布局键包含固定包名字符串 `@dsh-external/dsh-right-sidebar/workbench/1`，恢复备份键追加 `-invalid-backup`，不会从 checkout 或包目录派生。session 子键来自 sessionId，实例的 viewId 与 restore descriptor 保持原值；Host 的固定键 `dsh.layout.panels.v2` 也不变。同一浏览器 origin 下，纯包路径移动无需迁移或清除布局与草稿。源码身份和证据范围见 [迁移记录](.intent/logs/2026-09-06-workspace-package-layout.md)；live profile 和服务需要独立迁移及验收。

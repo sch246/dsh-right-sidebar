@@ -3,6 +3,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   PanelInjected,
+  RightSidebarFileDropContext,
+  RightSidebarFileDropHandler,
   RightSidebarGroup,
   RightSidebarInstance,
   RightSidebarInstanceInput,
@@ -39,6 +41,7 @@ interface RuntimeInstance extends RightSidebarInstance {
 }
 
 interface SessionRecord {
+  readonly fileDropHandlers: Map<string, RightSidebarFileDropHandler>
   snapshot: RightSidebarWorkbench
   readonly listeners: Set<() => void>
   readonly source: HostObservable<RightSidebarWorkbench>
@@ -166,6 +169,24 @@ export class RightSidebarRuntime implements RightSidebarService {
       if (this.#restorers.get(viewId) !== restore) return
       this.#restorers.delete(viewId)
       this.#markViewMissing(viewId)
+    }
+  }
+
+  /** @inheritdoc */
+  registerFileDropHandler(
+    sessionId: RightSidebarSessionId,
+    instanceId: string,
+    handler: RightSidebarFileDropHandler,
+  ): () => void {
+    this.#assertAlive()
+    const session = this.#knownSession(sessionId, instanceId)
+    if (session.fileDropHandlers.has(instanceId)) {
+      throw new RightSidebarError('duplicate-file-drop-handler', `right-sidebar: instance "${instanceId}" already has a file receiver`)
+    }
+    const registration = Object.freeze({ ...handler })
+    session.fileDropHandlers.set(instanceId, registration)
+    return () => {
+      if (session.fileDropHandlers.get(instanceId) === registration) session.fileDropHandlers.delete(instanceId)
     }
   }
 
@@ -334,6 +355,7 @@ export class RightSidebarRuntime implements RightSidebarService {
     const session = this.#knownSession(sessionId, id)
     const group = groupContaining(session.snapshot.root, id) as RightSidebarGroup
     const current = group.instances.find(instance => instance.id === id) as RuntimeInstance
+    session.fileDropHandlers.delete(id)
     this.#replaceInstance(session, group, current, Object.freeze({
       ...current,
       viewId: update.viewId,
@@ -423,6 +445,22 @@ export class RightSidebarRuntime implements RightSidebarService {
         if (session.snapshot.defaultTabOrientation === orientation) return
         this.#write(session, { ...session.snapshot, defaultTabOrientation: orientation })
       },
+      canAcceptFileDrop: groupId => {
+        this.#assertBinding(binding)
+        const receiver = this.#fileDropReceiver(sessionId, groupId)
+        if (receiver === undefined) return false
+        try { return receiver.handler.canAccept?.(receiver.context) ?? true } catch (error) {
+          console.error('right-sidebar: file drop eligibility callback failed:', error)
+          return false
+        }
+      },
+      dropFiles: async (groupId, files) => {
+        this.#assertBinding(binding)
+        if (files.length === 0) return
+        const receiver = this.#fileDropReceiver(sessionId, groupId)
+        if (receiver === undefined || receiver.handler.canAccept?.(receiver.context) === false) return
+        await receiver.handler.drop({ ...receiver.context, files })
+      },
       setSplitRatio: (splitId, ratio) => {
         this.#assertBinding(binding)
         const root = mapSplit(session.snapshot.root, splitId, split => Object.freeze({
@@ -447,10 +485,28 @@ export class RightSidebarRuntime implements RightSidebarService {
     this.#notify(this.#launcherListeners)
     for (const session of this.#sessions.values()) this.#notify(session.listeners)
     this.#launcherListeners.clear()
-    for (const session of this.#sessions.values()) session.listeners.clear()
+    for (const session of this.#sessions.values()) {
+      session.listeners.clear()
+      session.fileDropHandlers.clear()
+    }
     this.#sessions.clear()
     this.#closing.clear()
     this.#openGenerations.clear()
+  }
+
+  #fileDropReceiver(sessionId: RightSidebarSessionId, groupId: string): {
+    handler: RightSidebarFileDropHandler
+    context: RightSidebarFileDropContext
+  } | undefined {
+    const session = this.#session(sessionId)
+    const group = findGroup(session.snapshot.root, groupId)
+    const instance = group?.instances.find(candidate => candidate.id === group.activeInstanceId)
+    if (instance?.availability !== 'ready') return undefined
+    const handler = session.fileDropHandlers.get(instance.id)
+    return handler === undefined ? undefined : {
+      handler,
+      context: { sessionId, groupId, instanceId: instance.id },
+    }
   }
 
   #resolveOpenGroup(session: SessionRecord, target: RightSidebarTarget | undefined): RightSidebarGroup | undefined {
@@ -777,6 +833,7 @@ export class RightSidebarRuntime implements RightSidebarService {
     const listeners = new Set<() => void>()
     const record: SessionRecord = {
       snapshot,
+      fileDropHandlers: new Map(),
       listeners,
       source: {
         getSnapshot: () => record.snapshot,
@@ -825,6 +882,13 @@ export class RightSidebarRuntime implements RightSidebarService {
   }
 
   #write(session: SessionRecord, snapshot: RightSidebarWorkbench): void {
+    for (const id of session.fileDropHandlers.keys()) {
+      const owner = groupContaining(snapshot.root, id)
+      const instance = owner?.instances.find(candidate => candidate.id === id)
+      if (instance === undefined || instance.availability === 'missing' || instance.availability === 'failed') {
+        session.fileDropHandlers.delete(id)
+      }
+    }
     session.snapshot = Object.freeze(snapshot)
     this.#persisted[this.#sessionKey(session)] = persistWorkbench(snapshot)
     writePersisted(this.#persisted)

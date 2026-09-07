@@ -9,6 +9,7 @@ import { RightSidebarRuntime } from './service'
 import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
 import type {
+  RightSidebarFileDropHandler,
   RightSidebarInstanceInput,
   RightSidebarInstanceUpdate,
   RightSidebarInstanceViewUpdate,
@@ -24,6 +25,9 @@ import type {
 export {
   RightSidebarError,
   type RightSidebarErrorCode,
+  type RightSidebarFileDropContext,
+  type RightSidebarFileDropRequest,
+  type RightSidebarFileDropHandler,
   type RightSidebarInstance,
   type RightSidebarInstanceInput,
   type RightSidebarInstanceUpdate,
@@ -59,6 +63,11 @@ export function apply(ctx: ClientContext): void {
       runtime.registerLauncher(launcher),
     registerRestorer: (viewId: string, restore: RightSidebarRestorer): (() => void) =>
       runtime.registerRestorer(viewId, restore),
+    registerFileDropHandler: (
+      sessionId: RightSidebarSessionId,
+      instanceId: string,
+      handler: RightSidebarFileDropHandler,
+    ): (() => void) => runtime.registerFileDropHandler(sessionId, instanceId, handler),
     launch: async (
       sessionId: RightSidebarSessionId,
       launcherId: string,

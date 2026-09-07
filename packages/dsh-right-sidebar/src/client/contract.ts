@@ -11,6 +11,7 @@ export type RightSidebarErrorCode =
   | 'unknown-launcher'
   | 'duplicate-launcher'
   | 'duplicate-restorer'
+  | 'duplicate-file-drop-handler'
   | 'unknown-view'
   | 'unknown-instance'
   | 'unknown-group'
@@ -119,12 +120,45 @@ export type RightSidebarRestorer = (
   context: RightSidebarRestoreContext,
 ) => void | RightSidebarRestoreResult | Promise<void | RightSidebarRestoreResult>
 
+/** Current destination of a native file drag over one group's content. */
+export interface RightSidebarFileDropContext {
+  readonly sessionId: RightSidebarSessionId
+  readonly groupId: string
+  readonly instanceId: string
+}
+
+/** Files released over the active instance's content rectangle. */
+export interface RightSidebarFileDropRequest extends RightSidebarFileDropContext {
+  readonly files: readonly File[]
+}
+
+/** Feature-owned acceptance and processing of native files; internal tab drags never arrive here. */
+export interface RightSidebarFileDropHandler {
+  /** Synchronous, side-effect-free eligibility check; omission accepts files while the instance is ready. */
+  readonly canAccept?: (context: RightSidebarFileDropContext) => boolean
+  /** Resolve after handling the drop; rejection displays the sidebar operation error. The feature owns cancellation. */
+  readonly drop: (request: RightSidebarFileDropRequest) => void | Promise<void>
+}
+
 /** Public `ctx.rightSidebar` face for launchers and grouped session instances. */
 export interface RightSidebarService {
   /** Register one feature launcher and return its idempotent disposer. */
   registerLauncher(launcher: RightSidebarLauncher): () => void
   /** Register one restoration callback for a renderer id. */
   registerRestorer(viewId: string, restore: RightSidebarRestorer): () => void
+  /**
+   * Register one receiver for an existing instance, independently of its current group or activation.
+   * Close, renderer replacement, missing registration and runtime disposal invalidate it; inactive sessions never receive drops.
+   * @param sessionId - Owning session.
+   * @param instanceId - Existing instance in that session.
+   * @param handler - Feature acceptance and processing callbacks; duplicate registration throws.
+   * @returns Idempotent disposer; attach it to the feature lifecycle.
+   */
+  registerFileDropHandler(
+    sessionId: RightSidebarSessionId,
+    instanceId: string,
+    handler: RightSidebarFileDropHandler,
+  ): () => void
   /** Invoke one live launcher for the mounted session. */
   launch(sessionId: RightSidebarSessionId, launcherId: string, selection?: unknown): Promise<void>
   /** Add or activate one instance and return its actual destination group. */
@@ -248,6 +282,10 @@ export interface PanelInjected {
   setGroupVerticalRailWidth(groupId: string, width: number): void
   /** Change the default used by subsequently created groups. */
   setDefaultTabOrientation(orientation: RightSidebarTabOrientation): void
+  /** Check the active ready instance's native-file eligibility; callback exceptions reject eligibility and are reported. */
+  canAcceptFileDrop(groupId: string): boolean
+  /** Deliver native files to the group's active ready receiver; callback failure rejects to the panel. */
+  dropFiles(groupId: string, files: readonly File[]): Promise<void>
   /** Resize one split branch. */
   setSplitRatio(splitId: string, ratio: number): void
 }

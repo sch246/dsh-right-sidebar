@@ -102,7 +102,7 @@ describe('ctx.rightSidebar grouped workbench', () => {
     const unmount = panel.mountWorkbench()
 
     expect(Object.keys(bench.service())).toEqual([
-      'registerLauncher', 'registerRestorer', 'launch', 'openInstance', 'getInstanceGroup',
+      'registerLauncher', 'registerRestorer', 'registerFileDropHandler', 'launch', 'openInstance', 'getInstanceGroup',
       'resolveTarget', 'activateInstance', 'pinInstance', 'updateInstance', 'switchInstanceView',
       'closeInstance',
     ])
@@ -146,6 +146,94 @@ describe('ctx.rightSidebar grouped workbench', () => {
     unmount()
     disposePreview()
     disposeEditor()
+    await bench.dispose()
+  })
+
+  it('routes native files to the active receiver in its current group and session', async () => {
+    const bench = await createBench()
+    bench.registerView('editor')
+    const panel = bench.face('a')
+    panel.mountWorkbench()
+    const service = bench.service()
+    const first = await service.openInstance('a', { id: 'one', viewId: 'editor', title: 'One' })
+    const second = await service.openInstance('a', { id: 'two', viewId: 'editor', title: 'Two' }, {
+      target: { fromInstanceId: 'one', direction: 'right' },
+    })
+    const drop = vi.fn()
+    let accepting = true
+    const off = service.registerFileDropHandler('a', 'one', { canAccept: () => accepting, drop })
+    expectCode(() => service.registerFileDropHandler('a', 'one', { drop }), 'duplicate-file-drop-handler')
+    expectCode(() => service.registerFileDropHandler('b', 'one', { drop }), 'unknown-instance')
+    const files = [new File(['content'], 'note.txt')]
+    expect(panel.canAcceptFileDrop(first)).toBe(true)
+    expect(panel.canAcceptFileDrop(second)).toBe(false)
+    await panel.dropFiles(second, files)
+    await panel.dropFiles(first, [])
+    expect(drop).not.toHaveBeenCalled()
+    await panel.dropFiles(first, files)
+    expect(drop).toHaveBeenLastCalledWith({ sessionId: 'a', groupId: first, instanceId: 'one', files })
+    accepting = false
+    expect(panel.canAcceptFileDrop(first)).toBe(false)
+    await panel.dropFiles(first, files)
+    expect(drop).toHaveBeenCalledOnce()
+    accepting = true
+    panel.moveInstance('one', { groupId: second, direction: 'center' })
+    await panel.dropFiles(second, files)
+    expect(drop).toHaveBeenLastCalledWith({ sessionId: 'a', groupId: second, instanceId: 'one', files })
+    panel.activateInstance('two')
+    expect(panel.canAcceptFileDrop(second)).toBe(false)
+    await panel.dropFiles(second, files)
+    expect(drop).toHaveBeenCalledTimes(2)
+    panel.activateInstance('one')
+    const other = bench.face('b')
+    other.mountWorkbench()
+    await expect(panel.dropFiles(second, files)).rejects.toMatchObject({ code: 'not-mounted' })
+    const otherGroup = await service.openInstance('b', { id: 'one', viewId: 'editor', title: 'Other one' })
+    expect(other.canAcceptFileDrop(otherGroup)).toBe(false)
+    panel.mountWorkbench()
+    off()
+    off()
+    expect(panel.canAcceptFileDrop(second)).toBe(false)
+    service.registerFileDropHandler('a', 'one', { drop })
+    service.switchInstanceView('a', 'one', { viewId: 'editor' })
+    expect(panel.canAcceptFileDrop(second)).toBe(false)
+    const staleOff = service.registerFileDropHandler('a', 'one', { drop })
+    await service.closeInstance('a', 'one')
+    await service.openInstance('a', { id: 'one', viewId: 'editor', title: 'Reopened' })
+    expect(panel.canAcceptFileDrop(second)).toBe(false)
+    service.registerFileDropHandler('a', 'one', { drop })
+    staleOff()
+    expect(panel.canAcceptFileDrop(second)).toBe(true)
+    await bench.dispose()
+    expectCode(() => panel.canAcceptFileDrop(second), 'disposed')
+  })
+
+  it('reports native-file callback failures and removes receivers when a renderer disappears', async () => {
+    const bench = await createBench()
+    const offView = bench.registerView('editor')
+    const panel = bench.face('a')
+    panel.mountWorkbench()
+    const groupId = await bench.service().openInstance('a', { id: 'one', viewId: 'editor', title: 'One' })
+    const failure = new Error('feature failed')
+    const files = [new File(['content'], 'note.txt')]
+    let off = bench.service().registerFileDropHandler('a', 'one', { drop: async () => { throw failure } })
+    await expect(panel.dropFiles(groupId, files)).rejects.toBe(failure)
+    off()
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      off = bench.service().registerFileDropHandler('a', 'one', {
+        canAccept: () => { throw failure }, drop: vi.fn(),
+      })
+      expect(panel.canAcceptFileDrop(groupId)).toBe(false)
+      expect(report).toHaveBeenCalledWith('right-sidebar: file drop eligibility callback failed:', failure)
+      await expect(panel.dropFiles(groupId, files)).rejects.toBe(failure)
+    } finally { report.mockRestore() }
+    offView()
+    expect(panel.canAcceptFileDrop(groupId)).toBe(false)
+    bench.registerView('editor')
+    bench.service().switchInstanceView('a', 'one', { viewId: 'editor' })
+    expect(panel.canAcceptFileDrop(groupId)).toBe(false)
+    off()
     await bench.dispose()
   })
 

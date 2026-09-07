@@ -145,6 +145,8 @@ function mountPanel(
     closeInstance: vi.fn(async () => {}),
     retryRestore: vi.fn(async () => {}),
     moveInstance: vi.fn(),
+    canAcceptFileDrop: vi.fn(() => true),
+    dropFiles: vi.fn(async (_groupId: string, _files: readonly File[]) => {}),
     setGroupTabOrientation: vi.fn(),
     setGroupVerticalRailWidth: vi.fn(),
     setDefaultTabOrientation: vi.fn(),
@@ -303,6 +305,46 @@ describe('RightSidebarPanel', () => {
     fireEvent.drop(editor, { dataTransfer: external, clientX: 50, clientY: 50 })
     expect(editorDrop).toHaveBeenCalledOnce()
     expect(view.moveInstance).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['horizontal', 'vertical'] as const)('routes native files from %s content only and displays rejected operations', async orientation => {
+    const editorDrop = vi.fn()
+    const view = mountPanel({
+      kind: 'split', id: 'split', axis: 'horizontal', ratio: 0.5,
+      first: group('left', [instance('a', 'A')], 'a', { tabOrientation: orientation }),
+      second: group('right', [instance('b', 'B')]),
+    }, [], id => <div data-testid={`editor-${id}`} onDrop={editorDrop}>Editor</div>)
+    const files = [new File(['text'], 'note.txt')]
+    const transfer = { ...dataTransfer(), types: ['Files'], files }
+    const left = view.getByTestId('editor-a')
+    const right = view.getByTestId('editor-b')
+    fireEvent.dragOver(left, { dataTransfer: transfer })
+    expect(transfer.dropEffect).toBe('copy')
+    expect(view.canAcceptFileDrop).toHaveBeenCalledWith('left')
+    await act(async () => { fireEvent.drop(left, { dataTransfer: transfer }) })
+    expect(view.dropFiles).toHaveBeenLastCalledWith('left', files)
+    await act(async () => { fireEvent.drop(right, { dataTransfer: transfer }) })
+    expect(view.dropFiles).toHaveBeenLastCalledWith('right', files)
+    expect(editorDrop).not.toHaveBeenCalled()
+    const tabDrop = createEvent.drop(view.getAllByRole('tablist')[0]!, { dataTransfer: transfer })
+    fireEvent(view.getAllByRole('tablist')[0]!, tabDrop)
+    expect(tabDrop.defaultPrevented).toBe(true)
+    expect(view.dropFiles).toHaveBeenCalledTimes(2)
+    const root = view.container.querySelector('.dsh-rightbar-root')!
+    const unusedDrop = createEvent.drop(root, { dataTransfer: transfer })
+    fireEvent(root, unusedDrop)
+    expect(unusedDrop.defaultPrevented).toBe(true)
+    expect(view.dropFiles).toHaveBeenCalledTimes(2)
+    view.canAcceptFileDrop.mockReturnValue(false)
+    fireEvent.dragOver(left, { dataTransfer: transfer })
+    expect(transfer.dropEffect).toBe('none')
+    const internal = dataTransfer({ 'application/x-dsh-right-sidebar-instance': 'a' })
+    Object.defineProperty(internal, 'types', { value: [...internal.types, 'Files'] })
+    fireEvent.drop(left, { dataTransfer: internal })
+    expect(view.dropFiles).toHaveBeenCalledTimes(2)
+    view.dropFiles.mockRejectedValueOnce(new Error('feature failure'))
+    await act(async () => { fireEvent.drop(right, { dataTransfer: transfer }) })
+    expect(view.getByRole('alert').textContent).toBe('Operation failed')
   })
 
   it('keeps internal tab-bar reordering on the tab drop target', () => {
