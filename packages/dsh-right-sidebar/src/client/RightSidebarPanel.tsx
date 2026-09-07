@@ -42,8 +42,6 @@ export function RightSidebarPanel({
   closeInstance,
   retryRestore,
   moveInstance,
-  canAcceptFileDrop,
-  dropFiles,
   setGroupTabOrientation,
   setGroupVerticalRailWidth,
   setDefaultTabOrientation,
@@ -121,21 +119,7 @@ export function RightSidebarPanel({
   }
 
   return (
-    <div
-      className="dsh-rightbar-root"
-      aria-label={t('title')}
-      onDragOver={event => {
-        if (!isNativeFileDrag(event.dataTransfer)) return
-        event.preventDefault()
-        event.stopPropagation()
-        event.dataTransfer.dropEffect = 'none'
-      }}
-      onDrop={event => {
-        if (!isNativeFileDrag(event.dataTransfer)) return
-        event.preventDefault()
-        event.stopPropagation()
-      }}
-    >
+    <div className="dsh-rightbar-root" aria-label={t('title')}>
       {operationFailed && <div className="dsh-rightbar-operation-error" role="alert">{t('operationFailed')}</div>}
       <div
         ref={workspaceRef}
@@ -216,20 +200,6 @@ export function RightSidebarPanel({
               data-active={active ? 'true' : undefined}
               style={surfaceStyle(rect, owner, rectTouchesTop(rect), rectTouchesRight(rect))}
               onPointerDown={() => { activateGroup(owner.id) }}
-              onDragOverCapture={event => {
-                if (!isNativeFileDrag(event.dataTransfer)) return
-                event.preventDefault()
-                event.stopPropagation()
-                event.dataTransfer.dropEffect = active && canAcceptFileDrop(owner.id) ? 'copy' : 'none'
-              }}
-              onDropCapture={event => {
-                if (!isNativeFileDrag(event.dataTransfer)) return
-                event.preventDefault()
-                event.stopPropagation()
-                if (!active) return
-                const files = Array.from(event.dataTransfer.files)
-                if (files.length > 0) void run(`files:${owner.id}`, () => dropFiles(owner.id, files))
-              }}
             >
               <InstanceContent
                 instance={instance}
@@ -543,10 +513,6 @@ function InstanceTab(props: InstanceTabProps) {
 
 function isSidebarTabDrag(dataTransfer: DataTransfer): boolean {
   return Array.from(dataTransfer.types).includes(SIDEBAR_TAB_MIME)
-}
-
-function isNativeFileDrag(dataTransfer: DataTransfer): boolean {
-  return !isSidebarTabDrag(dataTransfer) && Array.from(dataTransfer.types).includes('Files')
 }
 
 function isTabBarEventTarget(target: EventTarget | null): boolean {

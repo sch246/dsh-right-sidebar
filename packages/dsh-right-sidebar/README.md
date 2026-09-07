@@ -12,7 +12,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 - 每组最多一个斜体 preview。打开下一个 preview 会先等待旧 preview 的关闭决策；veto 取消新打开。双击标签或功能首次编辑时调用 `pinInstance()` 固定 preview。
 - 相对打开由 runtime 集中解析。现有目标按几何距离选择，tree preorder 打破平局；没有目标时才在来源组旁创建 50/50 split。
 - 拖动到内容四边 10% 区域时在内容矩形内预览半区，drop 才创建 split；内容中心 drop 加入目标组。纵向轨道右边的内容左缘仍可向左分栏。整个标签栏（含空白与固定按钮）仅用于组内排序或跨组插入，深色插入线随指针标出前后位置；纵向标签用横线，横向标签用竖线。显式移动会固定 preview，空的非 root 组折叠。
-- tab 拖动只写 sidebar 自有 MIME，并在 content capture phase 完成内部 drop，避免 CodeMirror 等 feature editor 把 instance id 当文本插入；普通外部文本 drop 不被拦截；原生文件通过活动实例的接收 API 路由。
+- tab 拖动只写 sidebar 自有 MIME，并在 content capture phase 完成内部 drop，避免 CodeMirror 等 feature editor 把 instance id 当文本插入；普通外部文本 drop 不被拦截。文件接收与遮罩由外部 dsh-file-drop 插件及其消费者提供，sidebar 只提供布局和内部 docking。
 - 顶部横向标签与 Host controls 同行，右上组通过 `--dsh-shell-navbar-width` 预留空间。纵向右上组为 tab rail 和内容保留本地 clearance；可滚动标签不覆盖 Host controls。
 - 功能可用 `resourceMissing` 标记实例：其对应对象（例如被删除的文件）不存在时标签标题显示删除线，恢复存在后由功能自行取消标记。sidebar 只呈现该标记，不判断对象是否存在。
 - 标签仅保留标题与关闭按钮，不提供三点按钮或移动/分栏菜单。拖拽负责排序和分栏，双击固定 preview，现有键盘快捷键保留。
@@ -83,9 +83,7 @@ declare function restoreEditorState(
 - `onClose` 只决定能否关闭；同步 `onClosed` 仅在 sidebar 提交删除该 exact instance 后释放 feature state。veto、stale 或 superseded 操作不会调用它，通知异常不会回滚已提交 layout。
 - `activateInstance()`、`updateInstance()` 和 `closeInstance()` 分别负责激活、标题或 restore descriptor checkpoint 更新和安全关闭。并发关闭共享一次决策；过期完成不能删除 updated、moved、switched、restored 或 reopened instance。
 
-- `registerFileDropHandler(sessionId, instanceId, { canAccept?, drop })` 从版本 `0.0.2` 提供，消费者声明 `>=0.0.2 <1`。它为现有实例注册唯一原生文件接收器并返回幂等 disposer。`canAccept` 同步接收 `{ sessionId, groupId, instanceId }`，必须无副作用；`drop` 额外接收 `readonly File[]`，返回 `void | Promise<void>`。只从该组内容区投递给活动且 ready 的实例，标签栏、纵向轨道、launcher home 和未注册区域只阻止浏览器文件跳转。移动实例保留注册；关闭、替换 renderer、renderer/restorer 消失及 runtime disposal 撤销注册。功能在打开、恢复提交或 renderer effect 内注册并管理清理；文件目的地、上传规则、进度和取消均归功能。未处理的 drop rejection 显示 sidebar 操作错误，eligibility 异常记录诊断并拒绝 hover 接收。注册不持久化，sidebar 不依赖文件功能，也不安装全局文件监听器。
-
-`RightSidebarError` 提供稳定 code。重复文件接收器注册是 `duplicate-file-drop-handler`。预览 veto 是 `preview-vetoed`，较新的打开取代等待中的旧打开是 `superseded`，不可序列化 descriptor 是 `invalid-restore-descriptor`。所有输入验证先于 instance、layout 和 Host visibility 写入。
+`RightSidebarError` 提供稳定 code。预览 veto 是 `preview-vetoed`，较新的打开取代等待中的旧打开是 `superseded`，不可序列化 descriptor 是 `invalid-restore-descriptor`。所有输入验证先于 instance、layout 和 Host visibility 写入。
 
 ## 构建
 
@@ -95,7 +93,7 @@ declare function restoreEditorState(
 DSH_CHECKOUT=/root/deepseek-harness bash scripts/build.sh
 ```
 
-该命令构建 Node no-op entry、browser declarations 和 browser bundle。消费原生文件接收 API 的插件须在此构建后解析本包 `/client` 声明；接收器集成与按组拖放验收步骤见 [STATE 操作地图](../../.intent/state/STATE.md#installation-maintenance-and-removal)。它只重建 `packages/dsh-right-sidebar/lib/` 并刷新仓库根 `node_modules` dependency links，不安装 profile、不应用 Host patch，也不重启服务。
+该命令构建 Node no-op entry、browser declarations 和 browser bundle。外部 dsh-file-drop 消费者可在此构建后解析本包 `/client` 声明；它只重建 `packages/dsh-right-sidebar/lib/`，不安装 profile、不应用 Host patch，也不重启服务。
 
 ## 安装、维护与移除
 
