@@ -51,7 +51,8 @@
     "../logs/2026-09-06-local-toolchain.md",
     "../logs/2026-09-07-missing-resource-marking.md",
     "../logs/2026-09-07-group-native-file-drops.md",
-    "../logs/2026-09-07-file-drop-ownership-correction.md"
+    "../logs/2026-09-07-file-drop-ownership-correction.md",
+    "../logs/2026-09-07-standardized-workspace-operations.md"
   ],
   "protocol": {
     "id": "meta-intent",

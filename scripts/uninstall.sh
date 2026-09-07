@@ -16,8 +16,12 @@ if [ ! -f "$CHECKOUT/package.json" ] || ! git -C "$CHECKOUT" rev-parse --is-insi
   echo "invalid DSH_CHECKOUT: $CHECKOUT" >&2
   exit 1
 fi
+run_dsh() {
+  (cd "$CHECKOUT" && DSH_HOME="$PROFILE_HOME" node --import tsx/esm apps/cli/src/bin.ts "$@")
+}
+
 run_plugin() {
-  pnpm --dir "$CHECKOUT" dsh plugin --profile "$PROFILE" "$@"
+  run_dsh plugin --profile "$PROFILE" "$@"
 }
 
 PATCH="$PACKAGE_DIR/patches/deepseek-harness.patch"
@@ -37,24 +41,24 @@ fi
 
 regenerate_shared_catalogs() {
   echo "regenerating shared client catalogs from the remaining source contributions..."
-  (cd "$CHECKOUT" && pnpm run gen-client-catalog && pnpm run gen-cordis-api)
+  (cd "$CHECKOUT" && node --import tsx/esm scripts/gen-client-catalog.ts && node --import tsx/esm scripts/gen-cordis-api.ts)
 }
 
 rebuild_modified_host() {
   echo "rebuilding modified Host libraries and Web frontend..."
-  (cd "$CHECKOUT" && pnpm exec tsc -b \
+  (cd "$CHECKOUT" && node "$CHECKOUT/node_modules/typescript/bin/tsc" -b \
     packages/client/store/tsconfig.json \
     packages/client/ui-slots/tsconfig.json \
     packages/client/ui-layout/tsconfig.json \
     packages/client/ui-conversation/tsconfig.json \
     packages/client/web/tsconfig.json)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-store exec tsdown)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-slots exec tsdown)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-layout bundle)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-conversation bundle)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-ui-primitives exec tsdown)
-  (cd "$CHECKOUT" && pnpm --filter @deepseek-ai/dsh-client-web exec tsdown)
-  (cd "$CHECKOUT" && pnpm run build:web)
+  (cd "$CHECKOUT/packages/client/store" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/packages/client/ui-slots" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/packages/client/ui-layout" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/packages/client/ui-conversation" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/packages/client/ui-primitives" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/packages/client/web" && node "$CHECKOUT/node_modules/tsdown/dist/run.mjs" --config tsdown.config.ts)
+  (cd "$CHECKOUT/apps/web" && node node_modules/vite/bin/vite.js build)
 }
 
 if [ "$MODE" = "--check" ]; then

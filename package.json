@@ -8,9 +8,11 @@
     "build": "bash scripts/build.sh",
     "setup": "bash scripts/setup.sh",
     "uninstall": "bash scripts/uninstall.sh",
-    "typecheck": "pnpm --filter @dsh-external/dsh-right-sidebar typecheck",
-    "build:client": "pnpm --filter @dsh-external/dsh-right-sidebar build:client",
-    "test": "pnpm --filter @dsh-external/dsh-right-sidebar test"
+    "typecheck": "bash scripts/typecheck.sh",
+    "build:client": "cd packages/dsh-right-sidebar && node ../../node_modules/tsdown/dist/run.mjs",
+    "test": "cd packages/dsh-right-sidebar && node ../../node_modules/vitest/vitest.mjs run",
+    "inspect": "bash scripts/setup.sh --check",
+    "remove": "bash scripts/uninstall.sh"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": ">=4.0.0-rc <5",
@@ -33,5 +35,6 @@
     "overrides": {
       "vite": "7.3.6"
     }
-  }
+  },
+  "license": "MIT"
 }
