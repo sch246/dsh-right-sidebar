@@ -16,6 +16,7 @@ DeepSeek Harness Web 的右栏工作台底座。它复用 Host 的全高 `detail
 - 顶部横向标签与 Host controls 同行，右上组通过 `--dsh-shell-navbar-width` 预留空间。纵向右上组为 tab rail 和内容保留本地 clearance；可滚动标签不覆盖 Host controls。
 - 功能可用 `resourceMissing` 标记实例：其对应对象（例如被删除的文件）不存在时标签标题显示删除线，恢复存在后由功能自行取消标记。sidebar 只呈现该标记，不判断对象是否存在。
 - 标签仅保留标题与关闭按钮，不提供三点按钮或移动/分栏菜单。拖拽负责排序和分栏，双击固定 preview，现有键盘快捷键保留。
+- 组的蓝色选中边框只表示当前面板焦点：指针或键盘焦点进入组时显示，点击面板内其他空白区域、焦点离开窗口或切换到面板外时清除；`activeGroupId` 仍只记录下次打开的目标组。
 - 纵向标签标题、图标、新增与方向切换按钮左对齐。横向标签栏将普通滚轮、Shift 滚轮和触控板横向输入用于水平滚动；Ctrl 缩放保留，仅实际滚动时拦截事件，到达边缘或无溢出时继续传递。
 - group 顶栏只保留 launcher 与当前组横纵切换；新分组的默认方向在 launcher home 用“横向／纵向”单选项设置，标题与选项保持单行，选中项表示当前默认值；“仅影响之后新建的分组”通过鼠标悬浮提示提供。
 - split 和纵向 rail 支持 pointer、方向键与 reset。比例和 rail 宽没有固定最大值；rail 收窄后保留恢复按钮。
@@ -117,3 +118,9 @@ DSH_CHECKOUT=/absolute/harness DSH_HOME=/absolute/home DSH_PROFILE=web pnpm run 
 [patches/deepseek-harness.patch](patches/deepseek-harness.patch) 绑定 Harness alpha.2 commit `0a53fb55bea101816fa226bb964ae2bed71c343b`。它增加全局 navbar action seat、blank/new-session details 几何、普通宽度与最大化偏好、保留左栏的最大化布局、header clearance 和全高分隔条；并在 Host store 及 slot store API 增加选定字段持久化，将每个 session 的宽度、显隐和最大化持久保存。旧版全局偏好无法归属具体 session，不会用于初始化所有 session。
 
 Grouped workbench 没有增加 `groupId` owner prop，也没有改变 Host slot catalog。升级 Harness 时，先按 STATE 检查目标差异与消费者，再决定保留、修复或重新生成适配；补丁可应用不等于目标仍满足当前意图。
+
+## 分组导航
+
+每个组独立维护内存中的后退/前进历史。已提交的标签切换自动记录，功能通过 `recordNavigation(sessionId, instanceId)` 报告标签内跳转；普通工具栏点击、组间或聊天焦点切换不创建记录。历史保存实例身份与 JSON 安全的恢复描述符，功能通过运行时 `onNavigate(descriptor)` 恢复内容，可返回 false 拒绝跳转。后台 checkpoint 更新不自动压栈。关闭或移出当前组的标签会被跳过，历史不随浏览器刷新持久化。
+
+组工具栏提供后退/前进；Alt+左/右和鼠标后/前侧键作用于事件所在的组。历史回放不会再次压栈。已有布局恢复和默认打开目标不受焦点高亮清除影响。

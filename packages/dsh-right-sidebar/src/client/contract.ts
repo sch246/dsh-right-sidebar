@@ -71,6 +71,8 @@ export interface RightSidebarInstanceInput {
   onClose?: () => boolean | Promise<boolean>
   /** Release feature state after this exact instance is authoritatively removed. */
   onClosed?: () => void
+  /** Apply a saved navigation descriptor while keeping the instance open. */
+  onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
 }
 
 /** Mutable presentation fields of an existing instance. */
@@ -95,6 +97,8 @@ export interface RightSidebarInstanceViewUpdate {
   onClose?: () => boolean | Promise<boolean>
   /** Replacement notification after authoritative removal. */
   onClosed?: () => void
+  /** Apply a saved navigation descriptor while keeping the instance open. */
+  onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
 }
 
 /** Feature callback input for a persisted instance. */
@@ -112,6 +116,8 @@ export interface RightSidebarRestoreResult {
   readonly onClosed?: () => void
   /** Observe that this exact restoration was authoritatively committed ready. */
   readonly onRestored?: () => void
+  /** Apply a saved navigation descriptor while keeping the instance open. */
+  readonly onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
 }
 
 /** Reconstruct one feature-owned instance from its persisted descriptor. */
@@ -151,6 +157,10 @@ export interface RightSidebarService {
   ): void
   /** Ask an instance to close and remove it unless its callback vetoes. */
   closeInstance(sessionId: RightSidebarSessionId, id: string): Promise<void>
+  /** Record the current feature navigation state for an instance. */
+  recordNavigation(sessionId: RightSidebarSessionId, id: string): void
+  /** Move within the owning group's in-memory navigation history. */
+  navigateHistory(sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void>
 }
 
 /** Owner props passed to one static view renderer. */
@@ -250,6 +260,10 @@ export interface PanelInjected {
   setDefaultTabOrientation(orientation: RightSidebarTabOrientation): void
   /** Resize one split branch. */
   setSplitRatio(splitId: string, ratio: number): void
+  /** Navigate the group's in-memory feature history. */
+  navigateHistory(groupId: string, direction: -1 | 1): Promise<void>
+  /** Return whether the group can navigate and whether navigation is pending. */
+  getNavigation(groupId: string): { canGoBack: boolean; canGoForward: boolean; busy: boolean }
 }
 
 /** Injected face of the application navbar toggle. */

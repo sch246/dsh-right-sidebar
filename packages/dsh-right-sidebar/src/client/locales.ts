@@ -28,6 +28,8 @@ export type RightSidebarKey =
   | 'restoringInstance'
   | 'restoreFailed'
   | 'missingView'
+  | 'back'
+  | 'forward'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -36,6 +38,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 export const zh: Record<RightSidebarKey, string> = {
+  back: '后退',
+  forward: '前进',
   title: '侧边栏',
   openSidebar: '打开侧边栏',
   closeSidebar: '关闭侧边栏',
@@ -63,6 +67,8 @@ export const zh: Record<RightSidebarKey, string> = {
 }
 
 export const en: Record<RightSidebarKey, string> = {
+  back: 'Back',
+  forward: 'Forward',
   title: 'Sidebar',
   openSidebar: 'Open sidebar',
   closeSidebar: 'Close sidebar',

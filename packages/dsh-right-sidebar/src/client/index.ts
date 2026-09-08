@@ -95,6 +95,11 @@ export function apply(ctx: ClientContext): void {
     },
     closeInstance: (sessionId: RightSidebarSessionId, id: string): Promise<void> =>
       runtime.closeInstance(sessionId, id),
+    recordNavigation: (sessionId: RightSidebarSessionId, id: string): void => {
+      runtime.recordNavigation(sessionId, id)
+    },
+    navigateHistory: (sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void> =>
+      runtime.navigateHistory(sessionId, groupId, direction),
   })
 
   ctx.provide('rightSidebar', service)

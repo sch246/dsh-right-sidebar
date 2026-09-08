@@ -36,6 +36,7 @@ interface RuntimeInstance extends RightSidebarInstance {
   readonly restoreDescriptor?: unknown
   readonly onClose?: () => boolean | Promise<boolean>
   readonly onClosed?: () => void
+  readonly onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
 }
 
 interface SessionRecord {
@@ -108,6 +109,7 @@ export class RightSidebarRuntime implements RightSidebarService {
   readonly #closing = new Map<RightSidebarSessionId, Map<string, ClosingOperation>>()
   readonly #restorers = new Map<string, RightSidebarRestorer>()
   readonly #openGenerations = new Map<string, number>()
+  readonly #history = new Map<string, { entries: Array<{ id: string; descriptor?: unknown }>; cursor: number; busy: boolean; generation: number }>()
   readonly #offViewChanges: () => void
   readonly #persisted: Record<string, PersistedWorkbench>
   #launchers: readonly LauncherRegistration[] = Object.freeze([])
@@ -244,6 +246,8 @@ export class RightSidebarRuntime implements RightSidebarService {
       root = splitGroup(root, source.id, relative.direction, created, this.#newId('split'))
     }
 
+    if (targetGroup?.activeInstanceId !== undefined
+      && !this.#history.has(`${String(sessionId)}\u0000${targetGroup.id}`)) this.recordNavigation(sessionId, targetGroup.activeInstanceId)
     const opened: RuntimeInstance = Object.freeze({
       id: input.id,
       viewId: input.viewId,
@@ -254,6 +258,7 @@ export class RightSidebarRuntime implements RightSidebarService {
       restoreDescriptor,
       onClose: input.onClose,
       onClosed: input.onClosed,
+      onNavigate: input.onNavigate,
     })
     root = mapGroup(root, groupId, group => Object.freeze({
       ...group,
@@ -261,6 +266,7 @@ export class RightSidebarRuntime implements RightSidebarService {
       activeInstanceId: opened.id,
     }))
     this.#write(session, { ...session.snapshot, root, activeGroupId: groupId })
+    this.recordNavigation(sessionId, input.id)
     this.#ctx.layout.openDetails()
     return groupId
   }
@@ -341,6 +347,7 @@ export class RightSidebarRuntime implements RightSidebarService {
       restoreDescriptor: descriptor,
       onClose: update.onClose,
       onClosed: update.onClosed,
+      onNavigate: update.onNavigate,
       availability: 'ready',
     }))
   }
@@ -355,6 +362,62 @@ export class RightSidebarRuntime implements RightSidebarService {
     const currentGroup = groupContaining(session.snapshot.root, id)
     if (currentGroup === undefined || !currentGroup.instances.includes(instance)) return
     this.#removeInstance(session, currentGroup, instance, true)
+  }
+
+  /** Record a committed feature navigation checkpoint for an instance. */
+  recordNavigation(sessionId: RightSidebarSessionId, id: string): void {
+    const session = this.#knownSession(sessionId, id)
+    const group = groupContaining(session.snapshot.root, id) as RightSidebarGroup
+    const instance = group.instances.find(value => value.id === id) as RuntimeInstance
+    const key = `${String(sessionId)}\u0000${group.id}`
+    const history = this.#history.get(key) ?? { entries: [], cursor: -1, busy: false, generation: 0 }
+    history.generation++
+    const descriptor = cloneDescriptor(instance.restoreDescriptor)
+    const previous = history.entries[history.cursor]
+    if (previous?.id === id && sameDescriptor(previous.descriptor, descriptor)) return
+    history.entries.splice(history.cursor + 1)
+    history.entries.push({ id, descriptor })
+    history.cursor = history.entries.length - 1
+    this.#history.set(key, history)
+    this.#notifyHistory(session)
+  }
+
+  /** Navigate a group's in-memory feature history. */
+  async navigateHistory(sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void> {
+    this.#assertMounted(sessionId)
+    const session = this.#session(sessionId)
+    const history = this.#history.get(`${String(sessionId)}\u0000${groupId}`)
+    if (history === undefined || history.busy) return
+    const group = findGroup(session.snapshot.root, groupId)
+    let targetIndex = history.cursor + direction
+    let target = history.entries[targetIndex]
+    let instance = group?.instances.find(value => value.id === target?.id) as RuntimeInstance | undefined
+    while (target !== undefined && (instance === undefined || instance.availability !== 'ready')) {
+      targetIndex += direction
+      target = history.entries[targetIndex]
+      instance = group?.instances.find(value => value.id === target?.id) as RuntimeInstance | undefined
+    }
+    if (target === undefined || instance === undefined) return
+    history.busy = true
+    const generation = history.generation
+    const activeGroupId = session.snapshot.activeGroupId
+    const activeInstanceId = group?.activeInstanceId
+    this.#notifyHistory(session)
+    try {
+      if (instance.onNavigate !== undefined && !sameDescriptor(instance.restoreDescriptor, target.descriptor)
+        && !await instance.onNavigate(target.descriptor)) return
+      if (this.#disposed || history.generation !== generation || this.#binding?.sessionId !== sessionId
+        || session.snapshot.activeGroupId !== activeGroupId) return
+      const currentGroup = findGroup(session.snapshot.root, groupId)
+      const current = currentGroup?.instances.find(value => value.id === target.id) as RuntimeInstance | undefined
+      if (currentGroup?.activeInstanceId !== activeInstanceId || current?.availability !== 'ready'
+        || current.viewId !== instance.viewId || current.onNavigate !== instance.onNavigate || current.onClosed !== instance.onClosed) return
+      history.cursor = targetIndex
+      this.#activate(session, groupId, target.id, false)
+    } finally {
+      history.busy = false
+      if (!this.#disposed) this.#notifyHistory(session)
+    }
   }
 
   /** Create the renderer face for one session occurrence. */
@@ -399,6 +462,19 @@ export class RightSidebarRuntime implements RightSidebarService {
       closeInstance: async id => {
         this.#assertBinding(binding)
         await this.closeInstance(sessionId, id)
+      },
+      navigateHistory: (groupId, direction) => {
+        this.#assertBinding(binding)
+        return this.navigateHistory(sessionId, groupId, direction)
+      },
+      getNavigation: groupId => {
+        const history = this.#history.get(`${String(sessionId)}\u0000${groupId}`)
+        const liveIds = new Set(findGroup(session.snapshot.root, groupId)?.instances.filter(instance => instance.availability === 'ready').map(instance => instance.id))
+        return {
+          canGoBack: history !== undefined && history.entries.slice(0, history.cursor).some(entry => liveIds.has(entry.id)),
+          canGoForward: history !== undefined && history.entries.slice(history.cursor + 1).some(entry => liveIds.has(entry.id)),
+          busy: history?.busy ?? false,
+        }
       },
       retryRestore: async id => {
         this.#assertBinding(binding)
@@ -451,6 +527,7 @@ export class RightSidebarRuntime implements RightSidebarService {
     this.#sessions.clear()
     this.#closing.clear()
     this.#openGenerations.clear()
+    this.#history.clear()
   }
 
   #resolveOpenGroup(session: SessionRecord, target: RightSidebarTarget | undefined): RightSidebarGroup | undefined {
@@ -507,6 +584,14 @@ export class RightSidebarRuntime implements RightSidebarService {
     instance: RuntimeInstance,
     collapse: boolean,
   ): void {
+    const historyKey = `${this.#sessionKey(session)}\u0000${group.id}`
+    const history = this.#history.get(historyKey)
+    if (history !== undefined) {
+      const removed = history.entries.slice(0, history.cursor + 1).filter(entry => entry.id === instance.id).length
+      history.entries = history.entries.filter(entry => entry.id !== instance.id)
+      history.cursor = Math.min(history.cursor - removed, history.entries.length - 1)
+      history.generation++
+    }
     const index = group.instances.indexOf(instance)
     const instances = group.instances.filter(current => current !== instance)
     const activeInstanceId = group.activeInstanceId === instance.id
@@ -518,9 +603,15 @@ export class RightSidebarRuntime implements RightSidebarService {
     let activeGroupId = session.snapshot.activeGroupId
     if (collapse && instances.length === 0 && groupsOf(root).length > 1) {
       root = collapseGroup(root, group.id)
+      this.#history.delete(historyKey)
       if (activeGroupId === group.id) activeGroupId = groupsOf(root)[0]?.id ?? activeGroupId
     }
     this.#write(session, { ...session.snapshot, root, activeGroupId })
+    const remaining = findGroup(root, group.id)
+    const sessionId = [...this.#sessions.entries()].find(([, value]) => value === session)?.[0]
+    if (group.activeInstanceId === instance.id && remaining?.activeInstanceId !== undefined && sessionId !== undefined) {
+      this.recordNavigation(sessionId, remaining.activeInstanceId)
+    }
     try { instance.onClosed?.() } catch (error) {
       console.error(`right-sidebar: onClosed notification failed for instance "${instance.id}":`, error)
     }
@@ -546,16 +637,23 @@ export class RightSidebarRuntime implements RightSidebarService {
     this.#replaceInstance(session, group, current, Object.freeze({ ...current, preview: false }))
   }
 
-  #activate(session: SessionRecord, groupId: string, id: string): void {
+  #activate(session: SessionRecord, groupId: string, id: string, record = true): void {
     const group = findGroup(session.snapshot.root, groupId)
     if (group === undefined || !group.instances.some(instance => instance.id === id)) {
       this.#throwUnknownInstance('', id)
+    }
+    const sessionId = [...this.#sessions.entries()].find(([, value]) => value === session)?.[0]
+    if (record && sessionId !== undefined) {
+      const history = this.#history.get(`${String(sessionId)}\u0000${groupId}`)
+      if (history !== undefined) history.generation++
+      else if (group.activeInstanceId !== undefined) this.recordNavigation(sessionId, group.activeInstanceId)
     }
     if (session.snapshot.activeGroupId === groupId && group.activeInstanceId === id) return
     const root = mapGroup(session.snapshot.root, groupId, current => Object.freeze({
       ...current, activeInstanceId: id,
     }))
     this.#write(session, { ...session.snapshot, root, activeGroupId: groupId })
+    if (record && sessionId !== undefined) this.recordNavigation(sessionId, id)
   }
 
   #moveInstance(sessionId: RightSidebarSessionId, id: string, target: RightSidebarMoveTarget): void {
@@ -697,6 +795,7 @@ export class RightSidebarRuntime implements RightSidebarService {
       if (currentGroup === undefined || current !== restoring) return
       this.#replaceInstance(session, currentGroup, restoring, Object.freeze({
         ...restoring, availability: 'ready', onClose: result?.onClose, onClosed: result?.onClosed,
+        onNavigate: result?.onNavigate,
       }))
       try { result?.onRestored?.() } catch (error) {
         console.error(`right-sidebar: onRestored notification failed for instance "${instance.id}":`, error)
@@ -822,6 +921,11 @@ export class RightSidebarRuntime implements RightSidebarService {
       if (node.kind === 'split') { visit(node.first); visit(node.second) }
     }
     visit(root)
+  }
+
+  #notifyHistory(session: SessionRecord): void {
+    session.snapshot = Object.freeze({ ...session.snapshot })
+    this.#notify(session.listeners)
   }
 
   #write(session: SessionRecord, snapshot: RightSidebarWorkbench): void {
@@ -1009,4 +1113,8 @@ function isOrientation(value: unknown): value is RightSidebarTabOrientation {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function sameDescriptor(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
