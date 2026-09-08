@@ -1,5 +1,5 @@
 /** Grouped workbench chrome, drag docking, resize controls, and active renderers. */
-import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   PanelInjected,
@@ -55,6 +55,10 @@ export function RightSidebarPanel({
   const geometry = useMemo(() => layoutGeometry(workbench.root), [workbench.root])
   const workspaceRef = useRef<HTMLDivElement | null>(null)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
+  const lastFocusedElement = useRef<HTMLElement>()
+  const activeInstanceId = groups.find(group => group.id === workbench.activeGroupId)?.activeInstanceId
+  const activeDestination = JSON.stringify([workbench.activeGroupId, activeInstanceId])
+  const previousDestination = useRef(activeDestination)
   const [pending, setPending] = useState<ReadonlySet<string>>(NO_PENDING_OPERATIONS)
   const [operationFailed, setOperationFailed] = useState(false)
   const [draggedId, setDraggedId] = useState<string>()
@@ -64,6 +68,31 @@ export function RightSidebarPanel({
   ))
 
   useEffect(() => mountWorkbench(), [mountWorkbench])
+  useEffect(() => {
+    const clearOutsidePointer = (event: PointerEvent): void => {
+      if (!(event.target instanceof Node) || !workspaceRef.current?.contains(event.target)) {
+        lastFocusedElement.current = undefined
+      }
+    }
+    document.addEventListener('pointerdown', clearOutsidePointer, true)
+    return () => { document.removeEventListener('pointerdown', clearOutsidePointer, true) }
+  }, [])
+  useLayoutEffect(() => {
+    if (previousDestination.current === activeDestination) return
+    previousDestination.current = activeDestination
+    const workspace = workspaceRef.current
+    if (workspace === null || workbench.activeGroupId === undefined) return
+    const focused = document.activeElement
+    // A hidden tab can leave focus on body before React's layout effects run.
+    if (!workspace.contains(focused)
+      && (focused !== document.body || lastFocusedElement.current === undefined)) return
+    const owner = focused instanceof Element ? focused.closest<HTMLElement>('[data-group-id]') : null
+    if (owner?.dataset.groupId === workbench.activeGroupId
+      && (!owner.classList.contains('dsh-rightbar-surface') || owner.dataset.active === 'true')) return
+    const destination = [...workspace.querySelectorAll<HTMLElement>('.dsh-rightbar-group')]
+      .find(element => element.dataset.groupId === workbench.activeGroupId)
+    destination?.focus({ preventScroll: true })
+  }, [activeDestination, workbench.activeGroupId])
   useEffect(() => {
     const existing = new Set(groups.flatMap(group => group.instances.map(instance => instance.id)))
     const active = groups.flatMap(group => group.activeInstanceId === undefined ? [] : [group.activeInstanceId])
@@ -131,6 +160,13 @@ export function RightSidebarPanel({
       <div
         ref={workspaceRef}
         className="dsh-rightbar-workspace"
+        onFocusCapture={event => { lastFocusedElement.current = event.target }}
+        onBlurCapture={event => {
+          if (event.relatedTarget instanceof Node && event.relatedTarget !== document.body
+            && !event.currentTarget.contains(event.relatedTarget)) {
+            lastFocusedElement.current = undefined
+          }
+        }}
         onKeyDownCapture={event => {
           if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
             || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || eventGroup(event.target) === undefined) return
