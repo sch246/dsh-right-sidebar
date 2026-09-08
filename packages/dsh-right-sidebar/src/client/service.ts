@@ -227,7 +227,6 @@ export class RightSidebarRuntime implements RightSidebarService {
         title: input.title,
         pin: options.preview !== true,
       })) throw new RightSidebarError('superseded', 'right-sidebar: navigation was cancelled')
-      this.#ctx.layout.openDetails()
       return existingGroup.id
     }
 
@@ -296,7 +295,6 @@ export class RightSidebarRuntime implements RightSidebarService {
     }))
     this.#write(session, { ...session.snapshot, root, activeGroupId: groupId })
     navigation.commit(input.id, { descriptor: restoreDescriptor, title: input.title })
-    this.#ctx.layout.openDetails()
     return groupId
   }
 
@@ -331,7 +329,6 @@ export class RightSidebarRuntime implements RightSidebarService {
     const session = this.#knownSession(sessionId, id)
     const group = groupContaining(session.snapshot.root, id) as RightSidebarGroup
     this.#activate(session, group.id, id)
-    this.#ctx.layout.openDetails()
   }
 
   /** @inheritdoc */
@@ -483,6 +480,7 @@ export class RightSidebarRuntime implements RightSidebarService {
           replay.history.cursor = replay.index
         }
         this.#activate(session, group.id, id, false)
+        this.#ctx.layout.openDetails()
         this.#requestFocus(session, group.id, epoch, false)
         return true
       },

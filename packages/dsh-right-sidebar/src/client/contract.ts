@@ -44,7 +44,7 @@ export interface RightSidebarNavigation {
   current(): boolean
   /** Claim a resolved instance without displacing a newer destination request. */
   claim(id: string): boolean
-  /** Apply prepared feature state and commit its destination if this request is current. */
+  /** Apply prepared feature state, reveal the sidebar and activate the destination group/tab if this request is current. */
   commit(id: string, destination: RightSidebarNavigationCommit, apply?: () => void): boolean
 }
 

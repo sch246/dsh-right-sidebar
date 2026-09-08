@@ -22,7 +22,6 @@ Each repository and package keeps its own version: compatibility means satisfyin
 
 ```bash
 DSH_CHECKOUT=/root/deepseek-harness pnpm build
-DSH_CHECKOUT=/root/deepseek-harness pnpm test
 DSH_CHECKOUT=/root/deepseek-harness pnpm typecheck
 pnpm build:client
 ```

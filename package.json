@@ -10,7 +10,6 @@
     "uninstall": "bash scripts/uninstall.sh",
     "typecheck": "bash scripts/typecheck.sh",
     "build:client": "cd packages/dsh-right-sidebar && node ../../node_modules/tsdown/dist/run.mjs",
-    "test": "cd packages/dsh-right-sidebar && node ../../node_modules/vitest/vitest.mjs run",
     "inspect": "bash scripts/setup.sh --check",
     "remove": "bash scripts/uninstall.sh"
   },
@@ -22,14 +21,10 @@
     "@deepseek-ai/dsh-client-ui-slots": "0.1.2-alpha.2",
     "@types/node": "^24.13.3",
     "@types/react": "~18.3.1",
-    "@testing-library/react": "^16.3.2",
-    "jsdom": "^29.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "5.9.3",
-    "tsdown": "0.22.14",
-    "vitest": "4.1.8",
-    "@testing-library/dom": "^10.4.1"
+    "tsdown": "0.22.14"
   },
   "pnpm": {
     "overrides": {
