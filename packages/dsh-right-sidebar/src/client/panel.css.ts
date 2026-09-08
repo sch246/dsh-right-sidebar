@@ -9,7 +9,6 @@ export const PANEL_CSS = `
 .dsh-rightbar-workspace{position:relative;min-width:0;min-height:0;overflow:hidden;flex:1;}
 .dsh-rightbar-group{position:absolute;z-index:2;min-width:0;min-height:0;padding:2px;box-sizing:border-box;overflow:visible;pointer-events:none;}
 .dsh-rightbar-group-layout{display:flex;width:100%;height:100%;min-width:0;min-height:0;border:1px solid var(--dsw-alias-border-l2,rgba(38,49,72,.1));border-radius:5px;box-sizing:border-box;overflow:hidden;background:transparent;}
-.dsh-rightbar-group[data-active='true'] .dsh-rightbar-group-layout{border-color:var(--dsw-alias-border-l2,rgba(38,49,72,.1));outline:3px solid var(--dsw-alias-brand-primary,rgba(74,104,255,.55));outline-offset:-3px;}
 .dsh-rightbar-group[data-orientation='horizontal'] .dsh-rightbar-group-layout{flex-direction:column;}
 .dsh-rightbar-group[data-orientation='vertical'] .dsh-rightbar-group-layout{flex-direction:row;}
 .dsh-rightbar-tabs{display:flex;min-width:0;min-height:0;background:var(--dsw-alias-bg-layer-1,rgba(38,49,72,.025));pointer-events:auto;flex:none;}

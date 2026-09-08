@@ -47,18 +47,14 @@ export function RightSidebarPanel({
   setDefaultTabOrientation,
   setSplitRatio,
   navigateHistory,
-  getNavigation,
   t,
 }: RightSidebarPanelProps) {
   const workbench = useWorkbench(snapshot => snapshot)
   const launchers = useLaunchers(rows => rows)
   const groups = groupsOf(workbench.root)
   const geometry = useMemo(() => layoutGeometry(workbench.root), [workbench.root])
-  const rootRef = useRef<HTMLDivElement | null>(null)
   const workspaceRef = useRef<HTMLDivElement | null>(null)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
-  const previousFocus = useRef<string | undefined>()
-  const [focusedGroupId, setFocusedGroupId] = useState<string>()
   const [pending, setPending] = useState<ReadonlySet<string>>(NO_PENDING_OPERATIONS)
   const [operationFailed, setOperationFailed] = useState(false)
   const [draggedId, setDraggedId] = useState<string>()
@@ -68,47 +64,6 @@ export function RightSidebarPanel({
   ))
 
   useEffect(() => mountWorkbench(), [mountWorkbench])
-  useEffect(() => {
-    const root = rootRef.current
-    if (root === null) return
-    const groupFromTarget = (target: EventTarget | null): string | undefined => {
-      if (!(target instanceof Element)) return undefined
-      const group = target.closest<HTMLElement>('.dsh-rightbar-group')
-      return group !== null && root.contains(group) ? group.dataset.groupId : undefined
-    }
-    const updatePointerFocus = (event: PointerEvent): void => {
-      setFocusedGroupId(groupFromTarget(event.target))
-    }
-    const updateKeyboardFocus = (event: FocusEvent): void => {
-      setFocusedGroupId(groupFromTarget(event.target))
-    }
-    let focusFrame = 0
-    const updateWindowFocus = (): void => {
-      cancelAnimationFrame(focusFrame)
-      focusFrame = requestAnimationFrame(() => {
-        setFocusedGroupId(document.hasFocus() ? groupFromTarget(document.activeElement) : undefined)
-      })
-    }
-    const clearFocus = (): void => { setFocusedGroupId(undefined); updateWindowFocus() }
-    document.addEventListener('pointerdown', updatePointerFocus, true)
-    document.addEventListener('focusin', updateKeyboardFocus, true)
-    window.addEventListener('blur', clearFocus)
-    window.addEventListener('focus', updateWindowFocus)
-    return () => {
-      cancelAnimationFrame(focusFrame)
-      document.removeEventListener('pointerdown', updatePointerFocus, true)
-      document.removeEventListener('focusin', updateKeyboardFocus, true)
-      window.removeEventListener('blur', clearFocus)
-      window.removeEventListener('focus', updateWindowFocus)
-    }
-  }, [])
-  useEffect(() => {
-    const activeGroup = groups.find(group => group.id === workbench.activeGroupId)
-    const focusId = activeGroup?.activeInstanceId
-    if (focusId === undefined || focusId === previousFocus.current) return
-    previousFocus.current = focusId
-    tabRefs.current.get(focusId)?.focus()
-  }, [groups, workbench.activeGroupId])
   useEffect(() => {
     const existing = new Set(groups.flatMap(group => group.instances.map(instance => instance.id)))
     const active = groups.flatMap(group => group.activeInstanceId === undefined ? [] : [group.activeInstanceId])
@@ -131,6 +86,15 @@ export function RightSidebarPanel({
         return next
       })
     }
+  }
+
+  const eventGroup = (target: EventTarget | null): string | undefined => {
+    const element = target instanceof Element ? target.closest<HTMLElement>('[data-group-id]') : null
+    return element !== null && workspaceRef.current?.contains(element) ? element.dataset.groupId : undefined
+  }
+  const navigateFromEvent = (target: EventTarget | null, direction: -1 | 1): void => {
+    const groupId = eventGroup(target)
+    if (groupId !== undefined) void run(`navigate:${groupId}`, () => navigateHistory(groupId, direction))
   }
 
   const resolveContentDrop = (event: React.DragEvent<HTMLDivElement>): DropPreview | undefined => {
@@ -157,11 +121,32 @@ export function RightSidebarPanel({
   }
 
   return (
-    <div ref={rootRef} className="dsh-rightbar-root" aria-label={t('title')}>
+    <div className="dsh-rightbar-root" aria-label={t('title')}>
       {operationFailed && <div className="dsh-rightbar-operation-error" role="alert">{t('operationFailed')}</div>}
       <div
         ref={workspaceRef}
         className="dsh-rightbar-workspace"
+        onKeyDownCapture={event => {
+          if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+            || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || eventGroup(event.target) === undefined) return
+          event.preventDefault(); event.stopPropagation()
+          navigateFromEvent(event.target, event.key === 'ArrowLeft' ? -1 : 1)
+        }}
+        onPointerDownCapture={event => {
+          if ((event.button !== 3 && event.button !== 4) || eventGroup(event.target) === undefined) return
+          event.preventDefault(); event.stopPropagation()
+          navigateFromEvent(event.target, event.button === 3 ? -1 : 1)
+        }}
+        onMouseDownCapture={event => {
+          if ((event.button === 3 || event.button === 4) && eventGroup(event.target) !== undefined) {
+            event.preventDefault(); event.stopPropagation()
+          }
+        }}
+        onAuxClickCapture={event => {
+          if ((event.button === 3 || event.button === 4) && eventGroup(event.target) !== undefined) {
+            event.preventDefault(); event.stopPropagation()
+          }
+        }}
         onDragOverCapture={event => {
           if (!isSidebarTabDrag(event.dataTransfer) || isTabBarEventTarget(event.target)) return
           event.preventDefault()
@@ -191,7 +176,6 @@ export function RightSidebarPanel({
             key={group.id}
             group={group}
             rect={geometry.groups.get(group.id) as LayoutRect}
-            activeGroup={group.id === focusedGroupId}
             touchesTop={rectTouchesTop(geometry.groups.get(group.id) as LayoutRect)}
             touchesRight={rectTouchesRight(geometry.groups.get(group.id) as LayoutRect)}
             groups={groups}
@@ -212,13 +196,12 @@ export function RightSidebarPanel({
               showLauncher()
             }}
             onActivate={activateInstance}
+            onFocusTab={id => { tabRefs.current.get(id)?.focus() }}
             onPin={pinInstance}
             onClose={id => { void run(`close:${id}`, () => closeInstance(id)) }}
             onRetry={id => { void run(`restore:${id}`, () => retryRestore(id)) }}
             onLaunch={id => { void run(`launch:${id}`, () => launch(id)) }}
             onOrientation={orientation => { setGroupTabOrientation(group.id, orientation) }}
-            navigation={getNavigation(group.id)}
-            onNavigateHistory={direction => { void run(`navigate:${group.id}`, () => navigateHistory(group.id, direction)) }}
             onRailResize={width => { setGroupVerticalRailWidth(group.id, width) }}
             onDragStart={setDraggedId}
             onDragEnd={() => { setDraggedId(undefined); setDropPreview(undefined) }}
@@ -298,7 +281,6 @@ export function RightSidebarPanel({
 interface GroupPaneProps {
   readonly group: RightSidebarGroup
   readonly rect: LayoutRect
-  readonly activeGroup: boolean
   readonly touchesTop: boolean
   readonly touchesRight: boolean
   readonly groups: readonly RightSidebarGroup[]
@@ -311,6 +293,7 @@ interface GroupPaneProps {
   readonly onActivateGroup: () => void
   readonly onShowLauncher: () => void
   readonly onActivate: (id: string) => void
+  readonly onFocusTab: (id: string) => void
   readonly onPin: (id: string) => void
   readonly onClose: (id: string) => void
   readonly onRetry: (id: string) => void
@@ -321,14 +304,12 @@ interface GroupPaneProps {
   readonly onDragEnd: () => void
   readonly onDropTarget: (target: RightSidebarMoveTarget | undefined) => void
   readonly onMove: (id: string, target: RightSidebarMoveTarget) => void
-  readonly navigation: { canGoBack: boolean; canGoForward: boolean; busy: boolean }
-  readonly onNavigateHistory: (direction: -1 | 1) => void
 }
 
 function GroupPane(props: GroupPaneProps) {
   const {
-    group, rect, activeGroup, touchesTop, touchesRight, draggedId, t,
-    onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget, navigation, onNavigateHistory,
+    group, rect, touchesTop, touchesRight, draggedId, t,
+    onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget,
   } = props
   const groupRef = useRef<HTMLDivElement | null>(null)
   const tabScrollRef = useRef<HTMLDivElement | null>(null)
@@ -369,25 +350,7 @@ function GroupPane(props: GroupPaneProps) {
     <section
       ref={groupRef}
       className="dsh-rightbar-group"
-      data-active={activeGroup ? 'true' : undefined}
       data-group-id={group.id}
-      onKeyDownCapture={event => {
-        if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
-        event.preventDefault(); event.stopPropagation()
-        onNavigateHistory(event.key === 'ArrowLeft' ? -1 : 1)
-      }}
-      onPointerDownCapture={event => {
-        if (event.button !== 3 && event.button !== 4) return
-        event.preventDefault(); event.stopPropagation()
-        onNavigateHistory(event.button === 3 ? -1 : 1)
-      }}
-      onMouseDownCapture={event => {
-        if (event.button === 3 || event.button === 4) { event.preventDefault(); event.stopPropagation() }
-      }}
-      onAuxClick={event => {
-        if (event.button !== 3 && event.button !== 4) return
-        event.preventDefault(); event.stopPropagation()
-      }}
       data-orientation={group.tabOrientation}
       data-top={touchesTop ? 'true' : undefined}
       data-right={touchesRight ? 'true' : undefined}
@@ -440,8 +403,6 @@ function GroupPane(props: GroupPaneProps) {
             ))}
           </div>
           <div className="dsh-rightbar-group-actions">
-            {navigation.canGoBack && <button type="button" aria-label={t('back')} title={t('back')} disabled={navigation.busy} onClick={() => { onNavigateHistory(-1) }}>‹</button>}
-            {navigation.canGoForward && <button type="button" aria-label={t('forward')} title={t('forward')} disabled={navigation.busy} onClick={() => { onNavigateHistory(1) }}>›</button>}
             <button
               type="button"
               className="dsh-rightbar-launcher-toggle"
@@ -506,7 +467,7 @@ function InstanceTab(props: InstanceTabProps) {
             : undefined
     if (nextIndex === undefined) return
     const next = group.instances[nextIndex]
-    if (next !== undefined) props.onActivate(next.id)
+    if (next !== undefined) { props.onActivate(next.id); props.onFocusTab(next.id) }
   }
   return (
     <div
