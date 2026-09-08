@@ -7,6 +7,7 @@ export const PANEL_CSS = `
 .dsh-rightbar-launcher-toggle:hover,.dsh-rightbar-orientation:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));color:var(--dsw-alias-text-primary,inherit);}
 .dsh-rightbar-operation-error{position:absolute;z-index:30;top:56px;right:8px;max-width:calc(100% - 16px);padding:6px 10px;border:1px solid var(--dsw-alias-border-l2,rgba(38,49,72,.1));border-radius:6px;background:var(--dsw-alias-bg-base,#fff);color:var(--dsw-alias-status-error,var(--dsw-alias-text-primary,inherit));font-size:12px;}
 .dsh-rightbar-workspace{position:relative;min-width:0;min-height:0;overflow:hidden;flex:1;}
+.dsh-rightbar-group:focus{outline:none}
 .dsh-rightbar-group{position:absolute;z-index:2;min-width:0;min-height:0;padding:2px;box-sizing:border-box;overflow:visible;pointer-events:none;}
 .dsh-rightbar-group-layout{display:flex;width:100%;height:100%;min-width:0;min-height:0;border:1px solid var(--dsw-alias-border-l2,rgba(38,49,72,.1));border-radius:5px;box-sizing:border-box;overflow:hidden;background:transparent;}
 .dsh-rightbar-group[data-orientation='horizontal'] .dsh-rightbar-group-layout{flex-direction:column;}

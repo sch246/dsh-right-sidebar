@@ -94,7 +94,12 @@ export function RightSidebarPanel({
   }
   const navigateFromEvent = (target: EventTarget | null, direction: -1 | 1): void => {
     const groupId = eventGroup(target)
-    if (groupId !== undefined) void run(`navigate:${groupId}`, () => navigateHistory(groupId, direction))
+    if (groupId === undefined) return
+    // Group chrome survives both tab selection and replacement of a feature renderer.
+    const group = [...workspaceRef.current!.querySelectorAll<HTMLElement>('.dsh-rightbar-group')]
+      .find(element => element.dataset.groupId === groupId)
+    group?.focus({ preventScroll: true })
+    void run(`navigate:${groupId}`, () => navigateHistory(groupId, direction))
   }
 
   const resolveContentDrop = (event: React.DragEvent<HTMLDivElement>): DropPreview | undefined => {
@@ -350,6 +355,7 @@ function GroupPane(props: GroupPaneProps) {
     <section
       ref={groupRef}
       className="dsh-rightbar-group"
+      tabIndex={-1}
       data-group-id={group.id}
       data-orientation={group.tabOrientation}
       data-top={touchesTop ? 'true' : undefined}
