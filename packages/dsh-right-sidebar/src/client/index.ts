@@ -9,10 +9,13 @@ import { RightSidebarRuntime } from './service'
 import { en, NS, zh } from './locales'
 import { PANEL_CSS } from './panel.css'
 import type {
+  RightSidebarGroupNavigation,
   RightSidebarInstanceInput,
   RightSidebarInstanceUpdate,
   RightSidebarInstanceViewUpdate,
   RightSidebarLauncher,
+  RightSidebarNavigationCommit,
+  RightSidebarNavigationResult,
   RightSidebarOpenOptions,
   RightSidebarRestorer,
   RightSidebarService,
@@ -30,9 +33,12 @@ export {
   type RightSidebarInstanceViewUpdate,
   type RightSidebarDirection,
   type RightSidebarGroup,
+  type RightSidebarGroupNavigation,
   type RightSidebarInstanceAvailability,
   type RightSidebarLayoutNode,
   type RightSidebarLauncher,
+  type RightSidebarNavigationCommit,
+  type RightSidebarNavigationResult,
   type RightSidebarOpenOptions,
   type RightSidebarRestoreContext,
   type RightSidebarRestoreResult,
@@ -98,6 +104,15 @@ export function apply(ctx: ClientContext): void {
     recordNavigation: (sessionId: RightSidebarSessionId, id: string): void => {
       runtime.recordNavigation(sessionId, id)
     },
+    commitNavigation: (
+      sessionId: RightSidebarSessionId,
+      id: string,
+      commit: RightSidebarNavigationCommit,
+    ): void => {
+      runtime.commitNavigation(sessionId, id, commit)
+    },
+    getNavigation: (sessionId: RightSidebarSessionId, groupId: string): RightSidebarGroupNavigation =>
+      runtime.getNavigation(sessionId, groupId),
     navigateHistory: (sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void> =>
       runtime.navigateHistory(sessionId, groupId, direction),
   })

@@ -1,0 +1,11 @@
+# Unified navigation commit and group focus
+
+The user asked for one navigation behavior shared by session links, the viewer path bar, the file manager, Markdown links and group Back/Forward, with each group owning one history and one cursor and the group owning focus handoff. The work spans four repositories; this log records the sidebar's share and the delivery evidence.
+
+The group gained `commitNavigation(sessionId, id, commit)`, which applies the feature's descriptor, title, subject marking and preview pin together with the history entry and cursor. `recordNavigation()` remains for background checkpoints and now shares one private append path. A restorer's `onNavigate` may return `replaced`; the group then moves only its cursor, keeps the instance and group identity, and requests focus without activating. Replay still validates generation, binding session, active group, instance identity and availability before moving the cursor, and a veto leaves history, cursor and presentation untouched.
+
+Focus ownership moved from a panel-level "last focused element" ref to a per-panel flag set by group focus and pointer entry and cleared by a document pointerdown outside the workspace. `#activate`, `commitNavigation` and a `replaced` replay set one focus request; the panel consumes it in a layout effect and focuses the destination group chrome only while focus already belongs to the sidebar. `openInstance()` accepts an optional `commit` callback for an already-open id so a feature that moved that instance commits the destination instead of only activating it.
+
+The panel keeps workspace-level capture for Alt+Left/Right and mouse side buttons, because group chrome and content surfaces are siblings under the workspace; each group also handles both directly for events that start on its own chrome. Alt+Left/Right is cancelled and consumed at history limits and while a replay is pending. The removed panel code is the previous active-destination layout effect and the blur-based focus tracking.
+
+Verification: `DSH_CHECKOUT=/root/deepseek-harness bash scripts/typecheck.sh` and `bash scripts/build.sh` pass. `pnpm test` passes 48 tests, including two new cases for atomic commit plus `replaced` replay and for a vetoed replay. No browser automation was run, so interaction behavior still awaits human observation.

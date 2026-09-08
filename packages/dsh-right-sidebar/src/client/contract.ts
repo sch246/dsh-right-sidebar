@@ -37,12 +37,48 @@ export type RightSidebarTarget =
   | { readonly groupId: string }
   | { readonly fromInstanceId: string; readonly direction: RightSidebarDirection }
 
-/** Options controlling placement and preview lifecycle. */
+/** Options controlling placement, preview lifecycle and an existing-instance commit. */
 export interface RightSidebarOpenOptions {
   /** Destination; omission uses the active group. */
   target?: RightSidebarTarget
   /** Replace the destination group's unpinned preview. Defaults to `false`. */
   preview?: boolean
+  /**
+   * Commit callback for an instance that is already open: it returns the reached destination and
+   * the group applies presentation, checkpoint, history and cursor together. Without it an
+   * existing instance is only activated, which keeps plain opens from appending history.
+   * @param instanceId - Id of the existing instance being activated.
+   * @returns Destination state after the feature committed its view.
+   */
+  commit?: (instanceId: string) => RightSidebarNavigationCommit
+}
+
+/**
+ * Outcome of one feature-owned navigation request.
+ * `replaced` means the feature moved the destination in place and the group must only move its cursor.
+ */
+export type RightSidebarNavigationResult = boolean | 'replaced'
+
+/** One committed destination for an existing instance. */
+export interface RightSidebarNavigationCommit {
+  /** JSON-safe destination state after the feature committed its view. */
+  descriptor: unknown
+  /** Replacement tab title. */
+  title?: string
+  /** Replacement subject-missing marking; omission retains the current marking. */
+  resourceMissing?: boolean
+  /** Permanently exempt the committed instance from preview replacement. */
+  pin?: boolean
+}
+
+/** Current in-memory navigation ability of one group. */
+export interface RightSidebarGroupNavigation {
+  /** True while a ready instance exists before the cursor. */
+  readonly canGoBack: boolean
+  /** True while a ready instance exists after the cursor. */
+  readonly canGoForward: boolean
+  /** True while the group is replaying a destination. */
+  readonly busy: boolean
 }
 
 /** One feature-owned entry on the launcher home. */
@@ -72,7 +108,7 @@ export interface RightSidebarInstanceInput {
   /** Release feature state after this exact instance is authoritatively removed. */
   onClosed?: () => void
   /** Apply a saved navigation descriptor while keeping the instance open. */
-  onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
+  onNavigate?: (descriptor: unknown) => RightSidebarNavigationResult | Promise<RightSidebarNavigationResult>
 }
 
 /** Mutable presentation fields of an existing instance. */
@@ -98,7 +134,7 @@ export interface RightSidebarInstanceViewUpdate {
   /** Replacement notification after authoritative removal. */
   onClosed?: () => void
   /** Apply a saved navigation descriptor while keeping the instance open. */
-  onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
+  onNavigate?: (descriptor: unknown) => RightSidebarNavigationResult | Promise<RightSidebarNavigationResult>
 }
 
 /** Feature callback input for a persisted instance. */
@@ -117,7 +153,7 @@ export interface RightSidebarRestoreResult {
   /** Observe that this exact restoration was authoritatively committed ready. */
   readonly onRestored?: () => void
   /** Apply a saved navigation descriptor while keeping the instance open. */
-  readonly onNavigate?: (descriptor: unknown) => boolean | Promise<boolean>
+  readonly onNavigate?: (descriptor: unknown) => RightSidebarNavigationResult | Promise<RightSidebarNavigationResult>
 }
 
 /** Reconstruct one feature-owned instance from its persisted descriptor. */
@@ -159,6 +195,17 @@ export interface RightSidebarService {
   closeInstance(sessionId: RightSidebarSessionId, id: string): Promise<void>
   /** Record the current feature navigation state for an instance. */
   recordNavigation(sessionId: RightSidebarSessionId, id: string): void
+  /**
+   * Commit one reached destination for an existing instance: presentation fields, restoration
+   * checkpoint, group history and cursor in one step. Rejection leaves history and cursor unchanged.
+   * @param sessionId - Owning session.
+   * @param id - Reached instance.
+   * @param commit - Committed destination state.
+   * @throws RightSidebarError When the instance, its group or the runtime is gone.
+   */
+  commitNavigation(sessionId: RightSidebarSessionId, id: string, commit: RightSidebarNavigationCommit): void
+  /** Read one group's current in-memory navigation ability without changing it. */
+  getNavigation(sessionId: RightSidebarSessionId, groupId: string): RightSidebarGroupNavigation
   /** Move within the owning group's in-memory navigation history. */
   navigateHistory(sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void>
 }
@@ -263,7 +310,9 @@ export interface PanelInjected {
   /** Navigate the group's in-memory feature history. */
   navigateHistory(groupId: string, direction: -1 | 1): Promise<void>
   /** Return whether the group can navigate and whether navigation is pending. */
-  getNavigation(groupId: string): { canGoBack: boolean; canGoForward: boolean; busy: boolean }
+  getNavigation(groupId: string): RightSidebarGroupNavigation
+  /** Take the newest focus handoff requested by a committed navigation. */
+  takeFocusRequest(): { readonly groupId: string } | undefined
 }
 
 /** Injected face of the application navbar toggle. */

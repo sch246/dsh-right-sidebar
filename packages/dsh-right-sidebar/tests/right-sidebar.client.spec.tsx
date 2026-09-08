@@ -16,7 +16,7 @@ import type {
   ToggleInjected,
 } from '../src/client/contract'
 import { apply, inject } from '../src/client/index'
-import { groupsOf } from '../src/client/layout'
+import { groupsOf, splitGroup } from '../src/client/layout'
 import { PANEL_CSS } from '../src/client/panel.css'
 
 const silenceFixtureError = (event: ErrorEvent): void => { event.preventDefault() }
@@ -149,6 +149,9 @@ function mountPanel(
     setGroupVerticalRailWidth: vi.fn(),
     setDefaultTabOrientation: vi.fn(),
     setSplitRatio: vi.fn(),
+    navigateHistory: vi.fn(async () => {}),
+    getNavigation: vi.fn(() => ({ canGoBack: false, canGoForward: false, busy: false })),
+    takeFocusRequest: vi.fn(() => undefined),
   }
   const useWorkbench = (<S,>(selector: (snapshot: RightSidebarWorkbench) => S): S =>
     selector(useSyncExternalStore(workbench.subscribe, workbench.getSnapshot))) as RightSidebarPanelProps['useWorkbench']
@@ -261,6 +264,43 @@ describe('RightSidebarPanel', () => {
     expect(view.activateInstance).toHaveBeenCalledWith('two')
     fireEvent.keyDown(first, { key: 'ArrowRight', altKey: true, shiftKey: true })
     expect(view.moveInstance).toHaveBeenCalledWith('one', { groupId: 'group-1', direction: 'right' })
+  })
+
+  it('owns history keys, mouse buttons and focus handoff at the group', async () => {
+    const view = mountPanel(group('group-1', [instance('one', 'One')]))
+    const groupElement = view.container.querySelector<HTMLElement>('.dsh-rightbar-group')!
+    const history = (key: string) => createEvent.keyDown(groupElement, { key, altKey: true })
+    const back = history('ArrowLeft')
+    fireEvent(groupElement, back)
+    // The group cancels the browser default even while the destination is still loading.
+    expect(back.defaultPrevented).toBe(true)
+    expect(view.navigateHistory).toHaveBeenCalledWith('group-1', -1)
+    const forward = history('ArrowRight')
+    fireEvent(groupElement, forward)
+    expect(forward.defaultPrevented).toBe(true)
+    expect(view.navigateHistory).toHaveBeenLastCalledWith('group-1', 1)
+
+    const mouseBack = createEvent.pointerDown(groupElement, { button: 3 })
+    fireEvent(groupElement, mouseBack)
+    expect(mouseBack.defaultPrevented).toBe(true)
+    expect(view.navigateHistory).toHaveBeenLastCalledWith('group-1', -1)
+    expect(view.getByRole('tab', { name: 'One' }).closest('.dsh-rightbar-group')).toBe(groupElement)
+
+    // A committed navigation hands focus to its destination group.
+    const two = mountPanel(splitGroup(
+      group('group-1', [instance('one', 'One')]),
+      'group-1',
+      'right',
+      group('group-2', [instance('two', 'Two')]),
+      'split-1',
+    ))
+    const destination = [...two.container.querySelectorAll<HTMLElement>('.dsh-rightbar-group')]
+      .find(element => element.dataset.groupId === 'group-2')!
+    two.takeFocusRequest.mockReturnValue({ groupId: 'group-2' })
+    // Focus must already belong to the workspace when the request arrives.
+    two.container.querySelector<HTMLElement>('.dsh-rightbar-group')!.focus()
+    await act(async () => { two.workbench.set({ ...two.workbench.getSnapshot(), activeGroupId: 'group-2' }) })
+    expect(document.activeElement).toBe(destination)
   })
 
   it('captures internal content drops without intercepting external editor drops', () => {
@@ -612,6 +652,9 @@ describe('RightSidebarPanel', () => {
       activateGroup: () => {}, pinInstance: () => {}, closeInstance: async () => {}, retryRestore: async () => {},
       moveInstance: () => {}, setGroupTabOrientation: () => {}, setGroupVerticalRailWidth: () => {},
       setDefaultTabOrientation: () => {}, setSplitRatio: () => {},
+      navigateHistory: async () => {},
+      getNavigation: () => ({ canGoBack: false, canGoForward: false, busy: false }),
+      takeFocusRequest: () => undefined,
       t: (key: string) => copy[key] ?? key,
     }
     const pending = render(<RightSidebarPanel {...({

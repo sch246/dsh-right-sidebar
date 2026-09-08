@@ -104,7 +104,7 @@ describe('ctx.rightSidebar grouped workbench', () => {
     expect(Object.keys(bench.service())).toEqual([
       'registerLauncher', 'registerRestorer', 'launch', 'openInstance', 'getInstanceGroup',
       'resolveTarget', 'activateInstance', 'pinInstance', 'updateInstance', 'switchInstanceView',
-      'closeInstance',
+      'closeInstance', 'recordNavigation', 'commitNavigation', 'getNavigation', 'navigateHistory',
     ])
     expect(Object.isFrozen(bench.service())).toBe(true)
 
@@ -339,6 +339,79 @@ describe('ctx.rightSidebar grouped workbench', () => {
     await bench.service().closeInstance('session-1', 'c')
     expect(panel.hooks.workbench.getSnapshot().activeGroupId).toBe(middleGroup)
     expect(groupsOf(panel.hooks.workbench.getSnapshot().root)).toHaveLength(2)
+
+    unmount()
+    disposeView()
+    await bench.dispose()
+  })
+
+  it('commits a reached destination and replays it without appending another entry', async () => {
+    const bench = await createBench()
+    const disposeView = bench.registerView('editor')
+    const panel = bench.face('session-nav')
+    const unmount = panel.mountWorkbench()
+    await bench.service().openInstance('session-nav', {
+      id: 'doc', viewId: 'editor', title: 'Doc', restoreDescriptor: { path: 'a.md' },
+    })
+    const groupId = bench.service().getInstanceGroup('session-nav', 'doc')
+    expect(bench.service().getNavigation('session-nav', groupId)).toEqual({
+      canGoBack: false, canGoForward: false, busy: false,
+    })
+
+    bench.service().commitNavigation('session-nav', 'doc', {
+      descriptor: { path: 'b.md' }, title: 'B',
+    })
+    expect(group(panel, 'doc').instances[0]).toMatchObject({ title: 'B' })
+    expect(bench.service().getNavigation('session-nav', groupId)).toMatchObject({ canGoBack: true, canGoForward: false })
+
+    // Repeating the same destination does not duplicate the entry.
+    bench.service().commitNavigation('session-nav', 'doc', { descriptor: { path: 'b.md' }, title: 'B' })
+    expect(bench.service().getNavigation('session-nav', groupId)).toMatchObject({ canGoBack: true, canGoForward: false })
+
+    const navigate = vi.fn(async () => 'replaced' as const)
+    bench.service().switchInstanceView('session-nav', 'doc', {
+      viewId: 'editor', onNavigate: navigate,
+    })
+    await bench.service().navigateHistory('session-nav', groupId, -1)
+    expect(navigate).toHaveBeenCalledWith({ path: 'a.md' })
+    expect(bench.service().getNavigation('session-nav', groupId)).toMatchObject({ canGoBack: false, canGoForward: true })
+    // The replaced tab keeps its identity and group, and the group claims the focus handoff.
+    expect(bench.service().getInstanceGroup('session-nav', 'doc')).toBe(groupId)
+    expect(panel.takeFocusRequest()).toEqual({ groupId })
+    expect(panel.takeFocusRequest()).toBeUndefined()
+
+    await bench.service().navigateHistory('session-nav', groupId, 1)
+    expect(navigate).toHaveBeenCalledTimes(2)
+    expect(bench.service().getNavigation('session-nav', groupId)).toMatchObject({ canGoBack: true, canGoForward: false })
+
+    unmount()
+    disposeView()
+    await bench.dispose()
+  })
+
+  it('keeps the cursor and descriptor unchanged when a feature vetoes replay', async () => {
+    const bench = await createBench()
+    const disposeView = bench.registerView('editor')
+    const panel = bench.face('session-veto')
+    const unmount = panel.mountWorkbench()
+    await bench.service().openInstance('session-veto', {
+      id: 'doc', viewId: 'editor', title: 'Doc', restoreDescriptor: { path: 'a.md' },
+    })
+    const groupId = bench.service().getInstanceGroup('session-veto', 'doc')
+    bench.service().commitNavigation('session-veto', 'doc', { descriptor: { path: 'b.md' } })
+    expect(panel.takeFocusRequest()).toEqual({ groupId })
+
+    const navigate = vi.fn(async () => false)
+    bench.service().switchInstanceView('session-veto', 'doc', { viewId: 'editor', onNavigate: navigate })
+    await bench.service().navigateHistory('session-veto', groupId, -1)
+    expect(bench.service().getNavigation('session-veto', groupId)).toMatchObject({ canGoBack: true, canGoForward: false })
+    expect(group(panel, 'doc').instances[0]).toMatchObject({ title: 'Doc' })
+    expect(panel.takeFocusRequest()).toBeUndefined()
+
+    // A destination that is no longer open cannot be replayed either.
+    await bench.service().navigateHistory('session-veto', groupId, 1)
+    expect(navigate).toHaveBeenCalledTimes(1)
+    expect(bench.service().getNavigation('session-veto', groupId)).toMatchObject({ canGoBack: true, canGoForward: false })
 
     unmount()
     disposeView()

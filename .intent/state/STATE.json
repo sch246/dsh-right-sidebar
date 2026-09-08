@@ -1,7 +1,7 @@
 {
   "$schema": "meta-intent/0.2/state",
   "id": "dsh-right-sidebar",
-  "revision": "0.4.0-draft.16",
+  "revision": "0.4.0-draft.17",
   "status": "draft",
   "document": "STATE.md",
   "logs": [
@@ -52,7 +52,10 @@
     "../logs/2026-09-07-missing-resource-marking.md",
     "../logs/2026-09-07-group-native-file-drops.md",
     "../logs/2026-09-07-file-drop-ownership-correction.md",
-    "../logs/2026-09-07-standardized-workspace-operations.md"
+    "../logs/2026-09-07-standardized-workspace-operations.md",
+    "../logs/2026-09-08-focus-navigation-repair.md",
+    "../logs/2026-09-08-group-focus-and-navigation.md",
+    "../logs/2026-09-08-unified-navigation-commit.md"
   ],
   "protocol": {
     "id": "meta-intent",

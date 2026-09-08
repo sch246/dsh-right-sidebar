@@ -47,6 +47,7 @@ export function RightSidebarPanel({
   setDefaultTabOrientation,
   setSplitRatio,
   navigateHistory,
+  takeFocusRequest,
   t,
 }: RightSidebarPanelProps) {
   const workbench = useWorkbench(snapshot => snapshot)
@@ -55,10 +56,7 @@ export function RightSidebarPanel({
   const geometry = useMemo(() => layoutGeometry(workbench.root), [workbench.root])
   const workspaceRef = useRef<HTMLDivElement | null>(null)
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
-  const lastFocusedElement = useRef<HTMLElement>()
-  const activeInstanceId = groups.find(group => group.id === workbench.activeGroupId)?.activeInstanceId
-  const activeDestination = JSON.stringify([workbench.activeGroupId, activeInstanceId])
-  const previousDestination = useRef(activeDestination)
+  const workspaceFocus = useRef(false)
   const [pending, setPending] = useState<ReadonlySet<string>>(NO_PENDING_OPERATIONS)
   const [operationFailed, setOperationFailed] = useState(false)
   const [draggedId, setDraggedId] = useState<string>()
@@ -71,28 +69,24 @@ export function RightSidebarPanel({
   useEffect(() => {
     const clearOutsidePointer = (event: PointerEvent): void => {
       if (!(event.target instanceof Node) || !workspaceRef.current?.contains(event.target)) {
-        lastFocusedElement.current = undefined
+        workspaceFocus.current = false
       }
     }
     document.addEventListener('pointerdown', clearOutsidePointer, true)
     return () => { document.removeEventListener('pointerdown', clearOutsidePointer, true) }
   }, [])
   useLayoutEffect(() => {
-    if (previousDestination.current === activeDestination) return
-    previousDestination.current = activeDestination
+    const request = takeFocusRequest()
+    if (request === undefined) return
     const workspace = workspaceRef.current
-    if (workspace === null || workbench.activeGroupId === undefined) return
+    if (workspace === null) return
     const focused = document.activeElement
     // A hidden tab can leave focus on body before React's layout effects run.
-    if (!workspace.contains(focused)
-      && (focused !== document.body || lastFocusedElement.current === undefined)) return
-    const owner = focused instanceof Element ? focused.closest<HTMLElement>('[data-group-id]') : null
-    if (owner?.dataset.groupId === workbench.activeGroupId
-      && (!owner.classList.contains('dsh-rightbar-surface') || owner.dataset.active === 'true')) return
+    if (!workspaceFocus.current && !workspace.contains(focused)) return
     const destination = [...workspace.querySelectorAll<HTMLElement>('.dsh-rightbar-group')]
-      .find(element => element.dataset.groupId === workbench.activeGroupId)
+      .find(element => element.dataset.groupId === request.groupId)
     destination?.focus({ preventScroll: true })
-  }, [activeDestination, workbench.activeGroupId])
+  }, [workbench, takeFocusRequest])
   useEffect(() => {
     const existing = new Set(groups.flatMap(group => group.instances.map(instance => instance.id)))
     const active = groups.flatMap(group => group.activeInstanceId === undefined ? [] : [group.activeInstanceId])
@@ -124,6 +118,7 @@ export function RightSidebarPanel({
   const navigateFromEvent = (target: EventTarget | null, direction: -1 | 1): void => {
     const groupId = eventGroup(target)
     if (groupId === undefined) return
+    workspaceFocus.current = true
     // Group chrome survives both tab selection and replacement of a feature renderer.
     const group = [...workspaceRef.current!.querySelectorAll<HTMLElement>('.dsh-rightbar-group')]
       .find(element => element.dataset.groupId === groupId)
@@ -160,13 +155,7 @@ export function RightSidebarPanel({
       <div
         ref={workspaceRef}
         className="dsh-rightbar-workspace"
-        onFocusCapture={event => { lastFocusedElement.current = event.target }}
-        onBlurCapture={event => {
-          if (event.relatedTarget instanceof Node && event.relatedTarget !== document.body
-            && !event.currentTarget.contains(event.relatedTarget)) {
-            lastFocusedElement.current = undefined
-          }
-        }}
+        onFocusCapture={() => { workspaceFocus.current = true }}
         onKeyDownCapture={event => {
           if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
             || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || eventGroup(event.target) === undefined) return
@@ -248,6 +237,8 @@ export function RightSidebarPanel({
             onDragEnd={() => { setDraggedId(undefined); setDropPreview(undefined) }}
             onDropTarget={target => { setDropPreview(target === undefined ? undefined : { kind: 'tabs', target }) }}
             onMove={moveInstance}
+            onNavigate={navigateFromEvent}
+            onFocusWithin={() => { workspaceFocus.current = true }}
           />
         ))}
         {[...mountedIds].map(id => {
@@ -345,12 +336,14 @@ interface GroupPaneProps {
   readonly onDragEnd: () => void
   readonly onDropTarget: (target: RightSidebarMoveTarget | undefined) => void
   readonly onMove: (id: string, target: RightSidebarMoveTarget) => void
+  readonly onNavigate: (target: EventTarget | null, direction: -1 | 1) => void
+  readonly onFocusWithin: () => void
 }
 
 function GroupPane(props: GroupPaneProps) {
   const {
     group, rect, touchesTop, touchesRight, draggedId, t,
-    onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget,
+    onActivateGroup, onShowLauncher, onOrientation, onRailResize, onDropTarget, onNavigate, onFocusWithin,
   } = props
   const groupRef = useRef<HTMLDivElement | null>(null)
   const tabScrollRef = useRef<HTMLDivElement | null>(null)
@@ -397,7 +390,21 @@ function GroupPane(props: GroupPaneProps) {
       data-top={touchesTop ? 'true' : undefined}
       data-right={touchesRight ? 'true' : undefined}
       style={style}
-      onPointerDown={onActivateGroup}
+      onPointerDown={event => { onFocusWithin(); onActivateGroup() }}
+      onFocusCapture={onFocusWithin}
+      onKeyDownCapture={event => {
+        if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+          || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
+        event.preventDefault()
+        event.stopPropagation()
+        onNavigate(event.target, event.key === 'ArrowLeft' ? -1 : 1)
+      }}
+      onPointerDownCapture={event => {
+        if (event.button !== 3 && event.button !== 4) return
+        event.preventDefault()
+        event.stopPropagation()
+        onNavigate(event.target, event.button === 3 ? -1 : 1)
+      }}
     >
       <div className="dsh-rightbar-group-layout">
         <div
