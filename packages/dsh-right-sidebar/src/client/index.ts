@@ -15,7 +15,8 @@ import type {
   RightSidebarInstanceViewUpdate,
   RightSidebarLauncher,
   RightSidebarNavigationCommit,
-  RightSidebarNavigationResult,
+  RightSidebarNavigation,
+  RightSidebarNavigationOptions,
   RightSidebarOpenOptions,
   RightSidebarRestorer,
   RightSidebarService,
@@ -38,7 +39,8 @@ export {
   type RightSidebarLayoutNode,
   type RightSidebarLauncher,
   type RightSidebarNavigationCommit,
-  type RightSidebarNavigationResult,
+  type RightSidebarNavigation,
+  type RightSidebarNavigationOptions,
   type RightSidebarOpenOptions,
   type RightSidebarRestoreContext,
   type RightSidebarRestoreResult,
@@ -104,13 +106,8 @@ export function apply(ctx: ClientContext): void {
     recordNavigation: (sessionId: RightSidebarSessionId, id: string): void => {
       runtime.recordNavigation(sessionId, id)
     },
-    commitNavigation: (
-      sessionId: RightSidebarSessionId,
-      id: string,
-      commit: RightSidebarNavigationCommit,
-    ): void => {
-      runtime.commitNavigation(sessionId, id, commit)
-    },
+    beginNavigation: (sessionId: RightSidebarSessionId, options?: RightSidebarNavigationOptions): RightSidebarNavigation =>
+      runtime.beginNavigation(sessionId, options),
     getNavigation: (sessionId: RightSidebarSessionId, groupId: string): RightSidebarGroupNavigation =>
       runtime.getNavigation(sessionId, groupId),
     navigateHistory: (sessionId: RightSidebarSessionId, groupId: string, direction: -1 | 1): Promise<void> =>
